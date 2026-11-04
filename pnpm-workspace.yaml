@@ -1,0 +1,10 @@
+packages:
+  - apps/*
+  - packages/*
+  - evals
+onlyBuiltDependencies:
+  - lefthook
+  - onnxruntime-node
+  - sharp
+  - protobufjs
+  - esbuild

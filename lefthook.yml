@@ -1,0 +1,7 @@
+# Git hooks, installed by `pnpm install` (see the "prepare" script).
+pre-commit:
+  commands:
+    secret-scan:
+      # Fails the commit if a staged change looks like a secret.
+      # Install gitleaks first: `brew install gitleaks` (or your package manager).
+      run: gitleaks protect --staged --redact --verbose --config .gitleaks.toml
