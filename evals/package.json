@@ -1,0 +1,21 @@
+{
+  "name": "@slabwatch/evals",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "eval": "tsx --env-file-if-exists=../.env src/run.ts",
+    "typecheck": "tsc -p .",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@slabwatch/domain": "workspace:*",
+    "@slabwatch/seed": "workspace:*",
+    "@slabwatch/server": "workspace:*",
+    "effect": "4.1.2",
+    "@effect/platform-node": "4.1.2"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.15",
+    "vitest": "^5.1.0"
+  }
+}
