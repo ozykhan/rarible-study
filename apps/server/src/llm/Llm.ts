@@ -3,6 +3,7 @@ import { Context, Effect, Layer, Redacted, Schema } from "effect"
 import { toCodecAnthropic } from "effect/ai/AnthropicStructuredOutput"
 import { SqlClient } from "effect/sql/SqlClient"
 import { AppConfig } from "../config.ts"
+import { currentTraceId } from "../tracing.ts"
 
 export type LlmPurpose = "parse_want" | "judge" | "agent"
 
@@ -26,6 +27,24 @@ export interface StructuredRequest<A> {
   readonly maxTokens?: number
 }
 
+/** One turn of a tool-using conversation. History is append-only and passed back unchanged. */
+export interface ConverseRequest {
+  readonly purpose: LlmPurpose
+  readonly system: string
+  readonly messages: ReadonlyArray<Anthropic.MessageParam>
+  readonly tools: ReadonlyArray<Anthropic.Tool>
+  readonly maxTokens?: number
+  /** The agent run this call belongs to, stored on the ledger row. */
+  readonly runId?: string | null
+}
+
+export interface ConverseResponse {
+  /** Every block as returned, thinking included, so it can go back into the history as is. */
+  readonly content: ReadonlyArray<Anthropic.ContentBlock>
+  readonly stopReason: Anthropic.StopReason | null
+  readonly usage: Usage
+}
+
 export interface Usage {
   readonly inputTokens: number
   readonly outputTokens: number
@@ -46,6 +65,7 @@ export class Llm extends Context.Service<
     readonly structured: <A>(
       req: StructuredRequest<A>
     ) => Effect.Effect<{ readonly value: A; readonly usage: Usage }, LlmError | SpendCapReached | LlmNotConfigured>
+    readonly converse: (req: ConverseRequest) => Effect.Effect<ConverseResponse, LlmError | SpendCapReached | LlmNotConfigured>
   }
 >()("slabwatch/Llm") {}
 
@@ -67,21 +87,43 @@ export const LlmLive = Layer.effect(
       ? new Anthropic({ apiKey: Redacted.value(config.anthropicApiKey) })
       : null
 
-    const record = (purpose: LlmPurpose, usage: Usage, ok: boolean) =>
-      sql`
-        INSERT INTO llm_calls (purpose, model, input_tokens, output_tokens, cost_usd_micros, latency_ms, ok)
-        VALUES (${purpose}, ${config.llmModel}, ${usage.inputTokens}, ${usage.outputTokens},
-                ${usage.costUsdMicros}, ${usage.latencyMs}, ${ok})`.pipe(Effect.orDie)
+    const record = (purpose: LlmPurpose, usage: Usage, ok: boolean, runId: string | null = null) =>
+      Effect.gen(function* () {
+        const traceId = yield* currentTraceId
+        yield* sql`
+          INSERT INTO llm_calls (purpose, model, input_tokens, output_tokens, cost_usd_micros, latency_ms, ok, trace_id, run_id)
+          VALUES (${purpose}, ${config.llmModel}, ${usage.inputTokens}, ${usage.outputTokens},
+                  ${usage.costUsdMicros}, ${usage.latencyMs}, ${ok}, ${traceId}, ${runId})`
+      }).pipe(Effect.orDie)
 
-    const structured = Effect.fn("Llm.structured")(function* <A>(req: StructuredRequest<A>) {
-      if (client === null) return yield* new LlmNotConfigured()
-      yield* Effect.annotateCurrentSpan({ "llm.purpose": req.purpose, "llm.model": config.llmModel })
-
+    /** Fails with SpendCapReached once today's ledger reaches the cap. Checked before every call. */
+    const checkCap = Effect.gen(function* () {
       const spent = yield* spentTodayMicros(sql).pipe(Effect.orDie)
       const capMicros = config.llmDailyCapUsd * 1_000_000
       if (spent >= capMicros) {
         return yield* new SpendCapReached({ capUsd: config.llmDailyCapUsd, spentUsd: spent / 1_000_000 })
       }
+    })
+
+    const usageOf = (u: Anthropic.Usage, started: number): Usage => ({
+      inputTokens: u.input_tokens,
+      outputTokens: u.output_tokens,
+      costUsdMicros: Math.round(u.input_tokens * config.llmPriceInputPerMTok + u.output_tokens * config.llmPriceOutputPerMTok),
+      latencyMs: Date.now() - started
+    })
+
+    const annotateUsage = (usage: Usage) =>
+      Effect.annotateCurrentSpan({
+        "llm.input_tokens": usage.inputTokens,
+        "llm.output_tokens": usage.outputTokens,
+        "llm.cost_usd_micros": usage.costUsdMicros
+      })
+
+    const structured = Effect.fn("Llm.structured")(function* <A>(req: StructuredRequest<A>) {
+      if (client === null) return yield* new LlmNotConfigured()
+      yield* Effect.annotateCurrentSpan({ "llm.purpose": req.purpose, "llm.model": config.llmModel })
+
+      yield* checkCap
 
       // Effect Schema to the JSON Schema subset Anthropic accepts, plus the
       // codec that decodes the reply back into our own type.
@@ -104,20 +146,8 @@ export const LlmLive = Layer.effect(
           ),
         catch: (e) => new LlmError({ message: e instanceof Error ? e.message : String(e) })
       })
-      const usage: Usage = {
-        inputTokens: response.usage.input_tokens,
-        outputTokens: response.usage.output_tokens,
-        costUsdMicros: Math.round(
-          response.usage.input_tokens * config.llmPriceInputPerMTok +
-            response.usage.output_tokens * config.llmPriceOutputPerMTok
-        ),
-        latencyMs: Date.now() - started
-      }
-      yield* Effect.annotateCurrentSpan({
-        "llm.input_tokens": usage.inputTokens,
-        "llm.output_tokens": usage.outputTokens,
-        "llm.cost_usd_micros": usage.costUsdMicros
-      })
+      const usage = usageOf(response.usage, started)
+      yield* annotateUsage(usage)
 
       if (response.stop_reason === "refusal" || response.stop_reason === "max_tokens") {
         yield* record(req.purpose, usage, false)
@@ -136,6 +166,41 @@ export const LlmLive = Layer.effect(
       return { value: value as A, usage }
     })
 
-    return Llm.of({ model: config.llmModel, structured })
+    /**
+     * One model turn with tools. Thinking stays on (the model default) at low
+     * effort, tool_choice stays auto, and the caller keeps the loop: it reads
+     * blocks by type and appends `content` to the history unchanged.
+     */
+    const converse = Effect.fn("Llm.converse")(function* (req: ConverseRequest) {
+      if (client === null) return yield* new LlmNotConfigured()
+      yield* Effect.annotateCurrentSpan({ "llm.purpose": req.purpose, "llm.model": config.llmModel })
+      yield* checkCap
+      const started = Date.now()
+      const response = yield* Effect.tryPromise({
+        try: (signal) =>
+          client.messages.create(
+            {
+              model: config.llmModel,
+              max_tokens: req.maxTokens ?? 4096,
+              system: req.system,
+              messages: [...req.messages],
+              tools: [...req.tools],
+              tool_choice: { type: "auto" },
+              output_config: { effort: "low" }
+            },
+            { signal }
+          ),
+        catch: (e) => new LlmError({ message: e instanceof Error ? e.message : String(e) })
+      })
+      const usage = usageOf(response.usage, started)
+      yield* annotateUsage(usage)
+      yield* Effect.annotateCurrentSpan({ "llm.stop_reason": response.stop_reason ?? "none" })
+      const ok = response.stop_reason !== "refusal" && response.stop_reason !== "max_tokens"
+      yield* record(req.purpose, usage, ok, req.runId ?? null)
+      if (response.stop_reason === "refusal") return yield* new LlmError({ message: "the model declined this request" })
+      return { content: response.content, stopReason: response.stop_reason, usage } satisfies ConverseResponse
+    })
+
+    return Llm.of({ model: config.llmModel, structured, converse })
   })
 )

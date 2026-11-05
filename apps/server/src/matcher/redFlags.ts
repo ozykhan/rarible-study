@@ -1,16 +1,9 @@
 import type { ListingView, RedFlag } from "@slabwatch/domain"
-import { usdRate } from "@slabwatch/seed"
+import { toUsdCents } from "@slabwatch/seed"
 import type { MarketFacts } from "../catalog/CatalogRepo.ts"
 
 /** Price below this share of the recent median sale is "too good to be true". */
 export const TOO_CHEAP_RATIO = 0.4
-
-const toUsdCents = (l: ListingView): number => {
-  const { amountMinor, currency } = l.price
-  if (currency === "USD") return amountMinor
-  if (currency === "EUR") return Math.round(amountMinor / usdRate.EUR)
-  return Math.round((amountMinor / usdRate.JPY) * 100)
-}
 
 const GRADER_CLAIM = /\b(NVG|QSG|LCA)\s*(10|[1-9](?:\.5)?)\b/gi
 const GEM_MINT_CLAIM = /\bgem\s*mint\s*(?:NVG|QSG|LCA)?\s*(10|[1-9](?:\.5)?)\b/gi
@@ -36,7 +29,7 @@ export const gradeClaimMismatch = (l: Pick<ListingView, "title" | "description" 
 export const redFlagsFor = (l: ListingView, facts: MarketFacts | undefined): ReadonlyArray<RedFlag> => {
   const flags: Array<RedFlag> = []
   if (facts && facts.activeListingsForVaultItem > 1) flags.push("duplicate_vault_item")
-  if (facts && facts.medianSaleUsdCents !== null && toUsdCents(l) < TOO_CHEAP_RATIO * facts.medianSaleUsdCents) {
+  if (facts && facts.medianSaleUsdCents !== null && toUsdCents(l.price.amountMinor, l.price.currency) < TOO_CHEAP_RATIO * facts.medianSaleUsdCents) {
     flags.push("price_far_below_market")
   }
   if (gradeClaimMismatch(l)) flags.push("grade_claim_mismatch")

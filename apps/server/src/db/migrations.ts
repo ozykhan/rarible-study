@@ -139,6 +139,82 @@ const init = Effect.gen(function* () {
     )`
 })
 
+/**
+ * Day 2: what the agent may do and what it did. Purchases move
+ * proposed -> approved (by the collector) -> executing -> executed or failed,
+ * or end as refused. At most one live purchase per listing, enforced here too.
+ */
+const agent = Effect.gen(function* () {
+  const sql = yield* SqlClient
+  yield* sql`
+    CREATE TABLE rule_approvals (
+      id text PRIMARY KEY,
+      rule_id text NOT NULL REFERENCES watch_rules(id) ON DELETE CASCADE,
+      wallet text NOT NULL,
+      budget_minor bigint NOT NULL CHECK (budget_minor >= 0),
+      currency text NOT NULL CHECK (currency IN ('USD', 'EUR', 'JPY')),
+      daily_cap_usd_cents bigint NOT NULL CHECK (daily_cap_usd_cents >= 0),
+      mode text NOT NULL CHECK (mode IN ('confirm', 'auto')),
+      message text NOT NULL,
+      signature text NOT NULL,
+      expires_at timestamptz NOT NULL,
+      revoked_at timestamptz,
+      created_at timestamptz NOT NULL DEFAULT now()
+    )`
+  yield* sql`CREATE INDEX rule_approvals_rule_idx ON rule_approvals (rule_id, expires_at)`
+  yield* sql`
+    CREATE TABLE agent_tokens (
+      id text PRIMARY KEY,
+      label text NOT NULL,
+      token_sha256 text NOT NULL UNIQUE,
+      allowed_rule_ids text[] NOT NULL,
+      can_execute boolean NOT NULL DEFAULT false,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      revoked_at timestamptz
+    )`
+  yield* sql`
+    CREATE TABLE agent_runs (
+      id text PRIMARY KEY,
+      rule_id text NOT NULL REFERENCES watch_rules(id) ON DELETE CASCADE,
+      listing_id text REFERENCES listings(id),
+      trigger text NOT NULL CHECK (trigger IN ('new_match', 'manual', 'eval')),
+      status text NOT NULL CHECK (status IN ('running', 'done', 'failed')),
+      outcome text,
+      model_calls int NOT NULL DEFAULT 0,
+      tool_calls int NOT NULL DEFAULT 0,
+      transcript jsonb NOT NULL DEFAULT '[]',
+      trace_id text,
+      started_at timestamptz NOT NULL DEFAULT now(),
+      finished_at timestamptz
+    )`
+  yield* sql`
+    CREATE TABLE purchases (
+      id text PRIMARY KEY,
+      rule_id text NOT NULL REFERENCES watch_rules(id) ON DELETE CASCADE,
+      listing_id text NOT NULL REFERENCES listings(id),
+      run_id text REFERENCES agent_runs(id),
+      actor text NOT NULL,
+      price_minor bigint NOT NULL,
+      currency text NOT NULL CHECK (currency IN ('USD', 'EUR', 'JPY')),
+      price_usd_cents bigint NOT NULL,
+      status text NOT NULL CHECK (status IN ('proposed', 'approved', 'executing', 'executed', 'failed', 'refused')),
+      reason text,
+      refusals text[] NOT NULL DEFAULT '{}',
+      tx_signature text,
+      trace_id text,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      approved_at timestamptz,
+      executing_at timestamptz,
+      finished_at timestamptz
+    )`
+  yield* sql`
+    CREATE UNIQUE INDEX purchases_one_live_per_listing ON purchases (listing_id)
+    WHERE status IN ('proposed', 'approved', 'executing', 'executed')`
+  yield* sql`CREATE INDEX purchases_rule_idx ON purchases (rule_id, status)`
+  yield* sql`ALTER TABLE llm_calls ADD COLUMN run_id text`
+})
+
 export const migrations = {
-  "0001_init": init
+  "0001_init": init,
+  "0002_agent": agent
 }

@@ -47,6 +47,30 @@ The four v1 false positives (R1 / E08b, R1 / E09, R5 / E09, R5 / E50a) all becam
 
 The caveat: the change was chosen by reading v1's errors on this same set of 57 listings, and each version ran once. The result shows the fix works as intended on the cases that motivated it. A fresh labelled set would be needed to estimate precision on listings the pipeline has never seen.
 
+## Day 2
+
+### Decisions
+
+- **One tool layer.** The MCP server and the in-process agent call the same `runTool`, so they share input validation (zod, because the MCP SDK takes zod), output shape and the purchase policy. The same zod schemas produce the JSON Schema the model sees.
+- **The policy is a pure function** from facts to a list of checks. It returns every failure at once, which makes refusals readable for the model and the collector, and lets the unit tests cover each check, the exact budget edge, a currency mismatch and a JPY daily cap without a database.
+- **Execution re-reads everything.** Proposing records intent; executing locks the purchase row, takes an advisory lock on the owner's wallet, reads the listing, red flags, spending and approval fresh, and runs the policy again. A seller who changes the price after the proposal gets a refusal.
+- **Pay outside the transaction.** The purchase is marked executing inside the locked transaction, which commits, and only then does payment start. Executing rows count against the budget and cap, so a second execution waiting on the lock already sees the money as spent, and a slow devnet transfer on day 3 will not hold a database lock. A failed payment marks the row failed, which frees the budget again.
+- **Confirm mode removes the tool, not just the permission.** A confirm-mode run is never offered `execute_purchase`. Code refuses it as well, for a model that asks for a tool it was not given.
+- **The daily cap belongs to the owner,** across all their rules, in USD cents, counted from when an execution started. The signed approval carries its own cap and the lower of the two applies.
+- **Seller text appears in one place.** `search_listings` returns fields only, so a list of results cannot carry instructions. `get_listing` returns the seller text inside `seller_text` with `trusted: false` and a note.
+- **A manual tool loop.** The SDK's tool runner would work, but the loop needs a spend check before every model call, a step limit, every tool result of a turn in one message, and the transcript stored at the end. That is a few dozen lines. Thinking stays at the model default, effort is low, and `tool_choice` is auto (forcing a tool would skip thinking). Assistant turns go back into the history unchanged, thinking blocks included.
+- **Outcome from the database.** A run's outcome (executed, proposed, refused, no purchase, or why it stopped) is read from the purchases table, never taken from the model's final text.
+- **MCP is stateless.** A fresh MCP server and transport per request: nothing is shared between callers, and the bearer token decides the rules and the tools. Tokens are random 32 bytes, shown once, stored as SHA-256.
+- **The watcher starts where it is.** Its cursor starts at the first pass, so a fresh server does not wake the agent for the whole seed. It advances before agent runs start, so each listing is looked at once even if a run fails.
+
+### Things the tests caught
+
+- The first concurrency test raced two executions on the same rule and passed even with the advisory lock removed: the transactions were too short to overlap, and the pool opened connections lazily. It now holds the owner's lock in another transaction for 300 ms and checks that execution waits it out; with the lock removed, this test fails. A sequential test covers the budget case.
+- The watcher test found that without an API key every rule was skipped, because v2 asks the judge about every candidate. The same would happen in the demo once the spend cap is hit. The watcher now falls back to code-only checks and caps anything that passes at needs review, so the agent never acts on a listing the judge did not see. The matcher itself still fails loudly, which is what the evals want.
+- A cursor that went through a JS `Date` lost microseconds and could pick up the same listing twice. Cursor comparisons now stay in SQL.
+
 ### Open
 
-- Day 2: the MCP server, the agent loop with purchase limits in code, injection tests against the agent, and tracing.
+- Run `pnpm --filter @slabwatch/evals eval:agent` against the live model and record the numbers.
+- Prompt caching for the agent's system prompt and tools is not set up yet; the per-run cost is small enough that it has not been measured.
+- Day 3: the wallet page, signature checks on approvals, devnet payments, rate limits and the read-only demo, deploy.
