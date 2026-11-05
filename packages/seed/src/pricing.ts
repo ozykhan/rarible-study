@@ -38,3 +38,10 @@ export const fromUsdCents = (cents: number, currency: Currency): number => {
   if (currency === "EUR") return Math.round(cents * usdRate.EUR)
   return Math.round((cents / 100) * usdRate.JPY)
 }
+
+/** The inverse of fromUsdCents: minor units of any currency to USD cents at the fixed rate. */
+export const toUsdCents = (amountMinor: number, currency: Currency): number => {
+  if (currency === "USD") return amountMinor
+  if (currency === "EUR") return Math.round(amountMinor / usdRate.EUR)
+  return Math.round((amountMinor / usdRate.JPY) * 100)
+}

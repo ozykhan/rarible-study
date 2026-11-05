@@ -1,4 +1,4 @@
-import type { HardCriteria, ListingView } from "@slabwatch/domain"
+import type { HardCriteria, ListingView, Money } from "@slabwatch/domain"
 import { catalogText, cards, sets, type LabelledListing, type SaleRow, type SellerRow } from "@slabwatch/seed"
 import { Context, Effect, Layer } from "effect"
 import type { SqlError } from "effect/sql/SqlError"
@@ -67,6 +67,16 @@ const toView = (r: ListingRowDb): ListingView => ({
 })
 
 /** Seller text is embedded as title plus description. */
+export interface SearchFilters {
+  readonly setId?: string | undefined
+  readonly cardId?: string | undefined
+  readonly edition?: ListingView["edition"] | undefined
+  readonly finish?: ListingView["finish"] | undefined
+  readonly grader?: ListingView["grader"] | undefined
+  readonly minGrade?: number | undefined
+  readonly maxPrice?: Money | undefined
+}
+
 export const listingEmbeddingText = (l: { readonly title: string; readonly description: string }) =>
   `${l.title}. ${l.description}`
 
@@ -82,6 +92,12 @@ export class CatalogRepo extends Context.Service<
     readonly getListing: (id: string) => Effect.Effect<ListingView | null, SqlError>
     readonly listActive: (limit: number) => Effect.Effect<ReadonlyArray<ListingView>, SqlError>
     readonly listedSince: (since: Date) => Effect.Effect<ReadonlyArray<ListingView>, SqlError>
+    /** Free search for agents: optional filters, optionally ranked by meaning against a query vector. */
+    readonly search: (
+      filters: SearchFilters,
+      queryVector: ReadonlyArray<number> | null,
+      limit: number
+    ) => Effect.Effect<ReadonlyArray<{ readonly listing: ListingView; readonly similarity: number | null }>, SqlError>
     /** Active listings that pass every hard criterion, as one SQL query. */
     readonly hardCandidates: (hard: HardCriteria) => Effect.Effect<ReadonlyArray<ListingView>, SqlError>
     readonly marketFacts: (listingIds: ReadonlyArray<string>) => Effect.Effect<ReadonlyArray<MarketFacts>, SqlError>
@@ -233,6 +249,36 @@ export const CatalogRepoLive = Layer.effect(
       return yield* sql<CardFacts>`SELECT id AS card_id, kinds, catalog_text FROM cards WHERE id IN ${sql.in(cardIds)}`
     })
 
+    const search = Effect.fn("CatalogRepo.search")(function* (
+      f: SearchFilters,
+      queryVector: ReadonlyArray<number> | null,
+      limit: number
+    ) {
+      const clauses = [sql`l.status = 'active'`]
+      if (f.setId !== undefined) clauses.push(sql`c.set_id = ${f.setId}`)
+      if (f.cardId !== undefined) clauses.push(sql`c.id = ${f.cardId}`)
+      if (f.edition !== undefined) clauses.push(sql`v.edition = ${f.edition}`)
+      if (f.finish !== undefined) clauses.push(sql`v.finish = ${f.finish}`)
+      if (f.grader !== undefined) clauses.push(sql`v.grader = ${f.grader}`)
+      if (f.minGrade !== undefined) clauses.push(sql`v.grade >= ${f.minGrade}`)
+      if (f.maxPrice !== undefined) {
+        clauses.push(sql`l.currency = ${f.maxPrice.currency}`)
+        clauses.push(sql`l.price_minor <= ${f.maxPrice.amountMinor}`)
+      }
+      const where = sql.and(clauses)
+      if (queryVector === null) {
+        const rows = yield* sql<ListingRowDb>`${selectView(sql)} WHERE ${where} ORDER BY l.listed_at DESC LIMIT ${limit}`
+        return rows.map((r) => ({ listing: toView(r), similarity: null }))
+      }
+      const vec = toVector(queryVector)
+      const rows = yield* sql<ListingRowDb & { readonly similarity: number }>`
+        SELECT * FROM (${selectView(sql)} WHERE ${where}) AS v0
+        JOIN LATERAL (SELECT (1 - (l2.embedding <=> ${vec}::vector))::float8 AS similarity FROM listings l2
+                      WHERE l2.id = v0.listing_id) AS s ON true
+        ORDER BY s.similarity DESC LIMIT ${limit}`
+      return rows.map((r) => ({ listing: toView(r), similarity: r.similarity }))
+    })
+
     const similarities = Effect.fn("CatalogRepo.similarities")(function* (
       query: ReadonlyArray<number>,
       listingIds: ReadonlyArray<string>,
@@ -270,6 +316,7 @@ export const CatalogRepoLive = Layer.effect(
     })
 
     return CatalogRepo.of({
+      search,
       insertCatalog,
       insertSales,
       insertListings,

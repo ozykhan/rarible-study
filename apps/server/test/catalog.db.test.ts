@@ -1,40 +1,13 @@
-/**
- * Runs against a real Postgres with pgvector (docker compose locally, a
- * service container in CI), in a throwaway schema, with the hash embedder so
- * no model is downloaded.
- */
 import { money, passesHardChecks, type HardCriteria, type ListingView, type RedFlag, type TrapKind, type WatchRule } from "@slabwatch/domain"
-import { cards, generateSeed, makeRng, sellers, sets } from "@slabwatch/seed"
+import { cards, makeRng, sets } from "@slabwatch/seed"
 import { expect, layer } from "@effect/vitest"
-import { Effect, Layer } from "effect"
-import { SqlClient } from "effect/sql/SqlClient"
+import { Effect } from "effect"
 import { CatalogRepo } from "../src/catalog/CatalogRepo.ts"
-import { migrate } from "../src/db/Database.ts"
-import { BaseLive, ReposLive } from "../src/layers.ts"
-import { Matcher, MatcherLive, pipelineV1, pipelineV2 } from "../src/matcher/Matcher.ts"
+import { Matcher, pipelineV1, pipelineV2 } from "../src/matcher/Matcher.ts"
 import { redFlagsFor } from "../src/matcher/redFlags.ts"
+import { seed, testLayer } from "./db.ts"
 
-const schema = `test_catalog_${process.pid}`
-process.env["DB_SCHEMA"] = schema
-process.env["EMBEDDER"] = "hash"
-process.env["DATABASE_URL"] ??= "postgres://slabwatch:slabwatch@localhost:5432/slabwatch"
-
-const seed = generateSeed()
-
-const Seeded = Layer.effectDiscard(
-  Effect.gen(function* () {
-    const sql = yield* SqlClient
-    yield* sql`DROP SCHEMA IF EXISTS ${sql(schema)} CASCADE`
-    yield* Effect.addFinalizer(() => sql`DROP SCHEMA IF EXISTS ${sql(schema)} CASCADE`.pipe(Effect.ignore))
-    yield* migrate
-    const catalog = yield* CatalogRepo
-    yield* catalog.insertCatalog(sellers)
-    yield* catalog.insertSales(seed.sales)
-    yield* catalog.insertListings(seed.listings)
-  })
-)
-
-const TestLive = Layer.mergeAll(Seeded, MatcherLive).pipe(Layer.provideMerge(ReposLive), Layer.provideMerge(BaseLive))
+const TestLive = testLayer("catalog")
 
 const randomRules = (n: number): ReadonlyArray<HardCriteria> => {
   const rng = makeRng(7)
