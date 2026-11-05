@@ -33,7 +33,8 @@ const NAV: ReadonlyArray<[href: string, label: string]> = [
 export function Header() {
   const path = usePathname()
   const { token, funds } = useAccount()
-  const current = (href: string) => (href === path ? "page" : undefined)
+  // A listing page belongs to the market, so Market stays marked there.
+  const current = (href: string) => (href === path ? "page" : href === "/market" && path.startsWith("/listing/") ? "true" : undefined)
   return (
     <header className="topbar">
       <div className="topbar-inner">

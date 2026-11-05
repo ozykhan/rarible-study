@@ -156,8 +156,9 @@
   font-size: var(--text-base);
   font-weight: var(--weight-semibold);
 }
-/* A set's dot in its tone; All sets is muted. */
-.tab .set-dot {
+/* A set's dot in its tone, on the tabs and a listing page; All sets is muted. */
+.set-dot {
+  flex: none;
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -210,7 +211,7 @@
 }
 
 /* ListingTile: a slab on a tone-tinted backdrop, then name and badge, meta, price and seller.
-   Buy now and Watch sit over the art: shown on hover and on keyboard focus,
+   The art and the title link to the listing page. Buy now and Watch sit over the art: shown on hover and on keyboard focus,
    and on touch screens after a tap on the art (.revealed). */
 .tile {
   display: flex;
@@ -230,6 +231,11 @@
   background:
     radial-gradient(110% 70% at 50% 0%, color-mix(in srgb, var(--tone, var(--set-unknown)) 16%, transparent), transparent 70%),
     var(--surface-sunken);
+}
+.tile-art {
+  display: block;
+  color: inherit;
+  text-decoration: none;
 }
 .tile-media .slab {
   transition: transform var(--duration-slow) var(--ease);
@@ -337,6 +343,14 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.tile-title a {
+  color: inherit;
+  text-decoration: none;
+}
+.tile-title a:hover {
+  color: inherit;
+  text-decoration: underline;
 }
 .tile-meta {
   margin: 0;

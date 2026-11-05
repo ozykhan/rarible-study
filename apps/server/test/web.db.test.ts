@@ -191,6 +191,12 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("web api"
       const flagged = listed.find((l) => l["redFlags"].length > 0)!
       expect(flagged).toBeDefined()
 
+      // One listing by id, as the listing page reads it: the same amount and flags as the market list.
+      const one = (yield* call(`/listings/${item["listingId"]}`)).body["listing"]
+      expect(one).toMatchObject({ listingId: item["listingId"], status: "active", payUnits: price, redFlags: [] })
+      expect((yield* call(`/listings/${flagged["listingId"]}`)).body["listing"]["redFlags"]).toEqual(flagged["redFlags"])
+      expect((yield* call("/listings/L-NOPE")).status).toBe(404)
+
       expect((yield* call("/purchases/direct", { body: { listingId: item["listingId"] } })).status).toBe(401)
       const refused = yield* call("/purchases/direct", { token, body: { listingId: flagged["listingId"] } })
       expect(refused.body["status"]).toBe("refused")
@@ -239,6 +245,8 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("web api"
       // Sold listings leave the market.
       const after = (yield* call("/listings")).body["listings"] as ReadonlyArray<Record<string, any>>
       expect(after.map((l) => l["listingId"])).not.toContain(item["listingId"])
+      // Its page stays, and says it sold.
+      expect((yield* call(`/listings/${item["listingId"]}`)).body["listing"]["status"]).toBe("sold")
     }))
 
   it.effect("lets an unsigned direct buy lapse, so it cannot hold a listing", () =>

@@ -1,0 +1,211 @@
+/*
+ * The listing page: ListingDetail and ListingBuy. The breadcrumb, the slab
+ * large on a backdrop in the set's tone (--tone), the name with its checks,
+ * the price panel with the checkout inline, The slab, and More from the set.
+ * Side by side from 1000px; stacked below that.
+ */
+
+.listing-page.section {
+  padding-top: var(--space-6);
+}
+
+.crumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-5);
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.crumbs li + li::before {
+  content: "/";
+  margin-right: var(--space-2);
+  color: var(--faint);
+}
+.crumbs a {
+  text-decoration: none;
+}
+.crumbs a:hover {
+  text-decoration: underline;
+}
+.crumbs [aria-current] {
+  color: var(--ink-soft);
+}
+
+.listing-detail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-8);
+}
+
+.listing-stage {
+  flex: 1 1 520px;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+  padding: var(--space-12) var(--space-4);
+  background:
+    radial-gradient(50% 60% at 50% 45%, color-mix(in srgb, var(--tone, var(--set-unknown)) 18%, transparent), transparent 70%),
+    var(--surface-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+}
+.listing-slab {
+  width: min(300px, 80%);
+  filter: var(--shadow-float);
+}
+
+.listing-side {
+  flex: 1 1 440px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.listing-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+.listing-set {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.listing-head h1 {
+  font-size: var(--text-heading);
+  line-height: 1.1;
+  font-weight: var(--weight-black);
+  letter-spacing: var(--tracking-brand);
+}
+.listing-head .pills {
+  align-items: center;
+}
+.listing-head .badge {
+  margin: 0;
+  align-self: auto;
+}
+
+/* A panel on the listing page: an uppercase label, then its content in a column. */
+.listing-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3-5);
+  margin: 0;
+}
+.listing-panel > h2 {
+  margin: 0;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.listing-panel > h3,
+.listing-panel > p,
+.listing-panel > .note,
+.listing-panel > .error,
+.listing-panel > .seller-text {
+  margin: 0;
+}
+.listing-facts {
+  margin: 0;
+}
+.listing-facts dd {
+  text-align: right;
+  color: var(--ink);
+}
+
+.listing-price {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+.listing-price .price {
+  font-size: var(--text-5xl);
+}
+.listing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.listing-actions a.btn {
+  text-decoration: none;
+}
+/* The main action takes the row, here and in the inline checkout. */
+.listing-actions .btn-primary,
+.listing-buy .checkout-actions .btn-primary {
+  flex: 1 1 200px;
+}
+.listing-buy .checkout-actions {
+  justify-content: flex-start;
+}
+
+.listing-side .agent-strip {
+  margin-top: 0;
+}
+
+/* While the listing loads. */
+.listing-stage.skeleton {
+  aspect-ratio: auto;
+  min-height: 520px;
+}
+.listing-skeleton {
+  aspect-ratio: auto;
+  min-height: 440px;
+  border-radius: var(--radius-xl);
+}
+
+/* More from the set: four tiles in one row on a wide screen. */
+@media (min-width: 1000px) {
+  .grid-four {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  /* Side by side, the slab stays in view while the panels scroll. */
+  .listing-stage {
+    position: sticky;
+    top: calc(var(--header-height) + var(--space-4));
+  }
+}
+
+@media (max-width: 700px) {
+  .listing-page.section {
+    padding-top: var(--space-4);
+  }
+  .crumbs ol {
+    margin-bottom: var(--space-3);
+  }
+  .listing-detail {
+    gap: var(--space-5);
+  }
+  /* A smaller slab, so the name and Buy now come into view sooner. */
+  .listing-stage {
+    padding: var(--space-5) var(--space-4);
+  }
+  .listing-slab {
+    width: 168px;
+  }
+  .listing-stage.skeleton {
+    min-height: 320px;
+  }
+  /* Buy now and Watch share the row on a phone. */
+  .listing-actions .btn-primary {
+    flex-basis: 140px;
+  }
+  /* The checkout here leads with its action, so the phone keeps that order, one button per row. */
+  .listing-buy .checkout-actions {
+    flex-direction: column;
+  }
+  .listing-buy .checkout-actions .btn-primary {
+    flex: none;
+  }
+}

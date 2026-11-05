@@ -127,6 +127,7 @@
   --text-5xl: 28px; /* section titles */
   --text-display: clamp(40px, 6.2vw, 68px); /* the hero headline */
   --text-title: clamp(28px, 3.4vw, 44px); /* a page title: the market */
+  --text-heading: clamp(26px, 2.5vw, 36px); /* a listing's card name */
 
   --weight-medium: 500;
   --weight-semibold: 600;

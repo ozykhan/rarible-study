@@ -1,7 +1,8 @@
 "use client"
 
 import { useWallet } from "@solana/wallet-adapter-react"
-import { useEffect, useRef, useState, type KeyboardEvent } from "react"
+import Link from "next/link"
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react"
 import { gradeWord, setTheme } from "@/lib/art"
 import { dusd, explorerTx, money, redFlagText, variant } from "@/lib/format"
 import { proposeDirect, signAndPay } from "@/lib/purchase"
@@ -11,7 +12,8 @@ import { approveAllowance, getTestDusd } from "@/lib/wallet"
 import { Slab } from "./Slab"
 import { Button, Chip, CloseIcon, Pill } from "./ui"
 
-const FLAG_LABEL: Record<RedFlag, string> = {
+/** Each red flag as a pill says it. */
+export const FLAG_LABEL: Record<RedFlag, string> = {
   duplicate_vault_item: "Duplicate vault item",
   price_far_below_market: "Far below market",
   grade_claim_mismatch: "Grade claim mismatch"
@@ -38,6 +40,7 @@ export const checkoutStep = (p: {
   const units = listing.payUnits ?? 0
   if (status === null) return { kind: "blocked", why: "The backend is not reachable right now, so nothing can be bought." }
   if (status.readOnly) return { kind: "blocked", why: "This demo is read-only: purchases are turned off." }
+  if (listing.status !== "active") return { kind: "blocked", why: "This listing is no longer on the market." }
   if ((listing.redFlags ?? []).length > 0) {
     return { kind: "blocked", why: "Slabwatch does not sell a flagged listing directly. Watches skip it for the same reason." }
   }
@@ -98,6 +101,30 @@ const hintText = (step: CheckoutStep, units: number) => {
   }
 }
 
+/** The code's checks on a listing: "No red flags", or each flag as a warn pill with the policy's words. */
+export function CheckoutChecks({ flags }: { flags: ReadonlyArray<RedFlag> }) {
+  return (
+    <div className="checkout-checks">
+      <span className="pills">
+        {flags.length === 0 ? (
+          <Pill tone="ok">No red flags</Pill>
+        ) : (
+          flags.map((f) => (
+            <Pill key={f} tone="warn">
+              {FLAG_LABEL[f]}
+            </Pill>
+          ))
+        )}
+      </span>
+      <p className="muted small">
+        {flags.length === 0
+          ? "Grade, grader and cert come from the vault record, and the code checks found no red flags."
+          : `${flags.map((f) => redFlagText[f]).join(". ")}.`}
+      </p>
+    </div>
+  )
+}
+
 /**
  * What the checkout shows, with no state of its own: the slab and its facts,
  * the code's checks, the total, and the one action for the current step. The
@@ -106,10 +133,16 @@ const hintText = (step: CheckoutStep, units: number) => {
 export function CheckoutView(props: {
   listing: Listing
   step: CheckoutStep
-  /** "dialog" adds the close button and the dialog role; "panel" sits in the page. */
-  as: "dialog" | "panel"
+  /**
+   * "dialog" adds the close button and the dialog's title. "panel" is the same
+   * box in a page. "inline" sits in the listing page's price panel, which shows
+   * the slab and the code's checks already, so it is the total and the action.
+   */
+  as: "dialog" | "panel" | "inline"
   payments: Status["payments"] | null
   faucetUsd: number
+  /** The wallet's dUSD units, once read: the total shows what is left after paying. */
+  balance: number | null
   /** The step in progress: "faucet" while minting, anything else while the wallet is open. */
   busy: string | null
   /** The payment's transaction signature once bought. */
@@ -125,56 +158,49 @@ export function CheckoutView(props: {
   const theme = setTheme(l)
   const locked = busy !== null
   const blocked = step.kind === "blocked"
+  const inline = props.as === "inline"
+  const after = props.balance !== null && props.paid === null && !blocked && props.balance >= units ? props.balance - units : null
+  /** The dialog reads Cancel, then the action; the inline panel leads with the action. */
+  const actions = (cancel: ReactNode, main: ReactNode) => (
+    <div className="checkout-actions">{inline ? [main, cancel] : [cancel, main]}</div>
+  )
 
   return (
     <>
-      <div className="checkout-head">
-        <h2 id={props.as === "dialog" ? "checkout-title" : undefined}>Buy {l.cardName}</h2>
-        {props.as === "dialog" && (
-          <button type="button" className="btn-close" aria-label="Close" onClick={props.onClose} disabled={locked}>
-            <CloseIcon />
-          </button>
-        )}
-      </div>
+      {!inline && (
+        <>
+          <div className="checkout-head">
+            <h2 id={props.as === "dialog" ? "checkout-title" : undefined}>Buy {l.cardName}</h2>
+            {props.as === "dialog" && (
+              <button type="button" className="btn-close" aria-label="Close" onClick={props.onClose} disabled={locked}>
+                <CloseIcon />
+              </button>
+            )}
+          </div>
 
-      <div className="checkout-card">
-        <div className="checkout-slab">
-          <Slab card={l} eager />
-        </div>
-        <dl className="facts checkout-facts">
-          <dt>Card</dt>
-          <dd>
-            {theme?.year ?? ""} {l.setName} #{l.cardNumber}, {variant(l)}
-          </dd>
-          <dt>Grade</dt>
-          <dd>
-            {l.grader} {l.grade}, {gradeWord(l.grade)}
-          </dd>
-          <dt>Cert</dt>
-          <dd>{l.certNumber}</dd>
-          <dt>Seller</dt>
-          <dd>@{l.sellerHandle}</dd>
-        </dl>
-      </div>
+          <div className="checkout-card">
+            <div className="checkout-slab">
+              <Slab card={l} eager />
+            </div>
+            <dl className="facts checkout-facts">
+              <dt>Card</dt>
+              <dd>
+                {theme?.year ?? ""} {l.setName} #{l.cardNumber}, {variant(l)}
+              </dd>
+              <dt>Grade</dt>
+              <dd>
+                {l.grader} {l.grade}, {gradeWord(l.grade)}
+              </dd>
+              <dt>Cert</dt>
+              <dd>{l.certNumber}</dd>
+              <dt>Seller</dt>
+              <dd>@{l.sellerHandle}</dd>
+            </dl>
+          </div>
 
-      <div className="checkout-checks">
-        <span className="pills">
-          {flags.length === 0 ? (
-            <Pill tone="ok">No red flags</Pill>
-          ) : (
-            flags.map((f) => (
-              <Pill key={f} tone="warn">
-                {FLAG_LABEL[f]}
-              </Pill>
-            ))
-          )}
-        </span>
-        <p className="muted small">
-          {flags.length === 0
-            ? "Grade, grader and cert come from the vault record, and the code checks found no red flags."
-            : `${flags.map((f) => redFlagText[f]).join(". ")}.`}
-        </p>
-      </div>
+          <CheckoutChecks flags={flags} />
+        </>
+      )}
 
       <dl className="facts checkout-facts checkout-total">
         <dt>Price</dt>
@@ -185,6 +211,12 @@ export function CheckoutView(props: {
         <dd>paid by Slabwatch</dd>
         <dt className="total">Total</dt>
         <dd className="total">{dusd(units)}</dd>
+        {after !== null && (
+          <>
+            <dt>Wallet after</dt>
+            <dd>{dusd(after)}</dd>
+          </>
+        )}
       </dl>
 
       {props.paid !== null ? (
@@ -198,9 +230,15 @@ export function CheckoutView(props: {
                 View the payment
               </a>
             )}
-            <Button size="lg" onClick={props.onClose}>
-              Keep browsing
-            </Button>
+            {inline ? (
+              <Link className="btn btn-lg btn-primary" href="/market">
+                Back to the market
+              </Link>
+            ) : (
+              <Button size="lg" onClick={props.onClose}>
+                Keep browsing
+              </Button>
+            )}
           </div>
         </>
       ) : (
@@ -209,34 +247,24 @@ export function CheckoutView(props: {
           <p className={blocked ? "checkout-test" : "muted small"}>{hintText(step, units)}</p>
           {props.refused && <p className="error">Refused by code: {props.refused.join("; ")}</p>}
           {props.error && <p className="error">{props.error}</p>}
-          <div className="checkout-actions">
-            <Button variant="secondary" size="lg" onClick={props.onClose} disabled={locked}>
+          {actions(
+            <Button key="cancel" variant="secondary" size="lg" onClick={props.onClose} disabled={locked}>
               {blocked ? "Keep browsing" : "Cancel"}
-            </Button>
-            {!blocked && (
-              <Button size="lg" onClick={props.onAct} disabled={locked || step.kind === "loading"}>
+            </Button>,
+            !blocked && (
+              <Button key="main" size="lg" onClick={props.onAct} disabled={locked || step.kind === "loading"}>
                 {busy === "faucet" ? "Minting test dUSD…" : locked ? "Waiting for the wallet…" : actionLabel(step, units, props.faucetUsd)}
               </Button>
-            )}
-          </div>
+            )
+          )}
         </>
       )}
     </>
   )
 }
 
-/**
- * Buying one listing straight from the market, with no watch rule and no
- * agent. The main button walks through whatever is still missing: connect a
- * wallet, sign in, get test dUSD, approve what Slabwatch may spend, then sign
- * this one purchase. Code checks it again before paying, and a red-flagged
- * listing cannot be bought here at all.
- *
- * It is a dialog over the page, and a bottom sheet on a phone. It sits under
- * the wallet picker, so Connect wallet opens over it, and it cannot be closed
- * while the wallet is open. Styles: styles/checkout.css.
- */
-export function Checkout(props: {
+/** What a checkout needs from the account: the listing, the wallet's session and funds, and what to do after. */
+export interface CheckoutProps {
   listing: Listing
   status: Status | null
   wallet: string | null
@@ -248,16 +276,86 @@ export function Checkout(props: {
   /** Reloads the wallet's funds after the faucet, an allowance or a payment. */
   onFunds: () => Promise<void>
   onBought: (l: Listing) => void
-  onClose: () => void
-}) {
-  const { listing: l, status, token } = props
+}
+
+/**
+ * Buying one listing directly, with no watch rule and no agent: the current
+ * step and the one action that moves it on. The main button walks through
+ * whatever is still missing: connect a wallet, sign in, get test dUSD, approve
+ * what Slabwatch may spend, then sign this one purchase. Code checks it again
+ * before paying, and a red-flagged listing cannot be bought here at all. The
+ * dialog below and the listing page's price panel both run it.
+ */
+export function useCheckout(props: CheckoutProps) {
+  const { listing: l, token } = props
   const { signTransaction } = useWallet()
   const { busy, error, run } = useAction()
   const [paid, setPaid] = useState<string | null>(null)
   const [refused, setRefused] = useState<ReadonlyArray<string> | null>(null)
-  const box = useRef<HTMLDivElement>(null)
   const units = l.payUnits ?? 0
   const step = checkoutStep(props)
+
+  const pay = () =>
+    run("pay", async () => {
+      if (token === null) return
+      setRefused(null)
+      const proposed = await proposeDirect(token, l.listingId)
+      if (proposed.status === "refused") return setRefused(proposed.refusals)
+      const result = await signAndPay(token, proposed.purchaseId, props.signText)
+      if (result.status === "refused") return setRefused(result.refusals)
+      if (result.status === "failed") throw new Error(`The payment failed: ${result.error}`)
+      if (result.status === "awaiting_collector_approval") throw new Error("The wallet's signature did not arrive. Try again.")
+      setPaid(result.txSignature)
+      props.onBought(l)
+      await props.onFunds()
+    })
+
+  const act = () => {
+    switch (step.kind) {
+      case "connect":
+        return props.onConnect()
+      case "signin":
+        return void run("signin", props.signIn)
+      case "faucet":
+        return void run("faucet", async () => {
+          if (token !== null) await getTestDusd(token)
+          await props.onFunds()
+        })
+      case "allowance":
+        return void run("allowance", async () => {
+          if (token !== null) await approveAllowance(token, units / 100, signTransaction)
+          await props.onFunds()
+        })
+      case "pay":
+        return void pay()
+    }
+  }
+
+  /** The props CheckoutView takes, apart from where it sits and how it closes. */
+  const view = {
+    listing: l,
+    step,
+    payments: props.status?.payments ?? null,
+    faucetUsd: props.status?.faucetUsd ?? 0,
+    balance: props.funds === null ? null : Number(props.funds.balanceUnits),
+    busy,
+    paid,
+    refused,
+    error,
+    onAct: act
+  }
+  return { step, busy, view }
+}
+
+/**
+ * The checkout as a dialog over the page, and a bottom sheet on a phone, for
+ * Buy now on a tile. It sits under the wallet picker, so Connect wallet opens
+ * over it, and it cannot be closed while the wallet is open.
+ * Styles: styles/checkout.css.
+ */
+export function Checkout(props: CheckoutProps & { onClose: () => void }) {
+  const { busy, view } = useCheckout(props)
+  const box = useRef<HTMLDivElement>(null)
 
   // Focus moves into the dialog, the page behind it stops scrolling, and focus goes back on close.
   useEffect(() => {
@@ -296,58 +394,10 @@ export function Checkout(props: {
     }
   }
 
-  const pay = () =>
-    run("pay", async () => {
-      if (token === null) return
-      setRefused(null)
-      const proposed = await proposeDirect(token, l.listingId)
-      if (proposed.status === "refused") return setRefused(proposed.refusals)
-      const result = await signAndPay(token, proposed.purchaseId, props.signText)
-      if (result.status === "refused") return setRefused(result.refusals)
-      if (result.status === "failed") throw new Error(`The payment failed: ${result.error}`)
-      if (result.status === "awaiting_collector_approval") throw new Error("The wallet's signature did not arrive. Try again.")
-      setPaid(result.txSignature)
-      props.onBought(l)
-      await props.onFunds()
-    })
-
-  const act = () => {
-    switch (step.kind) {
-      case "connect":
-        return props.onConnect()
-      case "signin":
-        return void run("signin", props.signIn)
-      case "faucet":
-        return void run("faucet", async () => {
-          if (token !== null) await getTestDusd(token)
-          await props.onFunds()
-        })
-      case "allowance":
-        return void run("allowance", async () => {
-          if (token !== null) await approveAllowance(token, units / 100, signTransaction)
-          await props.onFunds()
-        })
-      case "pay":
-        return void pay()
-    }
-  }
-
   return (
     <div className="checkout-overlay" onKeyDown={onKeyDown} onClick={(e) => e.target === e.currentTarget && close()}>
       <div ref={box} className="checkout" role="dialog" aria-modal="true" aria-labelledby="checkout-title">
-        <CheckoutView
-          listing={l}
-          step={step}
-          as="dialog"
-          payments={status?.payments ?? null}
-          faucetUsd={status?.faucetUsd ?? 0}
-          busy={busy}
-          paid={paid}
-          refused={refused}
-          error={error}
-          onAct={act}
-          onClose={close}
-        />
+        <CheckoutView {...view} as="dialog" onClose={close} />
       </div>
     </div>
   )

@@ -203,6 +203,22 @@ export const WebApiRoutes = HttpRouter.addAll(
     const route = <A, E, R>(method: "GET" | "POST", path: `/${string}`, handler: Effect.Effect<A, E, R>) =>
       HttpRouter.route(method, path, respond(Effect.andThen(general, handler)))
 
+    /**
+     * Listings as the market sends them. payUnits is what each costs in dUSD
+     * units (cents): what checkout funds, approves and pays. redFlags are the
+     * same code checks the purchase policy runs; a flagged listing cannot be
+     * bought directly.
+     */
+    const forSale = (ls: ReadonlyArray<ListingView>) =>
+      Effect.gen(function* () {
+        const facts = new Map((yield* catalog.marketFacts(ls.map((l) => l.listingId))).map((f) => [f.listingId, f]))
+        return ls.map((l) => ({
+          ...l,
+          payUnits: toUsdCents(l.price.amountMinor, l.price.currency),
+          redFlags: redFlagsFor(l, facts.get(l.listingId))
+        }))
+      })
+
     const ruleSummary = (stored: { readonly rule: import("@slabwatch/domain").WatchRule }) => ({
       ...stored.rule,
       setName: setName(stored.rule.hard.setId),
@@ -261,19 +277,19 @@ export const WebApiRoutes = HttpRouter.addAll(
         const query = parseMarketQuery(new URL(request.originalUrl, "http://localhost").searchParams)
         const all = yield* catalog.listActive(MARKET_LIMIT)
         const { page: ls, total, counts } = marketPage(all, query)
-        const facts = new Map((yield* catalog.marketFacts(ls.map((l) => l.listingId))).map((f) => [f.listingId, f]))
-        // payUnits is what the listing costs in dUSD units (cents): what checkout funds, approves and pays.
-        // redFlags are the same code checks the purchase policy runs; a flagged listing cannot be bought directly.
-        return {
-          listings: ls.map((l) => ({
-            ...l,
-            payUnits: toUsdCents(l.price.amountMinor, l.price.currency),
-            redFlags: redFlagsFor(l, facts.get(l.listingId))
-          })),
-          total,
-          counts,
-          stats: marketStats(all)
-        }
+        return { listings: yield* forSale(ls), total, counts, stats: marketStats(all) }
+      })
+    )
+
+    const listing = route(
+      "GET",
+      "/listings/:id",
+      Effect.gen(function* () {
+        // Any status: a sold or withdrawn listing still has a page, which says it is off the market.
+        const l = yield* catalog.getListing(yield* param("id"))
+        if (l === null) return yield* new ApiError({ message: "no such listing", status: 404 })
+        const [one] = yield* forSale([l])
+        return { listing: one }
       })
     )
 
@@ -622,6 +638,7 @@ export const WebApiRoutes = HttpRouter.addAll(
     return [
       status,
       listings,
+      listing,
       catalogRoute,
       authStart,
       authFinish,
