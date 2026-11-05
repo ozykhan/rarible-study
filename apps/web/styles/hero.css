@@ -1,0 +1,190 @@
+/* Hero: the signed-out welcome. Generated art, four floating slabs, headline, search and two buttons. */
+
+.hero {
+  position: relative;
+  min-height: 580px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  isolation: isolate;
+}
+/* The art, darkened in the middle for the copy and faded into the canvas at the bottom. */
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background:
+    linear-gradient(180deg, rgba(8, 8, 8, 0.15) 0%, rgba(8, 8, 8, 0.05) 45%, var(--bg) 100%),
+    radial-gradient(55% 55% at 50% 48%, rgba(8, 8, 8, 0.7), transparent 75%),
+    url("/art/hero.webp") center / cover no-repeat,
+    var(--surface-inset);
+}
+
+/* Four slabs, each tilted by --r and placed by its letter. */
+.hero-slabs {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  max-width: 1440px;
+  margin: 0 auto;
+  pointer-events: none;
+}
+.hero-slab {
+  position: absolute;
+  width: 180px;
+  filter: var(--shadow-float);
+  animation: float 10s ease-in-out infinite;
+}
+.hero-slab .slab {
+  transform: rotate(var(--r, 0deg));
+}
+.hero-slab-a {
+  left: 5%;
+  top: 14%;
+  width: 196px;
+  --r: -9deg;
+}
+.hero-slab-b {
+  left: 18%;
+  top: 50%;
+  width: 150px;
+  --r: 7deg;
+  animation-delay: -3s;
+  opacity: 0.85;
+}
+.hero-slab-c {
+  right: 15.5%;
+  top: 7%;
+  width: 172px;
+  --r: 8deg;
+  animation-delay: -6s;
+  opacity: 0.9;
+}
+.hero-slab-d {
+  right: 4%;
+  top: 40%;
+  width: 200px;
+  --r: -6deg;
+  animation-delay: -1.5s;
+}
+@keyframes float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -14px;
+  }
+}
+
+.hero-copy {
+  position: relative;
+  max-width: 760px;
+  padding: var(--space-22) var(--space-4) var(--space-18);
+  text-align: center;
+}
+.hero h1 {
+  font-size: var(--text-display);
+  font-weight: var(--weight-black);
+  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-display);
+  text-wrap: balance;
+  text-shadow: var(--text-shadow-display);
+}
+.lede {
+  max-width: 580px;
+  margin: var(--space-4-5) auto 26px;
+  font-size: var(--text-xl);
+  line-height: var(--leading-lede);
+  color: var(--ink-soft);
+  text-shadow: var(--text-shadow-lede);
+}
+.strong-link {
+  color: var(--ink);
+  font-weight: var(--weight-bold);
+  text-decoration: none;
+}
+.strong-link:hover {
+  text-decoration: underline;
+}
+.hero-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2-5);
+  max-width: 520px;
+  height: 46px;
+  margin: 0 auto 22px;
+  padding: 0 var(--space-3-5);
+  color: var(--muted);
+  background: var(--glass-field);
+  border: 1px solid var(--line-glass);
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(var(--blur-sm));
+  -webkit-backdrop-filter: blur(var(--blur-sm));
+}
+.hero-search input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  font-size: var(--text-base);
+}
+.hero-search kbd {
+  font: var(--text-sm) var(--mono);
+  color: var(--faint);
+}
+.hero-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.hero-note {
+  margin: var(--space-3-5) 0 0;
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-slab {
+    animation: none;
+  }
+}
+
+@media (max-width: 1100px) {
+  .hero-slab-b,
+  .hero-slab-c {
+    display: none;
+  }
+  .hero-slab-a {
+    left: -2%;
+  }
+  .hero-slab-d {
+    right: -2%;
+  }
+}
+@media (max-width: 900px) {
+  .hero-slabs {
+    opacity: 0.35;
+  }
+}
+@media (max-width: 700px) {
+  .hero {
+    min-height: 0;
+  }
+  .hero-copy {
+    padding: var(--space-16) var(--space-4) var(--space-12);
+  }
+  .hero-slab-a {
+    width: 130px;
+    top: 4%;
+  }
+  .hero-slab-d {
+    width: 130px;
+    top: auto;
+    bottom: 4%;
+  }
+}

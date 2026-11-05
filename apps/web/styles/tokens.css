@@ -1,0 +1,216 @@
+/*
+ * Slabwatch design tokens.
+ *
+ * Every color, type size, space, radius, shadow and timing the stylesheets use
+ * is named here, so the look can be read and changed in one place. The rest of
+ * the CSS refers to these names; a raw value outside this file is either part
+ * of a drawing (the slab's glass, the hero's vignette) or a one-off nudge.
+ * DESIGN.md next to this folder explains each group and when to use it.
+ *
+ * Breakpoints can't be custom properties inside media queries, so they are
+ * written out in each stylesheet. There are four, all max-width:
+ *   1100px  hero shows two slabs, How it works goes two up
+ *    900px  the signed-in desk stacks, set banners go two up
+ *    700px  phone: 16px gutter, 64px header, market two up
+ *    460px  small phone: set blurbs and the model spend hide
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* ---------- Color: canvas and surfaces, darkest first ---------- */
+
+  --bg: #080808; /* the page canvas */
+  --surface-inset: #0b0b0c; /* bands and wells: devnet notice, ring button fill, banner fallback */
+  --surface-sunken: #0d0d0f; /* behind a slab in a tile, seller text */
+  --surface-solid: #0f0f11; /* form fields, dropdown lists */
+  --surface-raised: #101012; /* the wallet modal */
+  --surface-thumb: #151518; /* a thumbnail before its art loads */
+  --surface: rgba(255, 255, 255, 0.035); /* cards, tiles and panels over the canvas */
+  --surface-subtle: rgba(255, 255, 255, 0.02); /* listing rows inside a panel */
+  --surface-shine: rgba(255, 255, 255, 0.07); /* the skeleton's moving highlight */
+  --surface-count: rgba(255, 255, 255, 0.08); /* count badges in tabs */
+
+  /* Frosted bars and fields over content. */
+  --glass-header: rgba(8, 8, 8, 0.82);
+  --glass-footer: rgba(10, 10, 11, 0.92);
+  --glass-field: rgba(12, 12, 13, 0.78);
+
+  /* ---------- Color: lines ---------- */
+
+  --line: #1f1f1f; /* default 1px border and divider */
+  --line-strong: #2b2b2e; /* fields, chips, secondary buttons */
+  --line-glass: rgba(255, 255, 255, 0.12); /* a field over art */
+  --line-hover: rgba(255, 255, 255, 0.14); /* a tile under the pointer */
+  --line-active: rgba(255, 255, 255, 0.3); /* a secondary button under the pointer */
+
+  /* ---------- Color: text ---------- */
+
+  --ink: #ffffff; /* headings and body */
+  --ink-soft: #d4d4d8; /* nav links, lede, seller text */
+  --muted: #a1a1aa; /* secondary text, eyebrows */
+  --faint: #71717a; /* tertiary text: tile footers, step numbers */
+  --off: #52525b; /* an LED that is off */
+
+  /* ---------- Color: accent ---------- */
+
+  --accent: #e4ff3a; /* the one neon: primary actions, links, active tab, focus */
+  --accent-ink: #0b0b0c; /* text on the accent */
+  --accent-2: #7cf3c9; /* only in the logo gradient */
+
+  /* ---------- Color: status ---------- */
+
+  --ok: #4ade80;
+  --warn: #facc15; /* also "devnet", "read-only" and non-USD prices */
+  --bad: #f87171;
+
+  /* ---------- Color: the four fictional sets ---------- */
+  /* lib/art.ts points each set at its tone; components pass it on as --tone. */
+
+  --set-OS: #8fd16a; /* Origin Set */
+  --set-TW: #3fd0d4; /* Tidewild */
+  --set-EF: #ff7a3d; /* Emberfall */
+  --set-SE: #a98bff; /* Starward Expedition */
+  --set-unknown: #9aa1ab;
+
+  /* ---------- Color: the three fictional graders' slab labels ---------- */
+
+  --grader-NVG-stripe: #d8483f; /* Northvale Grading: red stripe, white label */
+  --grader-NVG-label: #f5f4ef;
+  --grader-NVG-ink: #17171a;
+  --grader-QSG-stripe: #e2b53e; /* Quarry Slab Grading: gold stripe, black label */
+  --grader-QSG-label: #17181c;
+  --grader-QSG-ink: #f3e6c0;
+  --grader-LCA-stripe: #2fb5a5; /* Lantern Card Authentication: teal stripe, cream label */
+  --grader-LCA-label: #ece6d6;
+  --grader-LCA-ink: #1b2422;
+
+  /* ---------- Color: the slab and the card inside it ---------- */
+
+  --slab-fill: rgba(20, 20, 24, 0.85); /* the acrylic case */
+  --slab-edge: rgba(255, 255, 255, 0.2); /* its 1px rim */
+  --slab-window: rgba(0, 0, 0, 0.4); /* the well the card sits in */
+  --card-ink: #ffffff; /* name and number printed on the card */
+  --card-badge: #111111; /* the round "1st" stamp */
+
+  /* ---------- Gradients ---------- */
+
+  /* The iridescent rim of the ring button. */
+  --gradient-ring: conic-gradient(from 200deg, #ff4fd8, #ffd84f, #4fffb0, #4fb3ff, #b04fff, #ff4fd8);
+  /* The holo sheen that drifts across holo and reverse holo cards. */
+  --gradient-holo: linear-gradient(
+    115deg,
+    transparent 22%,
+    rgba(255, 70, 200, 0.55) 36%,
+    rgba(255, 230, 80, 0.5) 44%,
+    rgba(80, 255, 200, 0.5) 52%,
+    rgba(90, 140, 255, 0.55) 60%,
+    transparent 76%
+  );
+
+  /* ---------- Type ---------- */
+
+  /* --font-sans (Inter) and --font-mono (JetBrains Mono) come from next/font in app/layout.tsx. */
+  --sans: var(--font-sans, system-ui), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: var(--font-mono, ui-monospace), ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --text-xs: 12px; /* eyebrows, chips, pills, badges, tile footers */
+  --text-sm: 13px; /* meta lines, notes, the status bar */
+  --text-md: 14px; /* buttons, fields, panel copy */
+  --text-base: 15px; /* body, tabs, nav, tile titles */
+  --text-lg: 16px; /* panel titles, prices in rows */
+  --text-xl: 17px; /* the hero lede */
+  --text-2xl: 19px; /* card headings, a rule's title */
+  --text-3xl: 20px; /* the brand, tile prices */
+  --text-4xl: 23px; /* section titles on a phone */
+  --text-5xl: 28px; /* section titles */
+  --text-display: clamp(40px, 6.2vw, 68px); /* the hero headline */
+
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --weight-black: 800;
+
+  --leading-display: 1.02;
+  --leading-body: 1.5;
+  --leading-lede: 1.55;
+  --leading-relaxed: 1.6;
+
+  --tracking-display: -0.035em;
+  --tracking-brand: -0.03em;
+  --tracking-heading: -0.02em; /* h1 to h3 and prices */
+  --tracking-snug: -0.01em;
+  --tracking-caps: 0.08em; /* uppercase eyebrows and labels */
+
+  /* ---------- Space: a 4px scale, named by multiples of 4 ---------- */
+
+  --space-0-5: 2px;
+  --space-1: 4px;
+  --space-1-5: 6px;
+  --space-2: 8px;
+  --space-2-5: 10px;
+  --space-3: 12px;
+  --space-3-5: 14px;
+  --space-4: 16px;
+  --space-4-5: 18px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-14: 56px;
+  --space-16: 64px;
+  --space-18: 72px;
+  --space-22: 88px;
+
+  /* ---------- Radius ---------- */
+
+  --radius-xs: 4px; /* badges, counts */
+  --radius-sm: 6px; /* seller text */
+  --radius-md: 8px; /* fields, notes, rows, rule items */
+  --radius-lg: 10px; /* tiles, set cards, step cards */
+  --radius-xl: 12px; /* panels */
+  --radius-pill: 999px; /* buttons, chips, pills, search */
+
+  /* ---------- Shadow and blur ---------- */
+
+  --shadow-focus: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
+  --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.55); /* the card inside a slab */
+  --shadow-float: drop-shadow(0 28px 36px rgba(0, 0, 0, 0.7)); /* hero slabs, as a filter */
+  --glow-ok: 0 0 8px var(--ok); /* an LED that is on */
+  --text-shadow-display: 0 4px 30px rgba(0, 0, 0, 0.6);
+  --text-shadow-lede: 0 2px 12px rgba(0, 0, 0, 0.8);
+
+  --blur-sm: 6px;
+  --blur-md: 12px;
+  --blur-lg: 14px;
+
+  /* ---------- Motion ---------- */
+  /* Loops (float 10s, holo 7s, shimmer 1.6s) stop under prefers-reduced-motion. */
+
+  --ease: ease;
+  --duration-fast: 0.15s; /* buttons, chips */
+  --duration-base: 0.2s; /* tile and card borders */
+  --duration-slow: 0.3s; /* a slab lifting in its tile */
+  --duration-slower: 0.5s; /* a set banner zooming */
+
+  /* ---------- Layout ---------- */
+
+  --wide: 1376px; /* content width */
+  --gutter: 32px; /* side padding; 16px on a phone */
+  --header-height: 72px; /* 64px on a phone */
+  --statusbar-height: 40px;
+  --scroll-offset: 88px; /* anchors land below the sticky header */
+  --rail: minmax(300px, 380px); /* the signed-in desk's left column */
+  --tile-min: 230px; /* market tiles fill the row at this width or more */
+
+  --z-header: 50;
+  --z-statusbar: 40;
+}
+
+@media (max-width: 700px) {
+  :root {
+    --gutter: 16px;
+    --header-height: 64px;
+  }
+}

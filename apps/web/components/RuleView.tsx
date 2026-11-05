@@ -7,6 +7,7 @@ import { cardArt, setTheme } from "@/lib/art"
 import { explorerTx, label, money, toMinor } from "@/lib/format"
 import type { Decision, ExecuteResult, Purchase, RuleDetail, SigningRequest, Status } from "@/lib/types"
 import { useAction } from "@/lib/useAction"
+import { Button, Panel, Pill, type PillTone } from "./ui"
 
 const VERDICT: Record<Decision["verdict"], string> = { match: "Match", needs_review: "Needs your review", reject: "Rejected" }
 
@@ -23,6 +24,13 @@ const outcomeText = (r: ExecuteResult | { status: "refused"; refusals: ReadonlyA
   }
 }
 
+const PURCHASE_TONE: Partial<Record<Purchase["status"], PillTone>> = { executed: "ok", refused: "bad", failed: "bad" }
+
+/**
+ * One watch rule in full: its criteria and status, purchases waiting for a
+ * signature, matches, listings to review, rejections, auto-buy, purchases and
+ * agent runs. Refreshes every 10 seconds. Styles: styles/desk.css.
+ */
 export function RuleView(props: {
   token: string
   ruleId: string
@@ -111,7 +119,7 @@ export function RuleView(props: {
       props.onChange()
     })
 
-  if (detail === null) return <section className="panel muted">Loading the rule…</section>
+  if (detail === null) return <Panel className="muted">Loading the rule…</Panel>
   const { rule } = detail
   const h = rule.hard
   const bought = new Set(detail.purchases.filter((p) => p.status === "executed").map((p) => p.listingId))
@@ -124,7 +132,7 @@ export function RuleView(props: {
   const auto = detail.approvals[0]
 
   return (
-    <section className="panel rule">
+    <Panel className="rule">
       <header className="rule-head">
         <div>
           <h2>{rule.rawWant}</h2>
@@ -135,21 +143,21 @@ export function RuleView(props: {
           </p>
         </div>
         <div className="pills">
-          <span className={`pill ${rule.status === "active" ? "ok" : ""}`}>{rule.status}</span>
-          <span className={`pill ${rule.mode === "auto" ? "warn" : ""}`}>{rule.mode === "auto" ? "auto-buy" : "confirm each"}</span>
-          <span className="pill">budget {money(rule.budget)}</span>
+          <Pill tone={rule.status === "active" ? "ok" : null}>{rule.status}</Pill>
+          <Pill tone={rule.mode === "auto" ? "warn" : null}>{rule.mode === "auto" ? "auto-buy" : "confirm each"}</Pill>
+          <Pill>budget {money(rule.budget)}</Pill>
         </div>
       </header>
 
       <div className="row">
         {rule.status === "active" ? (
-          <button className="secondary" onClick={() => setStatus("paused")} disabled={busy !== null}>
+          <Button variant="secondary" onClick={() => setStatus("paused")} disabled={busy !== null}>
             Pause
-          </button>
+          </Button>
         ) : (
-          <button className="secondary" onClick={() => setStatus("active")} disabled={busy !== null}>
+          <Button variant="secondary" onClick={() => setStatus("active")} disabled={busy !== null}>
             Resume
-          </button>
+          </Button>
         )}
       </div>
 
@@ -161,9 +169,9 @@ export function RuleView(props: {
           <h3>Waiting for your signature</h3>
           {pending.map((p) => (
             <PurchaseRow key={p.id} p={p}>
-              <button onClick={() => run(`sign:${p.id}`, () => signPurchase(p.id))} disabled={busy !== null || !canTrade}>
+              <Button onClick={() => run(`sign:${p.id}`, () => signPurchase(p.id))} disabled={busy !== null || !canTrade}>
                 {busy === `sign:${p.id}` ? "Waiting for the wallet…" : "Sign and pay"}
-              </button>
+              </Button>
             </PurchaseRow>
           ))}
         </div>
@@ -175,9 +183,9 @@ export function RuleView(props: {
             <h3>
               {VERDICT[verdict]} ({items.length}){" "}
               {items.length > 0 && (
-                <button className="link" onClick={() => setShowRejected(!showRejected)}>
+                <Button variant="link" onClick={() => setShowRejected(!showRejected)}>
                   {showRejected ? "hide" : "show why"}
-                </button>
+                </Button>
               )}
             </h3>
             {showRejected && items.map((d) => <DecisionRow key={d.listingId} d={d} />)}
@@ -192,17 +200,17 @@ export function RuleView(props: {
               <DecisionRow key={d.listingId} d={d}>
                 {d.listing?.status === "active" && !bought.has(d.listingId) && (
                   <>
-                    <button onClick={() => buy(d.listingId)} disabled={busy !== null || !canTrade}>
+                    <Button onClick={() => buy(d.listingId)} disabled={busy !== null || !canTrade}>
                       {busy === `buy:${d.listingId}` ? "Waiting for the wallet…" : "Buy (sign)"}
-                    </button>
+                    </Button>
                     {props.status.modelConfigured && (
-                      <button className="secondary" onClick={() => askAgent(d.listingId)} disabled={busy !== null}>
+                      <Button variant="secondary" onClick={() => askAgent(d.listingId)} disabled={busy !== null}>
                         {busy === `agent:${d.listingId}` ? "The agent is checking…" : "Ask the agent"}
-                      </button>
+                      </Button>
                     )}
                   </>
                 )}
-                {bought.has(d.listingId) && <span className="pill ok">bought</span>}
+                {bought.has(d.listingId) && <Pill tone="ok">bought</Pill>}
               </DecisionRow>
             ))}
           </div>
@@ -217,9 +225,9 @@ export function RuleView(props: {
               On until {new Date(auto.expiresAt).toLocaleString()}, with a daily cap of{" "}
               {money({ amountMinor: auto.dailyCapUsdCents, currency: "USD" })} across your rules.
             </p>
-            <button className="secondary" onClick={revoke} disabled={busy !== null}>
+            <Button variant="secondary" onClick={revoke} disabled={busy !== null}>
               Turn off auto-buy
-            </button>
+            </Button>
           </>
         ) : (
           <>
@@ -234,9 +242,9 @@ export function RuleView(props: {
               <label>
                 for <input value={hours} onChange={(e) => setHours(e.target.value)} size={4} inputMode="numeric" /> hours
               </label>
-              <button onClick={startAuto} disabled={busy !== null || !canTrade || !(toMinor(Number(cap), "USD") > 0)}>
+              <Button onClick={startAuto} disabled={busy !== null || !canTrade || !(toMinor(Number(cap), "USD") > 0)}>
                 {busy === "auto" ? "Waiting for the wallet…" : "Sign auto-buy approval"}
-              </button>
+              </Button>
             </div>
           </>
         )}
@@ -257,7 +265,7 @@ export function RuleView(props: {
           {detail.runs.map((r) => (
             <div className="run" key={r.id}>
               <div className="small">
-                <span className="pill">{r.outcome ?? r.status}</span> {r.listingId} · {r.trigger} · {r.modelCalls} model calls,{" "}
+                <Pill>{r.outcome ?? r.status}</Pill> {r.listingId} · {r.trigger} · {r.modelCalls} model calls,{" "}
                 {r.toolCalls} tool calls · {new Date(r.startedAt).toLocaleTimeString()}
               </div>
               {r.finalText && <p className="small quote">{r.finalText}</p>}
@@ -265,11 +273,12 @@ export function RuleView(props: {
           ))}
         </div>
       )}
-    </section>
+    </Panel>
   )
 }
 
-function DecisionRow({ d, children }: { d: Decision; children?: ReactNode }) {
+/** A listing the matcher judged: thumbnail in its set's tone, title, meta, price, the seller's text as plain text, and the reasons. */
+export function DecisionRow({ d, children }: { d: Decision; children?: ReactNode }) {
   const l = d.listing
   return (
     <div className="listing" style={l ? ({ "--tone": setTheme(l)?.tone } as CSSProperties) : undefined}>
@@ -302,12 +311,11 @@ function DecisionRow({ d, children }: { d: Decision; children?: ReactNode }) {
   )
 }
 
-function PurchaseRow({ p, children }: { p: Purchase; children?: ReactNode }) {
+/** A purchase: its state as a pill, the listing, price and who asked, and a devnet explorer link once paid. */
+export function PurchaseRow({ p, children }: { p: Purchase; children?: ReactNode }) {
   return (
     <div className="purchase small">
-      <span className={`pill ${p.status === "executed" ? "ok" : p.status === "refused" || p.status === "failed" ? "bad" : ""}`}>
-        {p.status}
-      </span>{" "}
+      <Pill tone={PURCHASE_TONE[p.status]}>{p.status}</Pill>{" "}
       {p.listingId} · {money(p.price)} · by {p.actor.split(":")[0]}
       {p.txSignature && !p.txSignature.startsWith("simulated:") && (
         <>

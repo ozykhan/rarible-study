@@ -1,0 +1,175 @@
+/* Market: set tabs, search and sort, and the grid of ListingTiles. */
+
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: var(--space-4-5);
+}
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-3-5);
+  white-space: nowrap;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--muted);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+}
+.tab:hover {
+  color: var(--ink);
+}
+.tab.active {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2-5);
+  margin-bottom: var(--space-4);
+}
+.search {
+  flex: 1 1 260px;
+  max-width: 420px;
+  height: 40px;
+  padding: 0 var(--space-3-5);
+  gap: var(--space-2);
+  color: var(--muted);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+}
+.search:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+}
+.search input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  font-size: var(--text-md);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--tile-min), 1fr));
+  gap: var(--space-3);
+}
+
+/* ListingTile: a slab on a tone-tinted backdrop, then badge, name, meta, price and seller. */
+.tile {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--duration-base) var(--ease);
+}
+.tile:hover {
+  border-color: var(--line-hover);
+}
+.tile-media {
+  padding: var(--space-4-5) 17% var(--space-4);
+  background:
+    radial-gradient(110% 70% at 50% 0%, color-mix(in srgb, var(--tone, var(--set-unknown)) 16%, transparent), transparent 70%),
+    var(--surface-sunken);
+}
+.tile-media .slab {
+  transition: transform var(--duration-slow) var(--ease);
+}
+.tile:hover .tile-media .slab {
+  transform: translateY(-4px);
+}
+.tile-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-3-5) var(--space-3-5);
+}
+.tile-title {
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-snug);
+}
+.tile-meta {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tile-price {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+/* Prices are always mono. */
+.price {
+  font: var(--weight-bold) var(--text-3xl) var(--mono);
+  letter-spacing: var(--tracking-heading);
+  white-space: nowrap;
+}
+.tile-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: var(--space-1-5) 0 0;
+  font: var(--text-xs) var(--mono);
+  color: var(--faint);
+}
+.tile-foot span:last-child {
+  white-space: nowrap;
+}
+.tile-foot span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A tile while listings load. */
+.skeleton {
+  aspect-ratio: 0.62;
+  background: linear-gradient(100deg, var(--surface) 30%, var(--surface-shine) 50%, var(--surface) 70%) 0 0 / 300% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+@keyframes shimmer {
+  to {
+    background-position: -150% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2);
+  }
+  .tile-media {
+    padding: var(--space-3) 12% var(--space-2-5);
+  }
+  .tile-body {
+    padding: var(--space-2-5);
+  }
+  .price {
+    font-size: var(--text-lg);
+  }
+}
