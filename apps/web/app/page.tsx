@@ -1,6 +1,7 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useWalletModal } from "@solana/wallet-adapter-react-ui"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { DevnetNotice } from "@/components/DevnetNotice"
 import { Header } from "@/components/Header"
 import { Hero } from "@/components/Hero"
@@ -14,7 +15,7 @@ import { StatusBar } from "@/components/StatusBar"
 import { Panel, Section } from "@/components/ui"
 import { WalletPanel } from "@/components/WalletPanel"
 import { api, ApiError } from "@/lib/api"
-import { short } from "@/lib/format"
+import { short, watchWant } from "@/lib/format"
 import { useSession } from "@/lib/session"
 import type { Funds, Listing, Rule, Status } from "@/lib/types"
 import { useAction } from "@/lib/useAction"
@@ -50,6 +51,10 @@ export default function Home() {
   const [set, setSet] = useState("all")
   const { listings, failed } = useListings()
   const { busy, error, run } = useAction()
+  const { setVisible } = useWalletModal()
+  // A tile's Watch seeds the New watch form; signed out, it waits for the sign-in.
+  const [seed, setSeed] = useState<{ text: string; n: number } | null>(null)
+  const pendingWatch = useRef<string | null>(null)
 
   useEffect(() => {
     void api<Status>("/status")
@@ -76,6 +81,32 @@ export default function Home() {
     setSelected(null)
     void refresh()
   }, [refresh])
+
+  useEffect(() => {
+    if (token === null || pendingWatch.current === null) return
+    setSeed({ text: pendingWatch.current, n: Date.now() })
+    pendingWatch.current = null
+  }, [token])
+
+  useEffect(() => {
+    if (seed === null) return
+    const box = document.getElementById("new-rule-want")
+    box?.scrollIntoView({ behavior: "smooth", block: "center" })
+    box?.focus({ preventScroll: true })
+  }, [seed])
+
+  const watching = useMemo(
+    () => new Set(rules.filter((r) => r.status === "active" && r.hard.cardId !== null).map((r) => r.hard.cardId as string)),
+    [rules]
+  )
+
+  const watch = (l: Listing) => {
+    const text = watchWant(l)
+    if (token !== null) return setSeed({ text, n: Date.now() })
+    pendingWatch.current = text
+    if (wallet === null) setVisible(true)
+    else void run("signin", signIn)
+  }
 
   const browse = (setId?: string) => {
     if (setId !== undefined) setSet(setId)
@@ -109,7 +140,9 @@ export default function Home() {
               <div className="side">
                 <WalletPanel token={token} status={status} funds={funds} onChange={refresh} />
                 <NewRule
+                  key={seed?.n ?? 0}
                   token={token}
+                  {...(seed ? { seed: seed.text } : {})}
                   onCreated={(rule, text) => {
                     setSelected(rule.id)
                     setNote(text)
@@ -142,7 +175,16 @@ export default function Home() {
         )}
 
         <Sets listings={listings} active={set} onPick={(id) => browse(id)} />
-        <Market listings={listings} failed={failed} query={query} onQuery={setQuery} set={set} onSet={setSet} />
+        <Market
+          listings={listings}
+          failed={failed}
+          query={query}
+          onQuery={setQuery}
+          set={set}
+          onSet={setSet}
+          watching={watching}
+          onWatch={watch}
+        />
         {!token && <HowItWorks />}
       </main>
       <StatusBar status={status} loaded={statusLoaded} />

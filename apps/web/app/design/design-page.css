@@ -120,3 +120,16 @@
     gap: var(--space-1-5);
   }
 }
+
+/* Holds a ListingTile's overlay open so the page can show it without a hover. */
+.ds-tile-open {
+  display: flex;
+}
+.ds-tile-open > .tile {
+  flex: 1;
+}
+.ds-tile-open .tile-actions {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}

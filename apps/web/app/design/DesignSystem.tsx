@@ -396,9 +396,15 @@ export function DesignSystem() {
         </Section>
 
         <Section eyebrow="Components" title="ListingTile">
+          <p className="ds-intro">
+            Buy now and Watch show on hover and keyboard focus, and after a tap on the art on touch screens. Here the first two
+            tiles hold them open; hover the last one to see them. The third is a listing the collector owns.
+          </p>
           <div className="grid">
-            {LISTINGS.map((l) => (
-              <ListingTile key={l.listingId} l={l} />
+            {LISTINGS.map((l, i) => (
+              <div key={l.listingId} className={i < 2 ? "ds-tile-open" : undefined}>
+                <ListingTile l={l} owned={i === 2} watching={i === 1} onBuy={() => {}} onWatch={() => {}} />
+              </div>
             ))}
           </div>
         </Section>

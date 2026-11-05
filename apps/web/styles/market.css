@@ -71,7 +71,9 @@
   gap: var(--space-3);
 }
 
-/* ListingTile: a slab on a tone-tinted backdrop, then badge, name, meta, price and seller. */
+/* ListingTile: a slab on a tone-tinted backdrop, then name and badge, meta, price and seller.
+   Buy now and Watch sit over the art: shown on hover and on keyboard focus,
+   and on touch screens after a tap on the art (.revealed). */
 .tile {
   display: flex;
   flex-direction: column;
@@ -85,6 +87,7 @@
   border-color: var(--line-hover);
 }
 .tile-media {
+  position: relative;
   padding: var(--space-4-5) 17% var(--space-4);
   background:
     radial-gradient(110% 70% at 50% 0%, color-mix(in srgb, var(--tone, var(--set-unknown)) 16%, transparent), transparent 70%),
@@ -96,16 +99,106 @@
 .tile:hover .tile-media .slab {
   transform: translateY(-4px);
 }
+
+/* The tap target over the art. Only touch screens get it; elsewhere hover and focus do the job. */
+.tile-reveal {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+.tile-reveal:focus-visible {
+  outline-offset: -2px;
+}
+@media (hover: none) {
+  .tile-reveal {
+    display: block;
+  }
+  /* A full-size touch target. */
+  .tile-actions .btn {
+    min-height: 44px;
+  }
+}
+
+.tile-actions {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  gap: var(--space-1-5);
+  padding: var(--space-6) var(--space-3) var(--space-3);
+  background: linear-gradient(to bottom, transparent, var(--glass-footer) 55%);
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+  transition:
+    opacity var(--duration-base) var(--ease),
+    transform var(--duration-base) var(--ease);
+}
+.tile:focus-within .tile-actions,
+.tile.revealed .tile-actions {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+@media (hover: hover) {
+  .tile:hover .tile-actions {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+}
+.tile-buy {
+  flex: 1;
+}
+/* Over art the outline button needs a solid fill to stay readable. */
+.tile-watch {
+  background: var(--surface-inset);
+}
+.tile-watch:only-child {
+  flex: 1;
+}
+.tile-owned {
+  position: absolute;
+  top: var(--space-2-5);
+  left: var(--space-2-5);
+  z-index: 2;
+}
+.tile-owned .pill {
+  background: var(--surface-inset);
+}
+
 .tile-body {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
   padding: var(--space-3) var(--space-3-5) var(--space-3-5);
 }
+.tile-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.tile-head .badge {
+  flex: none;
+  align-self: auto;
+  margin: 0;
+}
 .tile-title {
+  min-width: 0;
   font-size: var(--text-base);
   font-weight: var(--weight-bold);
   letter-spacing: var(--tracking-snug);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .tile-meta {
   margin: 0;
@@ -117,10 +210,12 @@
 }
 .tile-price {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: baseline;
   gap: var(--space-2);
-  margin-top: var(--space-2);
+  margin-top: var(--space-1-5);
+}
+.tile-price .chip {
+  align-self: center;
 }
 /* Prices are always mono. */
 .price {
@@ -128,21 +223,14 @@
   letter-spacing: var(--tracking-heading);
   white-space: nowrap;
 }
-.tile-foot {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-2);
-  margin: var(--space-1-5) 0 0;
+.tile-seller {
+  margin-left: auto;
+  min-width: 0;
   font: var(--text-xs) var(--mono);
   color: var(--faint);
-}
-.tile-foot span:last-child {
   white-space: nowrap;
-}
-.tile-foot span:first-child {
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* A tile while listings load. */
@@ -161,6 +249,9 @@
   .skeleton {
     animation: none;
   }
+  .tile-actions {
+    transition: none;
+  }
 }
 
 @media (max-width: 700px) {
@@ -173,6 +264,13 @@
   }
   .tile-body {
     padding: var(--space-2-5);
+  }
+  .tile-actions {
+    padding: var(--space-5) var(--space-2) var(--space-2);
+  }
+  /* Phones show Buy now only when it is there; Watch stays on the listing page. */
+  .tile-buy + .tile-watch {
+    display: none;
   }
   .price {
     font-size: var(--text-lg);

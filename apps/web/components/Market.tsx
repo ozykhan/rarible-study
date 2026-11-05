@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { GRADERS, SETS, setTheme } from "@/lib/art"
+import { cardId, GRADERS, SETS, setTheme } from "@/lib/art"
 import type { Listing } from "@/lib/types"
 import { ListingTile } from "./ListingTile"
 import { Button, SearchIcon, Section } from "./ui"
@@ -32,6 +32,9 @@ export function Market(props: {
   onQuery: (q: string) => void
   set: string
   onSet: (id: string) => void
+  /** Card ids the collector has an active watch for. */
+  watching?: ReadonlySet<string>
+  onWatch?: (l: Listing) => void
 }) {
   const [sort, setSort] = useState<Sort>("recent")
   const { listings, query, set } = props
@@ -123,7 +126,12 @@ export function Market(props: {
 
       <div className="grid">
         {shown.map((l) => (
-          <ListingTile key={l.listingId} l={l} />
+          <ListingTile
+            key={l.listingId}
+            l={l}
+            watching={props.watching?.has(cardId(l)) ?? false}
+            {...(props.onWatch ? { onWatch: props.onWatch } : {})}
+          />
         ))}
       </div>
     </Section>
