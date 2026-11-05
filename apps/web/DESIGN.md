@@ -26,7 +26,7 @@ Plain global CSS, no CSS modules or utility framework. Class names are short and
 1. **One accent.** `--accent` (a lime neon) marks the thing to do next: primary buttons, links, the active tab, the selected rule, focus states, step icons, tile badges. Nothing else is that color, and there is no second brand color.
 2. **Depth from lines, not shadows.** Surfaces are white at 2 to 8% over the canvas, separated by `--line`. Only the slabs (and the hero's floating ones) cast shadows, because they are objects.
 3. **Color means something.** A set's tone tints what belongs to that set. Green, yellow and red only ever mean ok, warn and bad.
-4. **Numbers in mono.** Prices, counts, wallet amounts, cert numbers, badges, tile footers and the model spend use `--mono`.
+4. **Numbers in mono.** Prices, counts, wallet amounts, cert numbers, badges, tile sellers and the model spend use `--mono`.
 5. **Pills for actions and tags, soft boxes for content.** Buttons, chips, pills and the market search are fully round; the hero search is `--radius-md`, like other fields; tiles and cards are `--radius-lg`, panels `--radius-xl`.
 6. **Honest and fictional.** The devnet notice is on every view, and all data is invented (see Content rules).
 
@@ -68,7 +68,7 @@ Inter for text and JetBrains Mono for numbers, both loaded by `next/font` in `ap
 | `--text-base` | 15px | Body, nav, tabs, tile titles |
 | `--text-md` | 14px | Buttons, fields, panel copy, notes |
 | `--text-sm` | 13px | Meta lines, the devnet notice, the status bar |
-| `--text-xs` | 12px | Eyebrows, chips, pills, badges, counts, tile footers |
+| `--text-xs` | 12px | Eyebrows, chips, pills, badges, counts, tile sellers |
 
 Weights: `--weight-medium` 500, `--weight-semibold` 600, `--weight-bold` 700, `--weight-black` 800. Line heights: `--leading-body` 1.5 (default), `--leading-lede` 1.55, `--leading-relaxed` 1.6, `--leading-display` 1.02. Tracking: `--tracking-caps` 0.08em for uppercase labels, `--tracking-heading` -0.02em, `--tracking-brand` -0.03em, `--tracking-display` -0.035em, `--tracking-snug` -0.01em.
 
@@ -125,7 +125,7 @@ Single-class blocks with no component: `.count` (a number in a tab), `.led` / `.
 | `Hero` | Signed out only. Hero art faded into the canvas, four tilted floating `Slab`s, the headline "Your grail card, on watch", a lede, a glass search field, a large primary and a large ring `Button` |
 | `Sets` and `SetCard` | Set filter chips (a glowing dot in the set's tone) and four banner cards (16:9 art, name, year and count, blurb). Hover tints the border with the tone and zooms the art |
 | `Market` | Set tabs with counts, a pill search and a sort select, then a grid of `ListingTile`s, skeleton tiles while loading |
-| `ListingTile` | A `Slab` on a sunken backdrop with a radial glow in the set's tone, then `Badge`, card name, meta line (year, set, number, edition, finish), mono price with a warn `Chip` when not in USD, and seller and age in faint mono |
+| `ListingTile` | A `Slab` on a sunken backdrop with a radial glow in the set's tone, then the card name with its `Badge`, meta line (year, set, number, edition, finish), and the mono price (with a warn `Chip` when not in USD) beside the seller in faint mono. Buy now and Watch sit over the art: shown on hover and on keyboard focus (`:focus-within`), and on touch screens after a tap on the art. Phones show Buy now only. A listing the collector owns shows an ok `Pill`, "In your wallet", instead |
 | `Slab` | The graded card in its case. See below |
 | `HowItWorks` | Signed out only. Four step cards: a 48px line icon in the accent, "Step n" in mono caps, a title and a sentence |
 | `StatusBar` | Fixed glass bar at the bottom: wordmark, "A study project", LEDs for payments and the agent, the model spend in mono, a warn chip in read-only mode |

@@ -1,4 +1,4 @@
-import type { Money } from "./types"
+import type { Listing, Money } from "./types"
 
 const digits = (c: Money["currency"]) => (c === "JPY" ? 0 : 2)
 
@@ -35,3 +35,11 @@ const labels: Record<string, string> = {
   reverse_holo: "Reverse holo"
 }
 export const label = (v: string) => labels[v] ?? v
+
+/** The finish after the edition, as a tile and a want say it: "1st edition holo", "Unlimited". */
+export const variant = (l: Pick<Listing, "edition" | "finish">) =>
+  `${label(l.edition)}${l.finish === "non_holo" ? "" : ` ${label(l.finish).toLowerCase()}`}`
+
+/** A plain-language want for a watch on this card, to seed the New watch form from a tile. */
+export const watchWant = (l: Listing) =>
+  `${l.cardName}, ${l.setName} #${l.cardNumber}, ${variant(l)}, grade ${l.grade} or better, up to ${money(l.price)}`

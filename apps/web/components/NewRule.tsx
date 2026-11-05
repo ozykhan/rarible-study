@@ -19,10 +19,12 @@ const EXAMPLES = [
 /**
  * Plain language in, a watch rule out. The model fills the fields; code maps
  * names to catalog ids and asks when something is unclear. Nothing is saved
- * until the collector confirms. Styles: styles/desk.css (.draft, .facts, .questions).
+ * until the collector confirms. `seed` fills the text box, for example from a
+ * tile's Watch button; give the component a new key to apply a new seed.
+ * Styles: styles/desk.css (.draft, .facts, .questions).
  */
-export function NewRule(props: { token: string; onCreated: (rule: Rule, note: string) => void }) {
-  const [want, setWant] = useState("")
+export function NewRule(props: { token: string; seed?: string; onCreated: (rule: Rule, note: string) => void }) {
+  const [want, setWant] = useState(props.seed ?? "")
   const [draft, setDraft] = useState<Draft | null>(null)
   const [maxPrice, setMaxPrice] = useState("")
   const [budget, setBudget] = useState("")
@@ -73,6 +75,8 @@ export function NewRule(props: { token: string; onCreated: (rule: Rule, note: st
   return (
     <Panel title="New watch rule">
       <textarea
+        id="new-rule-want"
+        aria-label="Describe the card you want"
         value={want}
         onChange={(e) => setWant(e.target.value)}
         placeholder={EXAMPLES[0]}
