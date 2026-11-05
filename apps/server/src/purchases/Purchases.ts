@@ -164,11 +164,17 @@ export const PurchasesLive = Layer.effect(
         return { redFlags: redFlagsFor(listing, facts[0]), live: live[0]?.n ?? 0 }
       })
 
-    /** Executing and executed purchases today (UTC) paid from this wallet, in USD cents. */
-    const spentToday = (wallet: string | null) =>
+    /**
+     * Executing and executed purchases today (UTC) paid from this wallet, in
+     * USD cents. "rules" counts only purchases made for watch rules, which is
+     * what the rule and auto-buy cap counted before direct buys existed;
+     * "all" adds the wallet's direct buys.
+     */
+    const spentToday = (wallet: string | null, scope: "rules" | "all") =>
       sql<{ readonly total: number }>`
         SELECT coalesce(sum(price_usd_cents), 0)::float8 AS total FROM purchases
         WHERE buyer_wallet IS NOT DISTINCT FROM ${wallet}
+          AND (${scope} = 'all' OR rule_id IS NOT NULL)
           AND status IN ('executing', 'executed')
           AND executing_at >= date_trunc('day', now() AT TIME ZONE 'utc') AT TIME ZONE 'utc'`.pipe(
         Effect.map((rows) => rows[0]?.total ?? 0)
@@ -188,8 +194,8 @@ export const PurchasesLive = Layer.effect(
         const onRule = yield* sql<{ readonly total: number }>`
           SELECT coalesce(sum(price_minor), 0)::float8 AS total FROM purchases
           WHERE rule_id = ${rule.id} AND status IN ('executing', 'executed')`
-        // Direct buys from the same wallet count toward the same daily cap.
-        const today = yield* spentToday(rule.ownerWallet)
+        // Rule purchases only, as before: a direct buy leaves the agent's daily room as it was.
+        const today = yield* spentToday(rule.ownerWallet, "rules")
         const approval = rule.mode === "auto" ? yield* activeApproval(rule.id) : null
         const serverCap = Math.round(config.purchaseDailyCapUsd * 100)
         const authorization: Authorization = collectorApproved
@@ -252,7 +258,7 @@ export const PurchasesLive = Layer.effect(
           redFlags,
           readOnly: config.readOnly,
           otherLivePurchases: live,
-          committedTodayUsdCents: yield* spentToday(buyerWallet),
+          committedTodayUsdCents: yield* spentToday(buyerWallet, "all"),
           dailyCapUsdCents: Math.round(config.purchaseDailyCapUsd * 100),
           authorization: collectorApproved ? "collector_approved" : "none"
         })
