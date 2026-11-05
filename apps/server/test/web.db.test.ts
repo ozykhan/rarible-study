@@ -1,5 +1,5 @@
 /**
- * The wallet page's API end to end, the way the browser uses it: sign in with
+ * The web app's API end to end, the way the browser uses it: sign in with
  * a wallet signature, create a rule, get test dUSD, sign the allowance
  * transaction, then sign one purchase and see it paid on the (in-process)
  * chain. Requests go straight into the router as web Requests.

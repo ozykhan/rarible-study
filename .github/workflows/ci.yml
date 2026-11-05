@@ -49,7 +49,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm test
-      - name: Build the wallet page
+      - name: Build the web app
         run: pnpm --filter @slabwatch/web build
         env:
           NEXT_TELEMETRY_DISABLED: "1"

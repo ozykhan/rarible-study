@@ -137,3 +137,20 @@ A candidate change, not made: tell the agent that seller text addressed to autom
 
 - The live demo's model key is set by hand in the host's dashboard, so no session handles it.
 - Nothing measures the wallet flow beyond the tests; a devnet run of the browser script against the deployed API is the next check.
+
+## Marketplace first
+
+The web app went from one agent-first page to a marketplace with the agent as an extra: `/`, `/market`, `/listing/[id]` and `/agent`.
+
+### Decisions
+
+- **Buying never needs the agent.** A direct buy is a purchase with a `buyer_wallet` and no rule (migration `0004_direct_buy`; every row has one or the other). It runs its own policy, `checkDirectPurchase`: the rule purchase checks without the rule's fields and budget, and only the buyer's signature on that one purchase pays for it.
+- **Auto-buy is unchanged.** The rule and auto-buy daily cap still counts rule purchases only, so a direct buy leaves the agent's room as it was. The direct buy cap counts everything the wallet paid for today.
+- **An unsigned direct buy lapses after 10 minutes,** so a listing cannot be held by proposing and never signing. Asking again before then returns the same purchase, which covers a closed wallet popup.
+- **The market filters on the server, in memory.** It is a few hundred listings, so one query for all active ones and plain code keeps the page, the total, the set counts and the floor prices consistent. Search matches words from the vault record and the catalog, never the seller's title, which can claim a grade the slab does not have.
+- **A listing page outlives the sale.** `GET /listings/:id` answers for any status, so a shared link to a sold listing says it is sold.
+- **A watch is never edited.** There is no edit endpoint, so Change this watch saves a new watch with `POST /rules` and then pauses the old one. If the pause fails, the new watch stays saved and the page says the old one is still on.
+
+### Gotchas
+
+- Behind the `/api` prefix, `request.url` is only the path, without the query string, so the listings route reads `request.originalUrl`.

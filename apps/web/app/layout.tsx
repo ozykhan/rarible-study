@@ -9,7 +9,7 @@ const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", displ
 
 export const metadata: Metadata = {
   title: "Slabwatch",
-  description: "A study project: an AI shopping agent for a mock marketplace of graded cards, on Solana devnet."
+  description: "A study project: a mock marketplace of graded cards on Solana devnet, with an optional AI agent that watches for the card you want."
 }
 
 export const viewport: Viewport = { themeColor: "#080808", colorScheme: "dark" }
