@@ -70,7 +70,7 @@ export function NewRule(props: { token: string; onCreated: (rule: Rule, note: st
   const priceGiven = Number(maxPrice) > 0
   const questions = (draft?.draft.questions ?? []).filter((q) => !(priceGiven && q === PRICE_QUESTION))
   return (
-    <section className="card">
+    <section className="panel">
       <h2>New watch rule</h2>
       <textarea
         value={want}
