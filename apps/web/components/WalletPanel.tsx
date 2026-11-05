@@ -2,14 +2,14 @@
 
 import { useWallet } from "@solana/wallet-adapter-react"
 import { useState } from "react"
-import { dusd, explorerTx } from "@/lib/format"
+import { dusd, explorerAddress, explorerTx, short } from "@/lib/format"
 import type { Funds, Status } from "@/lib/types"
 import { useAction } from "@/lib/useAction"
 import { approveAllowance, getTestDusd } from "@/lib/wallet"
 import { Button, Panel } from "./ui"
 
 /**
- * The collector's dUSD and what Slabwatch may spend from it. The allowance is
+ * The collector's dUSD, what Slabwatch may spend from it, and the address. The allowance is
  * an SPL token approval to Slabwatch's delegate, signed in the wallet; the
  * chain itself stops the delegate from spending more than that.
  * Styles: styles/ui.css (.panel) and styles/desk.css (.facts, .row).
@@ -48,6 +48,16 @@ export function WalletPanel(props: { token: string; status: Status; funds: Funds
         <dd>{funds ? dusd(funds.balanceUnits) : "…"}</dd>
         <dt>Slabwatch may spend</dt>
         <dd>{funds ? dusd(funds.allowanceUnits) : "…"}</dd>
+        {funds && (
+          <>
+            <dt>Address</dt>
+            <dd>
+              <a href={explorerAddress(funds.wallet)} target="_blank" rel="noreferrer">
+                {short(funds.wallet, 4)}
+              </a>
+            </dd>
+          </>
+        )}
       </dl>
       <div className="row">
         <Button onClick={faucet} disabled={busy !== null || props.status.readOnly}>

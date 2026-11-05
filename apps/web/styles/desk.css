@@ -1,13 +1,92 @@
 /*
- * The signed-in desk: a rail of panels on the left (WalletPanel, NewRule,
- * RuleList) and the selected rule on the right (RuleView).
+ * /agent: the page head, then three columns. The rail holds the watches
+ * (RuleList), the wallet (WalletPanel) and what the agent may do
+ * (AgentLimits); the middle holds the selected watch (RuleView); the chat
+ * column holds the watch as a conversation (RuleChat) and the form that
+ * changes it (NewRule). Under 1200px the chat column moves under the watch;
+ * under 900px everything stacks in markup order: watches, watch, chat,
+ * wallet, limits. Also the panel contents shared with NewRule and the
+ * listing page: .row, .facts, .seller-text.
  */
 
-.layout {
+.agent-page.section {
+  padding-top: var(--space-8);
+}
+.agent-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-6);
+  margin-bottom: var(--space-6);
+}
+.agent-head h1 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-title);
+  font-weight: var(--weight-black);
+  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-display);
+}
+.agent-head h1 .pill {
+  letter-spacing: normal;
+}
+.agent-head a.btn {
+  text-decoration: none;
+}
+.agent-lede {
+  max-width: 640px;
+  margin: var(--space-2-5) 0 0;
+  font-size: var(--text-xl);
+  line-height: var(--leading-lede);
+  color: var(--ink-soft);
+}
+
+/* The rail's panels sit in rows beside the watch; the last row takes up the rest of its height. */
+.agent-desk {
   display: grid;
-  grid-template-columns: var(--rail) minmax(0, 1fr);
-  gap: var(--space-4);
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr) minmax(300px, 360px);
+  grid-template-rows: auto auto 1fr;
+  grid-template-areas:
+    "list center chat"
+    "wallet center chat"
+    "limits center chat";
+  column-gap: var(--space-4);
   align-items: start;
+}
+.agent-list {
+  grid-area: list;
+}
+.agent-wallet {
+  grid-area: wallet;
+}
+.agent-limits {
+  grid-area: limits;
+}
+.agent-center {
+  grid-area: center;
+  min-width: 0;
+}
+.agent-chat {
+  grid-area: chat;
+  min-width: 0;
+}
+.agent-wallet .facts dd {
+  text-align: right;
+}
+
+/* A panel's title with a count or a short line at its right. */
+.panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.panel .panel-head h2 {
+  margin: 0;
 }
 
 .empty-rule {
@@ -63,19 +142,46 @@
 
 .rule-head {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: var(--space-3);
 }
+.rule-head > div {
+  flex: 1 1 320px;
+  min-width: 0;
+}
 .rule-head h2 {
   font-size: var(--text-2xl);
-  margin-bottom: var(--space-1);
+  margin-bottom: var(--space-2);
 }
-/* A titled block inside the rule: matches, purchases, auto-buy, agent runs. */
+/* The watch's conditions, two pairs to a line where there is room. */
+.rule-facts {
+  grid-template-columns: max-content minmax(0, 1fr) max-content minmax(0, 1fr);
+  margin-top: var(--space-4);
+  padding-top: var(--space-3-5);
+  border-top: 1px solid var(--line);
+}
+/* A titled block inside a panel: matches, purchases. */
 .block {
   margin-top: var(--space-4);
   padding-top: var(--space-3-5);
   border-top: 1px solid var(--line);
+}
+
+/* Found for you: purchases waiting for a signature, in a warn tint, above the matches. */
+.pending {
+  margin-bottom: var(--space-3);
+  padding: var(--space-3);
+  background: color-mix(in srgb, var(--warn) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warn) 55%, transparent);
+  border-radius: var(--radius-lg);
+}
+.pending .purchase:last-child {
+  margin-bottom: 0;
+}
+.rule-found .empty {
+  padding: var(--space-6) 0;
 }
 
 /* DecisionRow: a listing the matcher judged, with its thumbnail, price, seller text and reasons. */
@@ -110,6 +216,22 @@
   justify-content: space-between;
   gap: var(--space-3);
 }
+/* The card's name opens its listing page; the grade badge sits beside it. */
+.decision-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-0-5);
+  font-weight: var(--weight-semibold);
+}
+.decision-title a {
+  color: var(--ink);
+  text-decoration: none;
+}
+.decision-title a:hover {
+  text-decoration: underline;
+}
 .listing .price {
   font-size: var(--text-lg);
 }
@@ -133,6 +255,105 @@
   white-space: pre-wrap;
 }
 
+/* ---------- Checked and skipped: SkippedRow ---------- */
+
+.skipped {
+  list-style: none;
+  margin: 0 0 var(--space-2);
+  padding: 0;
+}
+.skip {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-top: 1px dashed var(--line-strong);
+}
+.skip:first-child {
+  border-top: 0;
+}
+.thumb-sm {
+  width: 28px;
+}
+.skip-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-5);
+  min-width: 0;
+  font-size: var(--text-md);
+}
+.skip-when {
+  color: var(--faint);
+}
+
+/* ---------- RuleChat: your words on the right, the agent's runs on the left ---------- */
+
+.chat-lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2-5);
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+.bubble {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-width: 92%;
+  padding: var(--space-2-5) var(--space-3);
+  font-size: var(--text-md);
+  border-radius: var(--radius-lg);
+}
+.bubble.you {
+  align-self: flex-end;
+  background: var(--surface-solid);
+  border: 1px solid var(--line-strong);
+}
+.bubble.agent {
+  align-self: flex-start;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.bubble-who {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--muted);
+}
+.bubble .quote {
+  margin: 0;
+}
+.bubble-meta {
+  font-size: var(--text-xs);
+  color: var(--faint);
+  overflow-wrap: anywhere;
+}
+
+/* ---------- AgentLimits: a light, the permission and its state on each line ---------- */
+
+.limits {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2-5);
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+.limits li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-md);
+}
+.limits .led {
+  margin-right: 0;
+}
+
 /* ---------- RuleList ---------- */
 
 .rule-list {
@@ -142,8 +363,8 @@
 }
 .rule-item {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-0-5);
+  align-items: flex-start;
+  gap: var(--space-2-5);
   width: 100%;
   margin-bottom: var(--space-1-5);
   padding: 9px var(--space-3);
@@ -159,9 +380,55 @@
   border-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 5%, transparent);
 }
+.rule-item .led {
+  flex: none;
+  margin: 6px 0 0;
+}
+.rule-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-5);
+  min-width: 0;
+}
+.rules .row {
+  margin-bottom: 0;
+}
+
+@media (max-width: 1199px) {
+  .agent-desk {
+    grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr auto;
+    grid-template-areas:
+      "list center"
+      "wallet center"
+      "limits center"
+      "limits chat";
+  }
+}
 
 @media (max-width: 900px) {
-  .layout {
-    grid-template-columns: 1fr;
+  .agent-desk {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-template-areas: "list" "center" "chat" "wallet" "limits";
+  }
+  .rule-facts {
+    grid-template-columns: max-content minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 700px) {
+  .agent-page.section {
+    padding-top: var(--space-6);
+  }
+  .agent-head {
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+  }
+  .agent-head h1 {
+    font-size: var(--text-4xl);
+  }
+  .agent-lede {
+    font-size: var(--text-md);
   }
 }

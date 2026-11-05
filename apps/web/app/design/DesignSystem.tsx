@@ -11,15 +11,16 @@ import { HowItWorks } from "@/components/HowItWorks"
 import { ListingDetail } from "@/components/ListingDetail"
 import { ListingTile } from "@/components/ListingTile"
 import { Logo } from "@/components/Logo"
+import { AgentLimits } from "@/components/AgentLimits"
 import { RuleList } from "@/components/RuleList"
-import { DecisionRow, PurchaseRow } from "@/components/RuleView"
+import { DecisionRow, PurchaseRow, RuleChat, SkippedRow } from "@/components/RuleView"
 import { Slab, type SlabCard } from "@/components/Slab"
 import { SetCard } from "@/components/Sets"
 import { StatusBar } from "@/components/StatusBar"
 import { Badge, Button, Chip, Panel, Pill, Section } from "@/components/ui"
 import { SETS } from "@/lib/art"
 import { money } from "@/lib/format"
-import type { Decision, Listing, Purchase, Rule, Status } from "@/lib/types"
+import type { Decision, Listing, Purchase, Rule, RuleDetail, Status } from "@/lib/types"
 
 /*
  * Every token and component, rendered with the real components and fictional
@@ -217,6 +218,32 @@ const RULES: ReadonlyArray<Rule> = [
   rule("r1", "Ashen Wyrm, 1st edition holo, grade 9 or better", "active", "confirm", 180000),
   rule("r2", "any water creature from Tidewild, holo", "paused", "auto", 50000)
 ]
+
+const SKIPPED: ReadonlyArray<Decision> = [
+  { ...DECISION, listingId: "SAMPLE-2", verdict: "reject", decidedAt: minutesAgo(12), reasons: ["Priced in EUR, above the top price."], listing: LISTINGS[1]! },
+  { ...DECISION, listingId: "SAMPLE-4", verdict: "reject", decidedAt: minutesAgo(40), reasons: ["Price far below market: a red flag."], listing: LISTINGS[3]! }
+]
+
+/** A watch with one agent run, as RuleChat shows it. */
+const DETAIL: RuleDetail = {
+  rule: RULES[0]!,
+  approvals: [],
+  decisions: [DECISION, ...SKIPPED],
+  purchases: [],
+  runs: [
+    {
+      id: "run1",
+      listingId: "SAMPLE-1",
+      trigger: "new_match",
+      status: "done",
+      outcome: "proposed",
+      modelCalls: 3,
+      toolCalls: 4,
+      startedAt: minutesAgo(4),
+      finalText: "It matches every condition and the price is under your limit. I proposed the buy; it waits for your signature."
+    }
+  ]
+}
 
 const STATUS: Status = {
   network: "devnet",
@@ -474,9 +501,14 @@ export function DesignSystem() {
           </div>
         </Section>
 
-        <Section eyebrow="Components" title="Panels on the desk">
+        <Section
+          eyebrow="Components"
+          title="Panels on the agent page"
+          lede="The rail (RuleList, the wallet, AgentLimits), the selected watch's Found for you and Checked and skipped, and RuleChat."
+        >
           <div className="ds-two">
             <div>
+              <RuleList rules={RULES} selected="r1" onSelect={() => {}} onNew={() => {}} onSignOut={() => {}} />
               <Panel title="Wallet">
                 <dl className="facts">
                   <dt>dUSD balance</dt>
@@ -489,30 +521,53 @@ export function DesignSystem() {
                 </div>
                 <p className="muted small">Slabwatch pays the network fee, so the wallet needs no SOL.</p>
               </Panel>
-              <RuleList rules={RULES} selected="r1" onSelect={() => {}} onSignOut={() => {}} />
+              <AgentLimits status={STATUS} rules={RULES} />
             </div>
-            <Panel>
-              <p className="note">3 matches and 1 to review among the listings right now.</p>
-              <div className="questions">
-                <strong>Before you save, the parser asks:</strong>
-                <ul>
-                  <li>What is the most you want to pay?</li>
-                </ul>
-              </div>
-              <div className="block">
-                <h3>Match (1)</h3>
+            <div>
+              <Panel className="rule-found">
+                <div className="panel-head">
+                  <h2>Found for you</h2>
+                  <span className="muted small">Matches, and listings the agent wants you to look at</span>
+                </div>
+                <p className="note">3 matches and 1 to review among the listings right now.</p>
+                <div className="pending">
+                  <h3>Waiting for your signature</h3>
+                  <PurchaseRow p={PURCHASES[0]!}>
+                    <Button>Sign and pay</Button>
+                  </PurchaseRow>
+                </div>
                 <DecisionRow d={DECISION}>
-                  <Button>Buy (sign)</Button>
+                  <Button>Buy now</Button>
                   <Button variant="secondary">Ask the agent</Button>
                 </DecisionRow>
-              </div>
-              <div className="block">
-                <h3>Purchases</h3>
-                {PURCHASES.map((p) => (
-                  <PurchaseRow key={p.id} p={p} />
-                ))}
-              </div>
-            </Panel>
+                <div className="block">
+                  <h3>Purchases</h3>
+                  {PURCHASES.slice(1).map((p) => (
+                    <PurchaseRow key={p.id} p={p} />
+                  ))}
+                </div>
+              </Panel>
+              <Panel className="rule-skipped">
+                <div className="panel-head">
+                  <h2>Checked and skipped</h2>
+                  <span className="muted small">Why each listing did not match</span>
+                </div>
+                <ul className="skipped">
+                  {SKIPPED.map((d) => (
+                    <SkippedRow key={d.listingId} d={d} />
+                  ))}
+                </ul>
+              </Panel>
+              <RuleChat detail={DETAIL} status={STATUS} />
+              <Panel title="New watch">
+                <div className="questions">
+                  <strong>Before you save, the parser asks:</strong>
+                  <ul>
+                    <li>What is the most you want to pay?</li>
+                  </ul>
+                </div>
+              </Panel>
+            </div>
           </div>
         </Section>
 
