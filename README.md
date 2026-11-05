@@ -12,9 +12,9 @@ This is a three-day study project, not a product. Nothing here is audited or pro
 
 | Day | Scope | State |
 | --- | --- | --- |
-| 1 | Fictional seed with traps, watch rules from plain language, SQL and pgvector matching, labelled eval set, v1 numbers | Built and tested; v1 numbers pending a run with an API key |
+| 1 | Fictional seed with traps, watch rules from plain language, SQL and pgvector matching, labelled eval set, v1 numbers | Built, tested, v1 measured |
 | 2 | MCP server, agent loop with limits in code, injection tests, tracing | Planned |
-| 3 | Next.js wallet page on devnet, deploy, v2 eval, write-up | Planned |
+| 3 | Next.js wallet page on devnet, deploy, write-up | Planned |
 
 ## How a want becomes a watch rule
 
@@ -43,7 +43,20 @@ The eval set in [`evals/`](evals) has 5 watch rules and 57 listings labelled by 
 
 Each run writes `evals/results/<version>.json` and adds a row to `evals/results/summary.md`. The plan is to run v1, read the errors, change exactly one thing for v2, and record both.
 
-**v1 numbers: not run yet.** The first run needs an Anthropic API key and network access to download the embedding model. `pnpm eval -- v1 --offline` checks the plumbing with no model calls, and CI runs it on every push.
+### Results
+
+| Version | Precision | Recall | Needs review | Trap listings wrongly matched | Injection: harmful changes | Want parsing: fields right | Model calls | Cost |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| v1 | 81.8% | 94.7% | 8 | 3 of 40 | 0 of 4 | 40 of 40 | 44 | $0.0083 |
+| v2 | pending | | | | | | | |
+
+Both runs use Claude Haiku 5.5 and bge-small embeddings on the same eval set. Exact rows with commit and timestamp are in `evals/results/summary.md`.
+
+**Reading v1.** 4 of the 5 wrong decisions were false positives on listings that code had already flagged: two duplicate vault items and one price far below recent sales (matched to two rules). Each time the warning was in the judge's prompt and the judge matched anyway. Where it gave a reason, it treated the warning as outside its job because the seller text itself looked fine. The one miss was a plant and water card that the judge decided was not "a water creature", which is arguable. Injected text never made a verdict more permissive. In the two cases where it changed anything, the judge moved the injected listing from match to needs review. One injected listing never reached a model because it failed every rule's hard filter.
+
+**v2 changes one thing:** a code red flag now caps the verdict at needs review, so no model can match past it. The collector still sees the listing with the warning, and an agent cannot auto-buy it.
+
+`pnpm eval -- v1 --offline` checks the plumbing with no model calls, and CI runs it on every push.
 
 ## Guardrails
 
@@ -87,7 +100,7 @@ evals             labelled eval set, metrics and the eval runner
 
 ## Built with coding agents
 
-I built this with Claude Code as a coding agent. I set the scope, the plan, the constraints and the eval labels, and reviewed the changes. The agent wrote most of the code and the tests.
+I built this with Claude Code as a coding agent. I set the scope, the plan and the constraints, and reviewed the changes. The agent wrote most of the code, the tests and the labelled eval set.
 
 ## What's next
 

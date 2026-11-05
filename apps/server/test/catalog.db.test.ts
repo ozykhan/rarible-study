@@ -3,7 +3,7 @@
  * service container in CI), in a throwaway schema, with the hash embedder so
  * no model is downloaded.
  */
-import { passesHardChecks, type HardCriteria, type ListingView, type RedFlag, type TrapKind } from "@slabwatch/domain"
+import { money, passesHardChecks, type HardCriteria, type ListingView, type RedFlag, type TrapKind, type WatchRule } from "@slabwatch/domain"
 import { cards, generateSeed, makeRng, sellers, sets } from "@slabwatch/seed"
 import { expect, layer } from "@effect/vitest"
 import { Effect, Layer } from "effect"
@@ -11,6 +11,7 @@ import { SqlClient } from "effect/sql/SqlClient"
 import { CatalogRepo } from "../src/catalog/CatalogRepo.ts"
 import { migrate } from "../src/db/Database.ts"
 import { BaseLive, ReposLive } from "../src/layers.ts"
+import { Matcher, MatcherLive, pipelineV1, pipelineV2 } from "../src/matcher/Matcher.ts"
 import { redFlagsFor } from "../src/matcher/redFlags.ts"
 
 const schema = `test_catalog_${process.pid}`
@@ -33,7 +34,7 @@ const Seeded = Layer.effectDiscard(
   })
 )
 
-const TestLive = Seeded.pipe(Layer.provideMerge(ReposLive), Layer.provideMerge(BaseLive))
+const TestLive = Layer.mergeAll(Seeded, MatcherLive).pipe(Layer.provideMerge(ReposLive), Layer.provideMerge(BaseLive))
 
 const randomRules = (n: number): ReadonlyArray<HardCriteria> => {
   const rng = makeRng(7)
@@ -98,5 +99,27 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("catalog 
       }
       expect(checked).toBeGreaterThan(10)
     }))
-})
 
+  it.effect("v2 caps red-flagged listings at needs_review, where v1 only warned", () =>
+    Effect.gen(function* () {
+      const matcher = yield* Matcher
+      const rule: WatchRule = {
+        id: "T1",
+        ownerWallet: null,
+        rawWant: "anything",
+        hard: { setId: null, cardId: null, edition: "any", finish: "any", graders: [], minGrade: 1, maxPrice: money(100_000_000, "USD") },
+        softDescription: null,
+        budget: money(100_000_000, "USD"),
+        mode: "confirm",
+        status: "active"
+      }
+      const stored = { rule, softEmbedding: null }
+      const v1 = yield* matcher.evaluate(stored, { ...pipelineV1, judge: "never" })
+      const v2 = yield* matcher.evaluate(stored, { ...pipelineV2, judge: "never" })
+      const flagged = v2.filter((d) => d.redFlags.length > 0)
+      expect(flagged.length).toBeGreaterThan(10)
+      expect(v1.filter((d) => d.redFlags.length > 0).every((d) => d.verdict === "match")).toBe(true)
+      expect(flagged.every((d) => d.verdict === "needs_review")).toBe(true)
+      expect(v2.filter((d) => d.redFlags.length === 0).every((d) => d.verdict === "match")).toBe(true)
+    }))
+})

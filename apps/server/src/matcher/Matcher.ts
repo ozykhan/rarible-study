@@ -22,8 +22,12 @@ export interface PipelineOptions {
   readonly similarityFloor: number
   /** Soft rules: at most this many candidates, best first, go to the judge. */
   readonly maxJudged: number
-  /** Reject on any code red flag, instead of passing the flag on as a warning. */
-  readonly redFlagsReject: boolean
+  /**
+   * What a code red flag does. "warn" passes it to the judge as a warning;
+   * "review" caps the verdict at needs_review, so no model can match past it;
+   * "reject" drops the listing before the judge.
+   */
+  readonly redFlags: "warn" | "review" | "reject"
   readonly judge: "always" | "soft_only" | "never"
 }
 
@@ -32,9 +36,18 @@ export const pipelineV1: PipelineOptions = {
   similarityAgainst: "listing",
   similarityFloor: 0.3,
   maxJudged: 20,
-  redFlagsReject: false,
+  redFlags: "warn",
   judge: "always"
 }
+
+/**
+ * v2 changes one thing. In v1, four of the five wrong decisions were listings
+ * that code had flagged (a duplicate vault item, a price far below recent
+ * sales) and the judge matched anyway. Now a red flag caps the verdict at
+ * needs_review: the collector still sees the listing, but no model can turn
+ * it into a match, and an agent cannot auto-buy it.
+ */
+export const pipelineV2: PipelineOptions = { ...pipelineV1, version: "v2", redFlags: "review" }
 
 export class Matcher extends Context.Service<
   Matcher,
@@ -128,7 +141,7 @@ export const MatcherLive = Layer.effect(
           if (fieldChecks.some((c) => !c.pass)) {
             return { ...base, verdict: "reject", decidedAt: "hard_filter", judge: null, reasons: ["field checks failed"] } satisfies MatchDecision
           }
-          if (options.redFlagsReject && redFlags.length > 0) {
+          if (options.redFlags === "reject" && redFlags.length > 0) {
             return { ...base, verdict: "reject", decidedAt: "red_flags", judge: null, reasons: flagReasons } satisfies MatchDecision
           }
           if (similarity !== null && (similarity < options.similarityFloor || rank >= options.maxJudged)) {
@@ -141,8 +154,9 @@ export const MatcherLive = Layer.effect(
             } satisfies MatchDecision
           }
           const useJudge = options.judge === "always" || (options.judge === "soft_only" && soft)
+          const flagCap: Verdict = options.redFlags === "review" && redFlags.length > 0 ? "needs_review" : "match"
           if (!useJudge) {
-            return { ...base, verdict: "match", decidedAt: "hard_filter", judge: null, reasons: ["all fields match", ...flagReasons] } satisfies MatchDecision
+            return { ...base, verdict: flagCap, decidedAt: "hard_filter", judge: null, reasons: ["all fields match", ...flagReasons] } satisfies MatchDecision
           }
 
           // Stage 4: the judge, only for what code cannot check.
@@ -167,7 +181,7 @@ export const MatcherLive = Layer.effect(
               reasons: [`judge unavailable: ${judged.error}`, ...flagReasons]
             } satisfies MatchDecision
           }
-          let verdict: Verdict = stricter("match", judged.verdict)
+          let verdict: Verdict = stricter(flagCap, judged.verdict)
           if (soft && judged.softMatch === false) verdict = "reject"
           return {
             ...base,
