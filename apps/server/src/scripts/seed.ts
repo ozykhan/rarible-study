@@ -17,9 +17,18 @@ const program = Effect.gen(function* () {
     return
   }
   const data = generateSeed()
-  yield* repo.insertCatalog(sellers)
-  yield* repo.insertSales(data.sales)
-  yield* repo.insertListings(data.listings)
+  // Embedding happens before the inserts, so one transaction keeps a run that
+  // dies part way (out of memory, say) from leaving half a catalog behind.
+  yield* sql.withTransaction(
+    Effect.gen(function* () {
+      // Only the seed writes sales. Rows here without seed listings come from
+      // an older seed that was killed before it used a transaction.
+      yield* sql`DELETE FROM sales`
+      yield* repo.insertCatalog(sellers)
+      yield* repo.insertSales(data.sales)
+      yield* repo.insertListings(data.listings)
+    })
+  )
   yield* Effect.logInfo(`seeded ${data.listings.length} listings and ${data.sales.length} past sales`)
 })
 
