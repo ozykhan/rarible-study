@@ -134,7 +134,7 @@ export function RuleView({ state, status }: { state: RuleState; status: Status }
   const pending = detail.purchases.filter((p) => p.status === "proposed")
   const canTrade = !status.readOnly
   const auto = detail.approvals[0]
-  const checked = detail.decisions.length
+  const judged = detail.decisions.length
 
   return (
     <>
@@ -154,7 +154,7 @@ export function RuleView({ state, status }: { state: RuleState; status: Status }
                   : "asks before buying"}
               </Pill>
               <Pill>
-                {checked >= 60 ? "60+" : checked} listing{checked === 1 ? "" : "s"} checked
+                {judged >= 60 ? "60+" : judged} listing{judged === 1 ? "" : "s"} judged
               </Pill>
             </div>
           </div>
