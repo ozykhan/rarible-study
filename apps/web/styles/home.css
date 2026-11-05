@@ -1,0 +1,143 @@
+/*
+ * The home page's own blocks: Graders (three label cards), AgentBand (the
+ * quiet optional band) and Footer. The hero is in hero.css, the set cards in
+ * sets.css and the tiles in market.css.
+ */
+
+/* ---------- Graders: a small slab label in each grader's colors, then its name. ---------- */
+
+.graders {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+.grader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3-5);
+  padding: var(--space-3-5);
+  background: var(--surface-subtle);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+/* The label colors come from .grader-<code> in slab.css. */
+.grader-label {
+  flex: none;
+  width: 64px;
+  padding: var(--space-1-5) var(--space-2);
+  font: var(--weight-bold) var(--text-xs) var(--mono);
+  text-align: center;
+  color: var(--label-ink);
+  background: var(--label-bg);
+  border-top: 4px solid var(--stripe);
+  border-radius: var(--radius-xs);
+}
+.grader-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-5);
+}
+
+/* ---------- AgentBand: one quiet row, a secondary button, no accent fill. ---------- */
+
+.agent-band {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--space-6);
+  background: var(--surface-subtle);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+}
+.agent-band-icon {
+  color: var(--accent);
+}
+.agent-band-text {
+  flex: 1 1 420px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+}
+.agent-band-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.agent-band-title h2 {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+}
+.agent-band-text p {
+  margin: 0;
+  font-size: var(--text-md);
+  line-height: var(--leading-lede);
+  color: var(--muted);
+}
+.agent-band-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+/* ---------- Footer ---------- */
+
+.footer {
+  max-width: calc(var(--wide) + 2 * var(--gutter));
+  margin: 0 auto;
+  padding: var(--space-12) var(--gutter) var(--space-8);
+  border-top: 1px solid var(--line);
+}
+.footer-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-12);
+}
+.footer-about {
+  flex: 1 1 260px;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2-5);
+}
+.footer-about .brand-mini {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-black);
+  letter-spacing: var(--tracking-brand);
+}
+.footer-col {
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2-5);
+  font-size: var(--text-md);
+}
+.footer-col .eyebrow {
+  margin: 0;
+}
+.footer-col a {
+  color: var(--ink-soft);
+  text-decoration: none;
+}
+.footer-col a:hover {
+  color: var(--ink);
+}
+.footer-note {
+  margin: var(--space-8) 0 0;
+  padding-top: var(--space-5);
+  font-size: var(--text-sm);
+  color: var(--faint);
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 900px) {
+  .graders {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 700px) {
+  .footer-row {
+    gap: var(--space-8);
+  }
+}

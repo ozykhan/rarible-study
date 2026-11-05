@@ -1,8 +1,8 @@
-/* HowItWorks: four step cards, each a line icon in the accent, a step number, a title and a sentence. */
+/* HowItWorks: three step cards, each a line icon in the accent, a step number, a title and a sentence. */
 
 .how-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-3);
 }
 .how {

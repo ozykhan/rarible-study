@@ -1,6 +1,6 @@
 # Slabwatch design system
 
-The wallet page is a dark collectibles marketplace: a near-black canvas, thin 1px borders over faintly lit surfaces, one neon accent, and graded cards drawn in CSS as slabs around generated art. Everything shown is fictional (sets, creatures, graders, sellers) and everything runs on Solana devnet.
+Slabwatch is a dark marketplace for graded cards: a near-black canvas, thin 1px borders over faintly lit surfaces, one neon accent, and graded cards drawn in CSS as slabs around generated art. Everything shown is fictional (sets, creatures, graders, sellers) and everything runs on Solana devnet.
 
 This file is the map. The values live in [`styles/tokens.css`](styles/tokens.css), and [`/design`](app/design/DesignSystem.tsx) renders every token and component with sample data, no backend needed (`pnpm --filter @slabwatch/web dev`, then open `http://localhost:3000/design`).
 
@@ -11,15 +11,27 @@ This file is the map. The values live in [`styles/tokens.css`](styles/tokens.css
 | `styles/tokens.css` | Every design token: color, type, space, radius, shadow, motion, layout |
 | `styles/base.css` | Element defaults, text utilities (`.muted`, `.small`, `.mono`, `.error`, `.hide-sm`), form fields |
 | `styles/ui.css` | Shared building blocks: button, chip, pill, badge, count, LED, section, panel, note |
-| `styles/<area>.css` | One file per page area, named after its component: `header`, `status-bar`, `hero`, `sets`, `market`, `slab`, `how-it-works`, `desk`, `checkout` |
+| `styles/<area>.css` | One file per page area, named after its component: `header`, `status-bar`, `hero`, `sets`, `market`, `slab`, `how-it-works`, `desk`, `checkout`, and `home` for the home page's own blocks (`Graders`, `AgentBand`, `Footer`) |
 | `app/globals.css` | Only the import order of the files above |
 | `components/ui/` | React components for the building blocks: `Button`, `Chip`, `Pill`, `Badge`, `Section`, `Panel`, `SearchIcon` |
-| `components/` | Page components: `Header`, `DevnetNotice`, `Hero`, `Sets` (and `SetCard`), `Market`, `ListingTile`, `Checkout`, `Slab`, `HowItWorks`, `StatusBar`, and the signed-in desk: `WalletPanel`, `NewRule`, `RuleList`, `RuleView` (with `DecisionRow`, `PurchaseRow`) |
+| `components/` | Page components: `Shell`, `Header`, `DevnetNotice`, `Hero`, `Sets` (and `SetCard`), `Market`, `ListingTile`, `Checkout`, `Slab`, `HowItWorks`, `Graders`, `AgentBand`, `Footer`, `StatusBar`, and the agent's desk: `WalletPanel`, `NewRule`, `RuleList`, `RuleView` (with `DecisionRow`, `PurchaseRow`) |
+| `lib/account.tsx` | `AccountProvider` and `useAccount()`: the wallet session, backend status, listings and market stats, the signed-in wallet's rules, funds and purchases, and the one checkout dialog, shared by every route |
+| `app/(shop)/` | The marketplace routes, all inside `Shell`: `/` (home), `/market`, `/agent` |
 | `lib/art.ts` | The four sets (name, year, blurb, tone), grade words, grader names, art paths |
 | `public/art/` | Generated images: 40 cards, 4 set banners, the hero background |
-| `app/design/` | The `/design` reference page |
+| `app/design/` | The `/design` reference page, outside the shell |
 
 Plain global CSS, no CSS modules or utility framework. Class names are short and describe the thing (`.tile`, `.slab`, `.panel`, `.pill`), and modifiers are a second class (`.pill.ok`, `.tab.active`, `.btn-secondary`).
+
+### Routes
+
+| Route | What it shows |
+| --- | --- |
+| `/` | The home page, top to bottom: `Hero` with the market search, `Sets` as links, "On the market now" (the five newest `ListingTile`s), `HowItWorks`, `Graders`, `AgentBand`, `Footer` |
+| `/market` | `Sets` as filters, then `Market`. The set, search and sort live in the URL (`?set=`, `?q=`, `?sort=`), so the hero search and the popular searches land on a filtered market |
+| `/agent` | The optional agent. Signed out, a panel to connect and sign in; signed in, the desk: `WalletPanel`, `NewRule`, `RuleList`, `RuleView`. A tile's Watch opens it with `?watch=` and fills `NewRule` |
+
+`Shell` wraps every route in `app/(shop)/`: `Header`, `DevnetNotice`, the page, then `StatusBar`. Buy now opens the same `Checkout` from any route.
 
 ## Principles
 
@@ -98,7 +110,7 @@ The rhythm: 56px between sections (40px on a phone), 20px under a section title,
 
 `--wide` 1376px of content, centered, with `--gutter` 32px each side (16px on a phone). `--header-height` 72px (64px on a phone) and a fixed `--statusbar-height` 40px bar at the bottom; the body pads for it. Anchors land `--scroll-offset` 88px down. The market grid fills rows with tiles of at least `--tile-min` 230px. The signed-in desk is a `--rail` column (300 to 380px) of panels beside the selected rule. Header z-index `--z-header` 50, status bar `--z-statusbar` 40, and the checkout dialog `--z-dialog` 60. The wallet picker belongs to the wallet adapter (z-index 1040), so it opens over the checkout.
 
-Breakpoints (max-width, written in each stylesheet): **1100px** the hero keeps two of its four slabs and How it works goes two up; **900px** the desk stacks, set cards go two up, hero slabs fade to 35%; **700px** phone: smaller gutter and header, nav and the header chip hide, the market goes two up, How it works one up; **460px** set blurbs and the model spend hide.
+Breakpoints (max-width, written in each stylesheet): **1240px** the five newest on the home page wrap like the market grid; **1100px** the hero slabs shrink and How it works goes two up; **900px** the header links hide, the desk stacks, set cards go two up, graders stack; **700px** phone: smaller gutter, header and wordmark, the header chip and the Agent link hide, a round search button shows, the market goes two up (four of the five newest on the home page), How it works one up; **460px** set blurbs and the model spend hide.
 
 ## Components
 
@@ -110,7 +122,7 @@ Breakpoints (max-width, written in each stylesheet): **1100px** the hero keeps t
 | `Chip` | `tone`: `warn` or none | A small pill with a tinted fill | Flagging a condition: "devnet", "read-only demo", a price in EUR or JPY |
 | `Pill` | `tone`: `ok`, `warn`, `bad` or none | A small outlined pill | A status: rule "active" (ok), "auto-buy" (warn), purchase "executed" (ok), "refused" or "failed" (bad), anything neutral without a tone |
 | `Badge` | children | Mono, uppercase, accent outline, square-ish | The grader and grade on a tile ("NVG 10") |
-| `Section` | `id`, `eyebrow`, `title`, `className` | A full-width band with an optional uppercase eyebrow over a 28px title | Each band of the page; `id` is the header's anchor |
+| `Section` | `id`, `eyebrow`, `title`, `lede`, `aside`, `className` | A full-width band with an optional uppercase eyebrow over a 28px title, an optional muted line under it, and an optional `aside` at the right of the title row | Each band of the page; `id` is the header's anchor. `aside` holds a `.section-link` ("All sets", "See all listings") |
 | `Panel` | `title`, `className` | A bordered box on `--surface`, 18px padding, 16px bold title | Everything on the signed-in desk. An `h3` inside renders as an uppercase label |
 | `SearchIcon` | none | 16px magnifier in the current color | Search fields |
 
@@ -120,16 +132,20 @@ Single-class blocks with no component: `.count` (a number in a tab), `.led` / `.
 
 | Component | What it is |
 | --- | --- |
-| `Header` | Sticky glass bar: `Logo` and wordmark, section links, a warn `Chip` "devnet", and the wallet adapter's button restyled as an accent pill |
+| `Shell` | Every marketplace route: `AccountProvider` around `Header`, `DevnetNotice`, the page and `StatusBar` |
+| `Header` | Sticky glass bar on every route: `Logo` and wordmark, the links (Market, Sets, Graders, How buying works; the current one in `--ink`), a warn `Chip` "devnet", the optional Agent link with its spark icon, the dUSD balance in mono once signed in, and the wallet adapter's button restyled as an accent pill. On a phone the links, the chip and the Agent link fold away and a 44px round search button links to `/market` |
 | `DevnetNotice` | The line under the header on every view: "Solana devnet only." in warn, then the fictional data and no-real-funds warning |
-| `Hero` | Signed out only. Hero art faded into the canvas, four tilted floating `Slab`s, the headline "Your grail card, on watch", a lede, a glass search field, a large primary and a large ring `Button` |
-| `Sets` and `SetCard` | Set filter chips (a glowing dot in the set's tone) and four banner cards (16:9 art, name, year and count, blurb). Hover tints the border with the tone and zooms the art |
+| `Hero` | The home page's opening. Hero art faded into the canvas behind two columns: an eyebrow "Live on devnet", the headline "Graded cards, ready to buy.", a lede, a glass search field with a primary Search `Button`, popular searches as outlined `.chip-link`s, and three live numbers in mono (listings now, sets, lowest price). On the right, two tilted floating `Slab`s |
+| `Sets` and `SetCard` | Four banner cards (16:9 art, name, year, "N listed · from X dUSD", blurb). Hover tints the border with the tone and zooms the art. On `/market` the cards filter and set chips (a glowing dot in the set's tone) sit above them; on the home page each card links to its set on `/market`, with "All sets" at the right |
 | `Market` | Set tabs with counts, a pill search and a sort select, then a grid of `ListingTile`s, skeleton tiles while loading |
 | `ListingTile` | A `Slab` on a sunken backdrop with a radial glow in the set's tone, then the card name with its `Badge`, meta line (year, set, number, edition, finish), and the mono price (with a warn `Chip` when not in USD) beside the seller in faint mono. Buy now and Watch sit over the art: shown on hover and on keyboard focus (`:focus-within`), and on touch screens after a tap on the art. Phones show Buy now only. A listing the collector owns shows an ok `Pill`, "In your wallet", instead |
 | `Checkout` | Buying one listing directly, with no rule or agent. A dialog on `--surface-raised` over a `--glass-header` backdrop; a bottom sheet under 700px. The `Slab` beside `.facts` for card, grade and grade word, cert and seller; the code's checks as pills (ok "No red flags", or a warn pill per flag); price, "Network fee: paid by Slabwatch" and the dUSD total. The test-token line sits in a warn tint. One large primary `Button` walks through what is missing (Connect wallet, Sign in, Get test dUSD, Approve, Sign and pay), reads "Waiting for the wallet…" while the wallet is open, and ends in a `.note`, "Bought.", with the explorer link and Keep browsing. Esc and Close are off while the wallet is open. A flagged, over-cap or read-only listing shows why in the warn tint, with no pay button |
 | `Slab` | The graded card in its case. See below |
-| `HowItWorks` | Signed out only. Four step cards: a 48px line icon in the accent, "Step n" in mono caps, a title and a sentence |
-| `StatusBar` | Fixed glass bar at the bottom: wordmark, "A study project", LEDs for payments and the agent, the model spend in mono, a warn chip in read-only mode |
+| `HowItWorks` | "How buying works": three step cards (Find the slab, Check the grade, Sign and pay), each a 48px line icon in the accent, "Step n" in mono caps, a title and a sentence |
+| `Graders` | "Graders we list": three cards, each a small slab label in that grader's colors (the `.grader-<code>` label colors from `slab.css`) beside its name and a line on its label |
+| `AgentBand` | A quiet band near the bottom of the home page: the agent's spark in the accent, "Can't find it? Let the agent watch for it." with a neutral `Pill` "optional", a sentence, and a large secondary "Set up a watch" link to `/agent`. No accent fill: buying never needs the agent |
+| `Footer` | The home page's last band: the wordmark and a line on what Slabwatch is, two link columns under eyebrows (Market; Slabwatch, with "Devnet notes" to the README), and the fictional-data line |
+| `StatusBar` | Fixed glass bar at the bottom: wordmark, "A study project", LEDs for payments and the agent (with "N of M watches active" once signed in), the model spend in mono, a warn chip in read-only mode |
 | `WalletPanel` | Panel: dUSD balance and allowance as `.facts`, faucet and allowance buttons, the last transaction link |
 | `NewRule` | Panel: a textarea for the want, "Draft the rule", an example link, then the drafted rule as `.facts` with editable price and budget, the parser's questions in `.questions`, and "Save rule" |
 | `RuleList` | Panel: the rules as full-width outlined items (the selected one in an accent border and tint), then "Sign out" |
@@ -198,8 +214,8 @@ Kept on purpose, because changing them would change how the page looks today:
 
 - The large primary button has a dark 1px edge and brightens on hover; the small one has an accent edge and does not.
 - `Chip` and `Pill` are near twins: a chip has a tinted fill and is used for conditions, a pill is outline only and is used for states.
-- A few values sit off the scales and are written out: the small button padding (7px by 15px), chip and pill padding, the 9px rule item padding, the hero copy margins (22px, 26px) and the step card padding (34px, 30px). Slab internals are shares of its width.
+- A few values sit off the scales and are written out: the small button padding (7px by 15px), chip and pill padding, the 9px rule item padding, the 22px gap in the hero copy and the step card padding (34px, 30px). Slab internals are shares of its width.
 - Control heights differ: a large button is 42px, the wallet button, select and market search 40px, the hero search 46px. The wallet button's side padding is 18px against 20px on a large button.
-- A few more values are written out: the devnet notice's 9px padding, the ring button's 1.5px border, and the hero's 1440px max width, wider than `--wide`.
+- A few more values are written out: the devnet notice's 9px padding and the ring button's 1.5px border.
 - Only fields and secondary buttons use `--line-control`. Chips, pills and rule items keep the quieter `--line-strong` (about 1.4:1), because a word or their fill carries the meaning.
 - The logo's SVG uses the accent colors as hex, so it still works when copied out on its own.

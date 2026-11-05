@@ -89,6 +89,13 @@ export interface Listing {
   readonly redFlags?: ReadonlyArray<RedFlag>
 }
 
+/** How many listings are active and the lowest price in dUSD units, across the market and per set id. */
+export interface MarketStats {
+  readonly count: number
+  readonly floorUnits: number | null
+  readonly sets: Readonly<Record<string, { readonly count: number; readonly floorUnits: number | null }>>
+}
+
 export type RedFlag = "duplicate_vault_item" | "price_far_below_market" | "grade_claim_mismatch"
 
 export interface Decision {

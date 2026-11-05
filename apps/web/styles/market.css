@@ -276,3 +276,16 @@
     font-size: var(--text-lg);
   }
 }
+
+/* The home page's five newest: one row of five on a wide screen. */
+/* The home page's five newest: one row on a wide screen, the market's grid below that, four on a phone. */
+@media (min-width: 1241px) {
+  .grid-five {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+@media (max-width: 700px) {
+  .grid-five > :nth-child(n + 5) {
+    display: none;
+  }
+}

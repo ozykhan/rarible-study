@@ -1,11 +1,15 @@
 "use client"
 
-import { useWalletModal } from "@solana/wallet-adapter-react-ui"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
+import { dusd } from "@/lib/format"
+import type { MarketStats } from "@/lib/types"
 import type { SlabCard } from "./Slab"
 import { Slab } from "./Slab"
 import { Button, SearchIcon } from "./ui"
 
-/** Four showcase slabs around the headline. Fixed picks, so nothing shifts while listings load. */
+/** Two showcase slabs beside the headline. Fixed picks, so nothing shifts while listings load. */
 const SHOWCASE: ReadonlyArray<SlabCard & { pos: string }> = [
   {
     pos: "a",
@@ -21,109 +25,94 @@ const SHOWCASE: ReadonlyArray<SlabCard & { pos: string }> = [
   },
   {
     pos: "b",
-    setId: "TW",
-    setName: "Tidewild",
-    cardId: "TW-007",
-    cardName: "Tidewyrm",
-    cardNumber: "007",
-    edition: "unlimited",
-    finish: "holo",
-    grader: "QSG",
-    grade: 9.5
-  },
-  {
-    pos: "c",
     setId: "SE",
     setName: "Starward Expedition",
-    cardId: "SE-001",
-    cardName: "Nebula Drake",
-    cardNumber: "001",
-    edition: "first",
-    finish: "reverse_holo",
-    grader: "LCA",
-    grade: 9
-  },
-  {
-    pos: "d",
-    setId: "OS",
-    setName: "Origin Set",
-    cardId: "OS-001",
-    cardName: "Cinderwing Drake",
-    cardNumber: "001",
-    edition: "first",
+    cardId: "SE-005",
+    cardName: "Starlit Unicorn",
+    cardNumber: "005",
+    edition: "unlimited",
     finish: "holo",
-    grader: "NVG",
-    grade: 9
+    grader: "LCA",
+    grade: 9.5
   }
 ]
 
+/** Searches that land on a filtered market. Each one matches real listings. */
+const POPULAR: ReadonlyArray<[label: string, href: string]> = [
+  ["Ashen Wyrm", "/market?q=Ashen%20Wyrm"],
+  ["1st edition holo", "/market?q=1st%20edition%20holo"],
+  ["NVG 10", "/market?q=NVG%2010"],
+  ["Lowest price first", "/market?sort=price_asc"]
+]
+
 /**
- * The signed-out welcome: generated art, four floating slabs, the headline,
- * a market search and the two calls to action. Styles: styles/hero.css.
+ * The home page's opening: the headline and lede, a market search with popular
+ * searches under it, three live numbers, and two floating slabs over the
+ * generated art. Styles: styles/hero.css.
  */
-export function Hero(props: {
-  wallet: string | null
-  signingIn: boolean
-  onSignIn: () => void
-  error: string | null
-  query: string
-  onQuery: (q: string) => void
-  onBrowse: () => void
-}) {
-  const { setVisible } = useWalletModal()
+export function Hero({ stats }: { stats: MarketStats | null }) {
+  const router = useRouter()
+  const [query, setQuery] = useState("")
   return (
-    <section className="hero">
+    <section className="hero" aria-labelledby="hero-title">
       <div className="hero-bg" aria-hidden="true" />
-      <div className="hero-slabs" aria-hidden="true">
-        {SHOWCASE.map(({ pos, ...card }) => (
-          <div key={pos} className={`hero-slab hero-slab-${pos}`}>
-            <Slab card={card} eager />
+      <div className="hero-row">
+        <div className="hero-copy">
+          <p className="eyebrow">Live on devnet</p>
+          <h1 id="hero-title">Graded cards, ready to buy.</h1>
+          <p className="lede">
+            Slabs from Northvale, Quarry and Lantern, with grade and cert from the vault record. Find the card, check the slab, and
+            sign to buy.
+          </p>
+          <form
+            className="hero-search"
+            role="search"
+            onSubmit={(e) => {
+              e.preventDefault()
+              const q = query.trim()
+              router.push(q === "" ? "/market" : `/market?q=${encodeURIComponent(q)}`)
+            }}
+          >
+            <SearchIcon />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search cards, sets, graders, sellers"
+              aria-label="Search the market"
+            />
+            <Button type="submit">Search</Button>
+          </form>
+          <div className="hero-popular">
+            <span>Popular:</span>
+            {POPULAR.map(([label, href]) => (
+              <Link key={label} className="chip-link" href={href}>
+                {label}
+              </Link>
+            ))}
           </div>
-        ))}
-      </div>
-      <div className="hero-copy">
-        <h1>Your grail card, on watch</h1>
-        <p className="lede">
-          Describe the graded card you want in plain words. An AI agent watches every new listing, checks it with code first, and
-          buys only within limits you signed.{" "}
-          <a href="#how" className="strong-link">
-            How it works?
-          </a>
-        </p>
-        <form
-          className="hero-search"
-          onSubmit={(e) => {
-            e.preventDefault()
-            props.onBrowse()
-          }}
-        >
-          <SearchIcon />
-          <input
-            value={props.query}
-            onChange={(e) => props.onQuery(e.target.value)}
-            placeholder="Search cards, sets or graders"
-            aria-label="Search the market"
-          />
-          <kbd aria-hidden="true">↵</kbd>
-        </form>
-        <div className="hero-actions">
-          {props.wallet === null ? (
-            <Button size="lg" onClick={() => setVisible(true)}>
-              Connect a devnet wallet
-            </Button>
-          ) : (
-            <Button size="lg" onClick={props.onSignIn} disabled={props.signingIn}>
-              {props.signingIn ? "Waiting for the wallet…" : "Sign in with this wallet"}
-            </Button>
-          )}
-          <Button size="lg" variant="ring" onClick={props.onBrowse}>
-            Browse the market
-          </Button>
+          <dl className="hero-stats">
+            <div>
+              <dt>listings now</dt>
+              <dd>{stats ? stats.count : "…"}</dd>
+            </div>
+            <div>
+              <dt>sets</dt>
+              <dd>4</dd>
+            </div>
+            <div>
+              <dt>lowest price</dt>
+              <dd>{stats?.floorUnits != null ? dusd(stats.floorUnits) : "…"}</dd>
+            </div>
+          </dl>
         </div>
-        {props.wallet !== null && (
-          <p className="hero-note">Your wallet signs a one-time text that proves you own it. Signing it moves no funds.</p>
-        )}
-        {props.error && <p className="error">{props.error}</p>}
+        <div className="hero-slabs" aria-hidden="true">
+          {SHOWCASE.map(({ pos, ...card }) => (
+            <div key={pos} className={`hero-slab hero-slab-${pos}`}>
+              <Slab card={card} eager />
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   )
