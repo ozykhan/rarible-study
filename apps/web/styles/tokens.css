@@ -39,17 +39,18 @@
   /* ---------- Color: lines ---------- */
 
   --line: #1f1f1f; /* default 1px border and divider */
-  --line-strong: #2b2b2e; /* fields, chips, secondary buttons */
-  --line-glass: rgba(255, 255, 255, 0.12); /* a field over art */
+  --line-strong: #2b2b2e; /* chips, pills, rule items, dashed dividers */
+  --line-control: #63636b; /* fields and secondary buttons: 3:1 on every surface */
+  --line-glass: rgba(255, 255, 255, 0.38); /* a field over art: 3:1 */
   --line-hover: rgba(255, 255, 255, 0.14); /* a tile under the pointer */
-  --line-active: rgba(255, 255, 255, 0.3); /* a secondary button under the pointer */
+  --line-active: rgba(255, 255, 255, 0.5); /* a secondary button under the pointer */
 
   /* ---------- Color: text ---------- */
 
   --ink: #ffffff; /* headings and body */
   --ink-soft: #d4d4d8; /* nav links, lede, seller text */
   --muted: #a1a1aa; /* secondary text, eyebrows */
-  --faint: #71717a; /* tertiary text: tile footers, step numbers */
+  --faint: #85858e; /* tertiary text: tile footers, step numbers, set blurbs. 4.5:1 on every surface */
   --off: #52525b; /* an LED that is off */
 
   /* ---------- Color: accent ---------- */
@@ -115,12 +116,12 @@
   --mono: var(--font-mono, ui-monospace), ui-monospace, "SFMono-Regular", Menlo, monospace;
 
   --text-xs: 12px; /* eyebrows, chips, pills, badges, tile footers */
-  --text-sm: 13px; /* meta lines, notes, the status bar */
-  --text-md: 14px; /* buttons, fields, panel copy */
+  --text-sm: 13px; /* meta lines, the devnet notice, the status bar */
+  --text-md: 14px; /* buttons, fields, panel copy, notes */
   --text-base: 15px; /* body, tabs, nav, tile titles */
   --text-lg: 16px; /* panel titles, prices in rows */
   --text-xl: 17px; /* the hero lede */
-  --text-2xl: 19px; /* card headings, a rule's title */
+  --text-2xl: 19px; /* step titles, a rule's title */
   --text-3xl: 20px; /* the brand, tile prices */
   --text-4xl: 23px; /* section titles on a phone */
   --text-5xl: 28px; /* section titles */
@@ -167,14 +168,16 @@
 
   --radius-xs: 4px; /* badges, counts */
   --radius-sm: 6px; /* seller text */
-  --radius-md: 8px; /* fields, notes, rows, rule items */
+  --radius-thumb: 5px; /* decision row thumbnails */
+  --radius-md: 8px; /* fields, notes, rows, rule items, the hero search */
   --radius-lg: 10px; /* tiles, set cards, step cards */
   --radius-xl: 12px; /* panels */
   --radius-pill: 999px; /* buttons, chips, pills, search */
 
   /* ---------- Shadow and blur ---------- */
 
-  --shadow-focus: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
+  --focus-ring: 2px solid var(--accent); /* keyboard focus on links and buttons, as an outline */
+  --shadow-focus: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent); /* the glow on a focused field */
   --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.55); /* the card inside a slab */
   --shadow-float: drop-shadow(0 28px 36px rgba(0, 0, 0, 0.7)); /* hero slabs, as a filter */
   --glow-ok: 0 0 8px var(--ok); /* an LED that is on */

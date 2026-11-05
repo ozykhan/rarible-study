@@ -71,6 +71,11 @@
   border-radius: var(--radius-xs);
   background: var(--accent);
 }
+.ds-gradient {
+  display: block;
+  height: 40px;
+  border-radius: var(--radius-md);
+}
 .ds-radius {
   width: 72px;
   height: 48px;

@@ -5,13 +5,14 @@ import { DevnetNotice } from "@/components/DevnetNotice"
 import { HowItWorks } from "@/components/HowItWorks"
 import { ListingTile } from "@/components/ListingTile"
 import { Logo } from "@/components/Logo"
+import { RuleList } from "@/components/RuleList"
 import { DecisionRow, PurchaseRow } from "@/components/RuleView"
 import { Slab, type SlabCard } from "@/components/Slab"
 import { SetCard } from "@/components/Sets"
 import { StatusBar } from "@/components/StatusBar"
 import { Badge, Button, Chip, Panel, Pill, Section } from "@/components/ui"
 import { SETS } from "@/lib/art"
-import type { Decision, Listing, Purchase, Status } from "@/lib/types"
+import type { Decision, Listing, Purchase, Rule, Status } from "@/lib/types"
 
 /*
  * Every token and component, rendered with the real components and fictional
@@ -38,7 +39,7 @@ const COLOR_GROUPS: ReadonlyArray<[string, ReadonlyArray<string>]> = [
       "--glass-field"
     ]
   ],
-  ["Lines", ["--line", "--line-strong", "--line-glass", "--line-hover", "--line-active"]],
+  ["Lines", ["--line", "--line-strong", "--line-control", "--line-glass", "--line-hover", "--line-active"]],
   ["Text", ["--ink", "--ink-soft", "--muted", "--faint", "--off"]],
   ["Accent and status", ["--accent", "--accent-ink", "--accent-2", "--ok", "--warn", "--bad"]],
   ["Set tones", ["--set-OS", "--set-TW", "--set-EF", "--set-SE", "--set-unknown"]],
@@ -60,8 +61,27 @@ const COLOR_GROUPS: ReadonlyArray<[string, ReadonlyArray<string>]> = [
 ]
 
 const TEXT = ["--text-display", "--text-5xl", "--text-4xl", "--text-3xl", "--text-2xl", "--text-xl", "--text-lg", "--text-base", "--text-md", "--text-sm", "--text-xs"]
-const SPACE = ["--space-1", "--space-2", "--space-3", "--space-4", "--space-5", "--space-6", "--space-8", "--space-10", "--space-12", "--space-14", "--space-16", "--space-22"]
-const RADII = ["--radius-xs", "--radius-sm", "--radius-md", "--radius-lg", "--radius-xl", "--radius-pill"]
+const SPACE = [
+  "--space-0-5",
+  "--space-1",
+  "--space-1-5",
+  "--space-2",
+  "--space-2-5",
+  "--space-3",
+  "--space-3-5",
+  "--space-4",
+  "--space-4-5",
+  "--space-5",
+  "--space-6",
+  "--space-8",
+  "--space-10",
+  "--space-12",
+  "--space-14",
+  "--space-16",
+  "--space-18",
+  "--space-22"
+]
+const RADII = ["--radius-xs", "--radius-thumb", "--radius-sm", "--radius-md", "--radius-lg", "--radius-xl", "--radius-pill"]
 
 /** Reads token values from the document once it is mounted. */
 function useTokens(names: ReadonlyArray<string>) {
@@ -73,7 +93,25 @@ function useTokens(names: ReadonlyArray<string>) {
   return values
 }
 
-const ALL_TOKENS = [...COLOR_GROUPS.flatMap(([, names]) => names), ...TEXT, ...SPACE, ...RADII]
+const GRADIENTS = ["--gradient-ring", "--gradient-holo"]
+const VALUE_GROUPS: ReadonlyArray<[string, ReadonlyArray<string>]> = [
+  ["Weight", ["--weight-medium", "--weight-semibold", "--weight-bold", "--weight-black"]],
+  ["Line height", ["--leading-display", "--leading-body", "--leading-lede", "--leading-relaxed"]],
+  ["Tracking", ["--tracking-display", "--tracking-brand", "--tracking-heading", "--tracking-snug", "--tracking-caps"]],
+  ["Shadow and focus", ["--focus-ring", "--shadow-focus", "--shadow-card", "--shadow-float", "--glow-ok", "--text-shadow-display", "--text-shadow-lede"]],
+  ["Blur", ["--blur-sm", "--blur-md", "--blur-lg"]],
+  ["Motion", ["--ease", "--duration-fast", "--duration-base", "--duration-slow", "--duration-slower"]],
+  ["Layout", ["--wide", "--gutter", "--header-height", "--statusbar-height", "--scroll-offset", "--rail", "--tile-min", "--z-header", "--z-statusbar"]]
+]
+
+const ALL_TOKENS = [
+  ...COLOR_GROUPS.flatMap(([, names]) => names),
+  ...TEXT,
+  ...SPACE,
+  ...RADII,
+  ...GRADIENTS,
+  ...VALUE_GROUPS.flatMap(([, names]) => names)
+]
 
 const card = (
   cardId: string,
@@ -130,6 +168,27 @@ const PURCHASES: ReadonlyArray<Purchase> = [
   { id: "P1", listingId: "SAMPLE-1", actor: "collector:demo", price: LISTINGS[0]!.price, status: "proposed", reason: null, refusals: [], txSignature: null },
   { id: "P2", listingId: "SAMPLE-4", actor: "agent:demo", price: LISTINGS[3]!.price, status: "executed", reason: null, refusals: [], txSignature: null },
   { id: "P3", listingId: "SAMPLE-2", actor: "agent:demo", price: LISTINGS[1]!.price, status: "refused", reason: null, refusals: ["priced in EUR"], txSignature: null }
+]
+
+const rule = (id: string, rawWant: string, status: Rule["status"], mode: Rule["mode"], amountMinor: number): Rule => {
+  const budget = { amountMinor, currency: "USD" as const }
+  return {
+    id,
+    ownerWallet: null,
+    rawWant,
+    hard: { setId: null, cardId: null, edition: "any", finish: "any", graders: [], minGrade: 9, maxPrice: budget },
+    softDescription: null,
+    budget,
+    mode,
+    status,
+    setName: null,
+    cardName: null
+  }
+}
+
+const RULES: ReadonlyArray<Rule> = [
+  rule("r1", "Ashen Wyrm, 1st edition holo, grade 9 or better", "active", "confirm", 180000),
+  rule("r2", "any water creature from Tidewild, holo", "paused", "auto", 50000)
 ]
 
 const STATUS: Status = {
@@ -246,6 +305,35 @@ export function DesignSystem() {
           </Group>
         </Section>
 
+        <Section eyebrow="Tokens" title="Gradients, shadows, motion and layout">
+          <Group title="Gradient">
+            <div className="ds-rows">
+              {GRADIENTS.map((n) => (
+                <div className="ds-row" key={n}>
+                  <span className="ds-label">
+                    <code>{n}</code>
+                  </span>
+                  <span className="ds-gradient" style={{ background: `var(${n})` }} />
+                </div>
+              ))}
+            </div>
+          </Group>
+          {VALUE_GROUPS.map(([title, names]) => (
+            <Group key={title} title={title}>
+              <div className="ds-swatches">
+                {names.map((n) => (
+                  <div className="ds-swatch" key={n}>
+                    <div className="ds-label">
+                      <code>{n}</code>
+                      <span>{v[n] ?? ""}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Group>
+          ))}
+        </Section>
+
         <Section eyebrow="Components" title="Buttons, tags and status">
           <Group title="Button, large (page-level calls to action)">
             <div className="ds-inline">
@@ -338,22 +426,7 @@ export function DesignSystem() {
                 </div>
                 <p className="muted small">Slabwatch pays the network fee, so the wallet needs no SOL.</p>
               </Panel>
-              <Panel title="Your rules">
-                <ul className="rule-list">
-                  <li>
-                    <button className="rule-item active">
-                      <span>Ashen Wyrm, 1st edition holo, grade 9 or better</span>
-                      <span className="muted small">active · confirm · budget $1,800.00</span>
-                    </button>
-                  </li>
-                  <li>
-                    <button className="rule-item">
-                      <span>any water creature from Tidewild, holo</span>
-                      <span className="muted small">paused · auto-buy · budget $500.00</span>
-                    </button>
-                  </li>
-                </ul>
-              </Panel>
+              <RuleList rules={RULES} selected="r1" onSelect={() => {}} onSignOut={() => {}} />
             </div>
             <Panel>
               <p className="note">3 matches and 1 to review among the listings right now.</p>
