@@ -28,6 +28,8 @@ export class Embedder extends Context.Service<
 /** bge models expect this instruction in front of search queries, not documents. */
 const BGE_QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
 
+const EMBED_BATCH = 16
+
 /**
  * A small sentence-embedding model (bge-small-en-v1.5, 384 dimensions) run
  * in-process with transformers.js. No API key and no per-call cost. The model
@@ -50,11 +52,18 @@ export const EmbedderLocal = Layer.effect(
       embed: Effect.fn("Embedder.embed")(function* (texts, kind) {
         if (texts.length === 0) return []
         const input = kind === "query" ? texts.map((t) => BGE_QUERY_PREFIX + t) : [...texts]
-        const output = yield* Effect.tryPromise({
-          try: () => extractor(input, { pooling: "cls", normalize: true }),
-          catch: (e) => new EmbedError({ message: String(e) })
-        })
-        return output.tolist() as Array<Array<number>>
+        // Small batches keep memory flat: one batch of 200 texts was enough to
+        // get the seed step killed on a small container.
+        const vectors: Array<Array<number>> = []
+        for (let i = 0; i < input.length; i += EMBED_BATCH) {
+          const output = yield* Effect.tryPromise({
+            try: () => extractor(input.slice(i, i + EMBED_BATCH), { pooling: "cls", normalize: true }),
+            catch: (e) => new EmbedError({ message: String(e) })
+          })
+          vectors.push(...(output.tolist() as Array<Array<number>>))
+          output.dispose()
+        }
+        return vectors
       })
     })
   })

@@ -60,6 +60,8 @@ export interface ApprovalInput {
   readonly message: string
   readonly signature: string
   readonly expiresAt: Date
+  /** The signing request it came from; unique, so one signed text records one approval. */
+  readonly nonce?: string | null
 }
 
 export class Purchases extends Context.Service<
@@ -129,9 +131,11 @@ export const PurchasesLive = Layer.effect(
 
     const activeApproval = (ruleId: string) =>
       sql<{ readonly id: string; readonly dailyCapUsdCents: number; readonly mode: WatchRule["mode"] }>`
-        SELECT id, daily_cap_usd_cents::float8 AS daily_cap_usd_cents, mode FROM rule_approvals
-        WHERE rule_id = ${ruleId} AND revoked_at IS NULL AND expires_at > now()
-        ORDER BY created_at DESC LIMIT 1`.pipe(Effect.map((rows) => rows[0] ?? null))
+        SELECT a.id, a.daily_cap_usd_cents::float8 AS daily_cap_usd_cents, a.mode FROM rule_approvals a
+        JOIN watch_rules r ON r.id = a.rule_id
+        WHERE a.rule_id = ${ruleId} AND a.revoked_at IS NULL AND a.expires_at > now()
+          AND a.wallet = r.owner_wallet AND a.budget_minor = r.budget_minor AND a.currency = r.currency
+        ORDER BY a.created_at DESC LIMIT 1`.pipe(Effect.map((rows) => rows[0] ?? null))
 
     /** Everything the policy needs, read fresh from the database. */
     const evaluate = (
@@ -324,9 +328,9 @@ export const PurchasesLive = Layer.effect(
       const id = newId("A")
       yield* sql`
         INSERT INTO rule_approvals (id, rule_id, wallet, budget_minor, currency, daily_cap_usd_cents, mode, message,
-                                    signature, expires_at)
+                                    signature, expires_at, nonce)
         VALUES (${id}, ${a.ruleId}, ${a.wallet}, ${a.budget.amountMinor}, ${a.budget.currency}, ${a.dailyCapUsdCents},
-                ${a.mode}, ${a.message}, ${a.signature}, ${a.expiresAt.toISOString()}::timestamptz)`
+                ${a.mode}, ${a.message}, ${a.signature}, ${a.expiresAt.toISOString()}::timestamptz, ${a.nonce ?? null})`
       return id
     })
 

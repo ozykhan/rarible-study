@@ -7,6 +7,13 @@ import { AppConfig } from "../config.ts"
 /** Generated listings beyond this many are withdrawn, oldest first, so the demo database stays small. */
 export const MAX_ACTIVE_GENERATED = 150
 
+const nextVaultNumber = Effect.gen(function* () {
+  const sql = yield* SqlClient
+  const rows = yield* sql<{ readonly next: number }>`
+    SELECT coalesce(max(substring(id from 5)::int), 0) + 1 AS next FROM vault_items`
+  return rows[0]?.next ?? 1
+})
+
 /**
  * Lists one new random card, with the same trap odds as the seed, so watch
  * rules have something new to react to while the demo is open.
@@ -14,6 +21,13 @@ export const MAX_ACTIVE_GENERATED = 150
 export const listOne = Effect.fn("generator.listOne")(function* (state: GeneratorState) {
   const sql = yield* SqlClient
   const catalog = yield* CatalogRepo
+  // While a new deploy starts, the old server is still listing too. Catching
+  // up with the database before each listing keeps the two from reusing ids.
+  const next = yield* nextVaultNumber
+  if (next > state.vaultCounter) {
+    state.vaultCounter = next
+    state.listingCounter = next
+  }
   const item = generateListing(state, { prefix: "G", source: "generator", listedMinutesAgo: 0 })
   yield* catalog.insertListings([item])
   yield* sql`
@@ -32,10 +46,7 @@ export const listOne = Effect.fn("generator.listOne")(function* (state: Generato
  * with earlier runs.
  */
 export const makeState = Effect.gen(function* () {
-  const sql = yield* SqlClient
-  const rows = yield* sql<{ readonly next: number }>`
-    SELECT coalesce(max(substring(id from 5)::int), 0) + 1 AS next FROM vault_items`
-  return makeGeneratorState(Date.now() % 2_147_483_647, rows[0]?.next ?? 1)
+  return makeGeneratorState(Date.now() % 2_147_483_647, yield* nextVaultNumber)
 })
 
 /** Runs in the background for the life of the server. GENERATOR_INTERVAL_SECONDS=0 turns it off. */

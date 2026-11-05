@@ -8,11 +8,14 @@ import { Effect, Layer } from "effect"
 import { SqlClient } from "effect/sql/SqlClient"
 import { CatalogRepo } from "../src/catalog/CatalogRepo.ts"
 import { migrate } from "../src/db/Database.ts"
-import { AppLive } from "../src/layers.ts"
+import { makeAppLive } from "../src/layers.ts"
+import type { Chain } from "../src/solana/Chain.ts"
+import { chainInMemory } from "../src/solana/LocalChain.ts"
 
 export const seed = generateSeed()
 
-export const testLayer = (name: string, env: Record<string, string> = {}) => {
+/** Tests never reach a real cluster: with PAYMENTS=devnet the chain is an in-process VM. */
+export const testLayer = (name: string, env: Record<string, string> = {}, chain: Layer.Layer<Chain> = chainInMemory) => {
   const schema = `test_${name}_${process.pid}`
   process.env["DB_SCHEMA"] = schema
   process.env["EMBEDDER"] = "hash"
@@ -32,5 +35,5 @@ export const testLayer = (name: string, env: Record<string, string> = {}) => {
       yield* catalog.insertListings(seed.listings)
     })
   )
-  return Seeded.pipe(Layer.provideMerge(AppLive))
+  return Seeded.pipe(Layer.provideMerge(makeAppLive(chain)))
 }

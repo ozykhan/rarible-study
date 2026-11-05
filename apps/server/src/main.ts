@@ -13,7 +13,11 @@ import { WatcherLive } from "./jobs/watcher.ts"
 import { AppConfigLive } from "./config.ts"
 import { AppLive } from "./layers.ts"
 import { McpRoute } from "./mcp/McpHttp.ts"
+import { Payments } from "./purchases/Payments.ts"
+import { Treasury } from "./solana/Treasury.ts"
 import { TracingLive } from "./tracing.ts"
+import { AppConfig } from "./config.ts"
+import { WebApiRoutes } from "./web/WebApi.ts"
 
 const Health = HttpRouter.add(
   "GET",
@@ -34,9 +38,57 @@ const ServerLive = Layer.unwrap(
 
 const Migrated = Layer.effectDiscard(migrate)
 
-const Routes = Layer.mergeAll(Health, McpRoute)
+/** Browsers may call /api from the web app's origins only. */
+const Cors = Layer.unwrap(
+  Effect.gen(function* () {
+    const config = yield* AppConfig
+    return HttpRouter.cors({
+      allowedOrigins: config.webOrigins,
+      allowedMethods: ["GET", "POST", "OPTIONS"],
+      allowedHeaders: ["authorization", "content-type"],
+      maxAge: 600
+    })
+  })
+)
 
-const Main = Layer.mergeAll(HttpRouter.serve(Routes), GeneratorLive, WatcherLive).pipe(
+/**
+ * On devnet, makes sure the dUSD mint and the escrow account exist, in the
+ * background so a slow RPC never holds up the server.
+ */
+/**
+ * Creates the dUSD mint and the escrow account on the first boot. When the
+ * treasury has no SOL for fees and the faucet refuses, it logs the address to
+ * fund once and checks again every minute, so funding it needs no restart.
+ */
+const DevnetSetup = Layer.effectDiscard(
+  Effect.gen(function* () {
+    const payments = yield* Payments
+    if (payments.kind !== "devnet") return
+    const treasury = yield* Treasury
+    const attempt = (warned: boolean): Effect.Effect<void> =>
+      treasury.setup.pipe(
+        Effect.flatMap((r) =>
+          r.needsFunding === null
+            ? Effect.logInfo(`${r.cluster === "devnet" ? "devnet" : "in-memory chain"} ready: mint ${r.mint}, escrow ${r.escrowAccount}, treasury ${r.treasury} (${r.treasuryLamports} lamports); created: ${r.created.join(", ") || "nothing"}`)
+            : (warned ? Effect.void : Effect.logWarning(`devnet treasury needs SOL: ${r.needsFunding}. Checking again every minute.`)).pipe(
+                Effect.andThen(Effect.sleep("1 minute")),
+                Effect.andThen(Effect.suspend(() => attempt(true)))
+              )
+        ),
+        Effect.catchCause((cause) =>
+          Effect.logWarning("devnet setup failed; trying again in a minute", cause).pipe(
+            Effect.andThen(Effect.sleep("1 minute")),
+            Effect.andThen(Effect.suspend(() => attempt(warned)))
+          )
+        )
+      )
+    yield* Effect.forkScoped(attempt(false))
+  })
+)
+
+const Routes = Layer.mergeAll(Health, McpRoute, WebApiRoutes).pipe(Layer.provide(Cors))
+
+const Main = Layer.mergeAll(HttpRouter.serve(Routes), GeneratorLive, WatcherLive, DevnetSetup).pipe(
   Layer.provide(Migrated),
   Layer.provide(ServerLive),
   Layer.provideMerge(AppLive),

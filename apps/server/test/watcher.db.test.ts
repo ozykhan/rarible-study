@@ -4,7 +4,7 @@ import { Effect } from "effect"
 import { SqlClient } from "effect/sql/SqlClient"
 import { Agent, makeAgent } from "../src/agent/Agent.ts"
 import { CatalogRepo } from "../src/catalog/CatalogRepo.ts"
-import { makeState } from "../src/jobs/generator.ts"
+import { listOne, makeState } from "../src/jobs/generator.ts"
 import { pipelineV2 } from "../src/matcher/Matcher.ts"
 import { watchOnce } from "../src/jobs/watcher.ts"
 import { Llm } from "../src/llm/Llm.ts"
@@ -77,4 +77,17 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("watcher"
         SELECT trigger, listing_id FROM agent_runs WHERE id = ${run?.runId ?? ""}`
       expect(stored).toEqual([{ trigger: "new_match", listingId: second.listingId }])
     }))
+
+  it.effect("two generators started at the same time do not reuse listing ids", () =>
+    Effect.gen(function* () {
+      // What happens during a deploy: the old server and the new one both list.
+      const a = yield* makeState
+      const b = yield* makeState
+      const first = yield* listOne(a)
+      const second = yield* listOne(b)
+      const third = yield* listOne(a)
+      const ids = [first, second, third].map((x) => x.listing.id)
+      expect(new Set(ids).size).toBe(3)
+    })
+  )
 })

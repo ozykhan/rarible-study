@@ -4,7 +4,7 @@ import { Agent, type AgentRunResult } from "../agent/Agent.ts"
 import { AppConfig } from "../config.ts"
 import type { MatchDecision } from "@slabwatch/domain"
 import { Matcher, pipelineV2, type PipelineOptions } from "../matcher/Matcher.ts"
-import { RuleRepo } from "../rules/RuleRepo.ts"
+import { RuleRepo, type StoredRule } from "../rules/RuleRepo.ts"
 
 const CURSOR = "watcher"
 
@@ -38,6 +38,29 @@ const capUnjudged = (decisions: ReadonlyArray<MatchDecision>, reason: string): R
   )
 
 /**
+ * The matcher, falling back to code-only checks when the model is out of
+ * reach (spend cap, no key). Used by the watcher and when a rule is created.
+ */
+export const evaluateWithFallback = (
+  matcher: Matcher["Service"],
+  stored: StoredRule,
+  pipeline: PipelineOptions,
+  only?: ReadonlyArray<string>
+) => {
+  const withoutJudge = (reason: string) =>
+    matcher
+      .evaluate(stored, { ...pipeline, judge: "never" }, only)
+      .pipe(Effect.map((ds) => ({ decisions: capUnjudged(ds, reason), unjudgedReason: reason as string | null })))
+  return matcher.evaluate(stored, pipeline, only).pipe(
+    Effect.map((decisions) => ({ decisions, unjudgedReason: null as string | null })),
+    Effect.catchTags({
+      SpendCapReached: () => withoutJudge("the daily model spend cap is reached"),
+      LlmNotConfigured: () => withoutJudge("no model API key is configured")
+    })
+  )
+}
+
+/**
  * One pass: listings that arrived since the last pass, every active rule
  * through the v2 matcher on just those listings, decisions saved, and an
  * agent run for each match. The cursor starts at the first pass, so a fresh
@@ -64,16 +87,8 @@ export const watchOnce = Effect.fn("watcher.tick")(function* (options: WatchOpti
   const matches: Array<{ ruleId: string; listingId: string }> = []
   const unjudged: Array<{ ruleId: string; reason: string }> = []
   for (const stored of yield* rules.listActive) {
-    const withoutJudge = (reason: string) => {
-      unjudged.push({ ruleId: stored.rule.id, reason })
-      return matcher.evaluate(stored, { ...pipeline, judge: "never" }, ids).pipe(Effect.map((ds) => capUnjudged(ds, reason)))
-    }
-    const decisions = yield* matcher.evaluate(stored, pipeline, ids).pipe(
-      Effect.catchTags({
-        SpendCapReached: () => withoutJudge("the daily model spend cap is reached"),
-        LlmNotConfigured: () => withoutJudge("no model API key is configured")
-      })
-    )
+    const { decisions, unjudgedReason } = yield* evaluateWithFallback(matcher, stored, pipeline, ids)
+    if (unjudgedReason !== null) unjudged.push({ ruleId: stored.rule.id, reason: unjudgedReason })
     yield* rules.saveDecisions(decisions)
     for (const d of decisions) if (d.verdict === "match") matches.push({ ruleId: d.ruleId, listingId: d.listingId })
   }
