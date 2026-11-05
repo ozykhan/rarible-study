@@ -130,6 +130,7 @@ A candidate change, not made: tell the agent that seller text addressed to autom
 
 - The first deploy's seed step was killed for memory (exit 137) while embedding: it sent all 200 listings to the local model in one batch. The embedder now works in batches of 16.
 - That killed run may already have written the past sales, and a rerun would write them again. Then the two follow-up deploys seeded at the same time, and the second failed on duplicate listings. The seed now runs in one transaction under a Postgres advisory lock, and because it is deterministic it checks the exact number of sales it expects and reloads them when the count is off.
+- During a deploy the old and the new server both run the listing generator for a few seconds, and both picked the same next id. The generator now catches up with the database before each listing, and a test starts two generators at once.
 - Railway's config-as-code file is deprecated, so the service settings were set through the platform and are listed in the README instead of a `railway.json`.
 
 ### Open
