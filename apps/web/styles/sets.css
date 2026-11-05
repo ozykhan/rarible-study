@@ -1,34 +1,4 @@
-/* Sets: one chip and one banner card per fictional set, each colored by its --tone. */
-
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-bottom: var(--space-4);
-}
-.chip-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: 7px 15px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-pill);
-  background: var(--surface);
-  font-size: var(--text-md);
-  font-weight: var(--weight-semibold);
-  transition: border-color var(--duration-fast) var(--ease);
-}
-.chip-btn:hover,
-.chip-btn.active {
-  border-color: var(--tone);
-}
-.chip-btn .dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--tone);
-  box-shadow: 0 0 10px var(--tone);
-}
+/* Sets: one banner card per fictional set, each colored by its --tone. The market's set tabs are in market.css. */
 
 .set-grid {
   display: grid;

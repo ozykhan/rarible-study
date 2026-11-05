@@ -160,6 +160,31 @@
 
 /* ---------- Section: <Section eyebrow title>. A full-width band of the page. ---------- */
 
+/* A round 36px button around a CloseIcon: the checkout's and the agent drawer's Close. */
+.btn-close {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  padding: 0;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  color: var(--muted);
+}
+.btn-close:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--line-control);
+}
+/* A full-size touch target on a phone. */
+@media (max-width: 700px) {
+  .btn-close {
+    width: 44px;
+    height: 44px;
+  }
+}
+
 .section,
 .callout {
   max-width: calc(var(--wide) + 2 * var(--gutter));

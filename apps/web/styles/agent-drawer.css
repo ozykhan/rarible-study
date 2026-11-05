@@ -1,0 +1,112 @@
+/*
+ * The optional agent on the market: AgentStrip (one quiet line under the
+ * grid), AgentDrawer (New watch rule at the right edge) and the phone's
+ * floating "Ask the agent" button. No accent fill: buying never needs the agent.
+ */
+
+.agent-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-8);
+  padding: var(--space-3-5) var(--space-4-5);
+  background: var(--surface-subtle);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+.agent-strip-icon {
+  display: flex;
+  color: var(--accent);
+}
+.agent-strip-text {
+  flex: 1 1 320px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-5);
+}
+.agent-strip-text strong {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+}
+
+/* Not modal: the market stays usable behind it, and the checkout opens over it. */
+.agent-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--z-drawer);
+  width: 420px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-raised);
+  border-left: 1px solid var(--line-strong);
+}
+.agent-drawer:focus {
+  outline: none;
+}
+.agent-drawer-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2-5);
+  min-height: var(--header-height);
+  padding: 0 var(--space-3) 0 var(--space-4-5);
+  border-bottom: 1px solid var(--line);
+}
+.agent-drawer-head h2 {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+}
+.agent-drawer-full {
+  margin-left: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+.agent-drawer-head .btn-close {
+  margin-left: auto;
+}
+.agent-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4-5) var(--space-4-5) calc(var(--statusbar-height) + var(--space-4-5));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.agent-drawer-body > p {
+  margin: 0;
+}
+.agent-drawer-signin {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2-5);
+}
+.agent-drawer-signin p {
+  margin: 0;
+}
+
+/* Phone only: the agent's way in, over the grid and above the status bar. */
+.agent-fab {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .agent-drawer {
+    width: 100%;
+    border-left: none;
+  }
+  .agent-fab {
+    position: fixed;
+    right: var(--gutter);
+    bottom: calc(var(--statusbar-height) + var(--space-4));
+    z-index: var(--z-statusbar);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 44px;
+    background: var(--surface-solid);
+  }
+}

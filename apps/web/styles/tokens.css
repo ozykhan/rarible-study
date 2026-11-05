@@ -126,6 +126,7 @@
   --text-4xl: 23px; /* section titles on a phone */
   --text-5xl: 28px; /* section titles */
   --text-display: clamp(40px, 6.2vw, 68px); /* the hero headline */
+  --text-title: clamp(28px, 3.4vw, 44px); /* a page title: the market */
 
   --weight-medium: 500;
   --weight-semibold: 600;
@@ -208,6 +209,7 @@
   --tile-min: 230px; /* market tiles fill the row at this width or more */
 
   --z-dialog: 60; /* checkout; the wallet picker (wallet adapter, 1040) opens over it */
+  --z-drawer: 55; /* the agent drawer, over the header and under the checkout */
   --z-header: 50;
   --z-statusbar: 40;
 }

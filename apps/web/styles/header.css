@@ -66,13 +66,20 @@
 .topbar-agent[aria-current="page"] {
   color: var(--ink);
 }
+/* On /market only: the market search between the links and the right side. */
+.search.topbar-search {
+  flex: 1 1 280px;
+  max-width: 440px;
+}
 /* Phone only: a 44px round search button in place of the nav links and the Agent link. */
 .topbar-icon {
   display: none;
   place-items: center;
   width: 44px;
   height: 44px;
+  padding: 0;
   color: var(--ink);
+  background: none;
   border: 1px solid var(--line-control);
   border-radius: var(--radius-pill);
 }
@@ -118,6 +125,11 @@
   border: 1px solid var(--line-strong);
 }
 
+@media (max-width: 1100px) {
+  .search.topbar-search {
+    display: none;
+  }
+}
 @media (max-width: 900px) {
   .nav {
     display: none;
