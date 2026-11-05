@@ -1,0 +1,32 @@
+# Secrets: never commit these. Copy .env.example to .env instead.
+.env
+.env.*
+!.env.example
+*.pem
+*-keypair.json
+keys/
+
+# Dependencies and builds
+node_modules/
+dist/
+.next/
+out/
+*.tsbuildinfo
+coverage/
+
+# Local model cache for the embedding model
+.cache/
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Vercel
+.vercel

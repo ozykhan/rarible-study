@@ -1,0 +1,25 @@
+{
+  "name": "slabwatch",
+  "private": true,
+  "description": "Study project: an AI shopping agent for a mock marketplace of graded collectible cards, on Solana devnet.",
+  "license": "MIT",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "prepare": "lefthook install || true",
+    "bootstrap": "docker compose up -d --wait && pnpm db:migrate && pnpm db:seed",
+    "dev": "pnpm --filter @slabwatch/server dev",
+    "db:migrate": "pnpm --filter @slabwatch/server db:migrate",
+    "db:seed": "pnpm --filter @slabwatch/server db:seed",
+    "eval": "pnpm --filter @slabwatch/evals eval",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.0",
+    "lefthook": "^2.2.2",
+    "typescript": "^7.0.2"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "@slabwatch/server",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": {
+    "dev": "tsx watch --env-file-if-exists=../../.env src/main.ts",
+    "db:migrate": "tsx --env-file-if-exists=../../.env src/scripts/migrate.ts",
+    "db:seed": "tsx --env-file-if-exists=../../.env src/scripts/seed.ts",
+    "generate": "tsx --env-file-if-exists=../../.env src/scripts/generate.ts",
+    "start": "tsx src/main.ts",
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "1.5.0",
+    "@effect/platform-node": "4.1.2",
+    "@effect/sql-pg": "4.1.2",
+    "@huggingface/transformers": "4.3.2",
+    "@slabwatch/domain": "workspace:*",
+    "@slabwatch/seed": "workspace:*",
+    "effect": "4.1.2"
+  },
+  "devDependencies": {
+    "@effect/vitest": "4.1.2",
+    "tsx": "^4.23.15",
+    "vitest": "^5.1.0"
+  }
+}
