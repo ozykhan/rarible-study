@@ -2,7 +2,7 @@
 
 A study project: an AI shopping agent for a mock marketplace of tokenized, graded trading cards.
 
-You describe a card you want in plain words. The app turns that into a watch rule, matches new listings with code first and a model second, and lets an agent buy within limits that code enforces. On day 3 it pays with SPL tokens on Solana devnet.
+You describe a card you want in plain words. The app turns that into a watch rule, matches new listings with code first and a model second, and lets an agent buy within limits that code enforces. It pays with a test SPL token on Solana devnet, from a wallet you connect in the browser.
 
 **Solana devnet only.** Every card, set, character, grading company and seller in this repo is invented. There is no real marketplace data, no real money and no mainnet code path.
 
@@ -14,7 +14,7 @@ This is a three-day study project, not a product. Nothing here is audited or pro
 | --- | --- | --- |
 | 1 | Fictional seed with traps, watch rules from plain language, SQL and pgvector matching, labelled eval set, v1 and v2 numbers | Built, tested, measured |
 | 2 | MCP server, agent loop with limits in code, injection tests, tracing | Built, tested, measured |
-| 3 | Next.js wallet page on devnet, deploy, write-up | Planned |
+| 3 | Wallet sign-in and signed approvals, SPL payments on devnet, Next.js wallet page, rate limits, deploy | Built, tested; live demo below |
 
 ## How a want becomes a watch rule
 
@@ -47,9 +47,9 @@ The model can ask for anything. Code decides, in [`apps/server/src/purchases/`](
 
 - **The caller is scoped.** An agent run acts for one rule. An MCP token carries its own rule-id allow-list. A rule outside the list is refused.
 - **The policy is one pure function** that reports every failed check, not just the first: demo read-only mode, the rule on the allow-list and active, the listing active and passing the rule's hard checks, no code red flags, not already bought, the rule's budget (what is already spent plus this price, same currency), and the owner's daily cap in USD.
-- **Confirm mode needs the collector.** For a confirm rule the agent never sees `execute_purchase`, and a proposal waits for the collector. Auto mode needs a signed, unexpired approval that names the rule, budget and daily cap; day 3 verifies the wallet signature on it. The lower of the server's cap and the signed cap applies.
+- **Confirm mode needs the collector.** For a confirm rule the agent never sees `execute_purchase`, and a proposal waits for the collector. Auto mode needs a signed, unexpired approval that names the rule, budget and daily cap, and the server checks the wallet's signature on it. The lower of the server's cap and the signed cap applies.
 - **Execution is serialized per owner.** It locks the purchase row and takes a Postgres advisory lock for the owner's wallet, then reads everything fresh and re-runs the policy. A price that changed since the proposal is refused. The purchase is marked executing, which counts against the budget and cap, before payment starts. A partial unique index allows one live purchase per listing.
-- **Payments are simulated on day 2** behind a `Payments` service. Day 3 swaps in SPL transfers on devnet.
+- **Payments go through a `Payments` service:** a simulated ledger in tests and evals, SPL transfers on devnet in the demo (next section).
 
 The agent loop ([`apps/server/src/agent/Agent.ts`](apps/server/src/agent/Agent.ts)) is a plain tool loop on Claude Haiku 5.5 at low effort: at most 6 model calls, the spend cap checked before each one, history passed back unchanged, and every run recorded in `agent_runs` with its transcript, counts, outcome and trace id. The outcome comes from the purchases table, not from what the model says it did.
 
@@ -64,6 +64,35 @@ pnpm --filter @slabwatch/server mint-token --revoke T-...
 ```
 
 The token is printed once. Only its SHA-256 is stored. Without a valid token the endpoint answers 401. A token without execute rights does not see `execute_purchase`, and calling it anyway fails. Every purchase records which token or agent run asked for it.
+
+## How paying works on devnet
+
+The collector's wallet signs three kinds of text, and each is written by the server, stored with a one-time nonce, and checked with ed25519 against exactly that stored text ([`apps/server/src/wallet/`](apps/server/src/wallet)):
+
+| Text | What it does |
+| --- | --- |
+| Sign in | Proves the wallet is yours and opens a 12 hour session. It moves no funds. |
+| Purchase approval | Confirm mode: approves one named purchase, with its listing, price and amount in dUSD. |
+| Auto-buy approval | Lets the agent buy for one rule within its budget and a daily cap, until it expires. It names all three, and it stops counting if the rule's budget changes later. |
+
+Every text says it is for Solana devnet with test tokens of no value, because the wallet shows it to the person before they sign.
+
+Money moves as an SPL token, not SOL ([`apps/server/src/solana/`](apps/server/src/solana)):
+
+- **dUSD** is a token the server mints itself on devnet, with 2 decimals, so one unit is one US cent. A faucet gives a wallet 2,000 dUSD once a day.
+- **The collector approves an allowance** with an SPL `ApproveChecked` to Slabwatch's delegate key. The server builds that transaction, pays its fee and signs as fee payer; the wallet only adds its signature, so it needs no SOL. The server relays a transaction only if it carries its own valid fee payer signature over the exact bytes it built.
+- **A purchase is a `TransferChecked`** from the collector's token account to a mock escrow account, signed by the delegate, with a memo that names the purchase and listing. Before sending, the server checks the allowance and balance and says which one falls short.
+- **The chain enforces the allowance.** Even if every check above it failed, the delegate cannot move more than the collector approved. A test asks for more and the transaction fails.
+- **Devnet only, checked in code.** Before its first transaction the server compares the cluster's genesis hash with devnet's and refuses anything else, so a mainnet RPC URL in the config cannot move real funds.
+- **One secret.** The server's four devnet keys (treasury, delegate, mint, escrow owner) are derived from `DEVNET_SEED`, 32 random bytes that live only in `.env` or the host's environment. The browser bundle holds no key.
+
+The payment code runs for real in tests on [litesvm](https://github.com/LiteSVM/litesvm), an in-process Solana VM with the SPL programs built in. `SOLANA_RPC_URL=memory` uses the same VM for a local run with no network.
+
+## The wallet page
+
+[`apps/web`](apps/web) is a Next.js page that connects any Wallet Standard wallet through the Solana wallet adapter. You sign in, get test dUSD, approve an allowance, describe a card, check the rule the model drafted (and answer its questions), set a budget, and then see matches, listings waiting for review and rejections with their reasons. You can buy a match by signing it, ask the agent about a listing, or sign an auto-buy approval and revoke it later. Seller text is shown as plain text, since some of it is written to trick an AI buyer.
+
+The whole flow, from connecting to a paid purchase and auto-buy on and off, was driven in headless Chromium with a test wallet against the in-memory chain.
 
 ## Prompt injection, tested where it matters
 
@@ -130,8 +159,6 @@ Every step is an Effect span: rule parsing, each matcher stage, model calls with
 
 ## Guardrails
 
-Built so far:
-
 - The model can veto a match but never approve one that code rejected.
 - Catalog ids come from code, never from the model.
 - Purchases are checked in code against the rule's budget, the daily cap and the caller's rule-id allow-list, and checked again under a lock right before payment.
@@ -140,12 +167,10 @@ Built so far:
 - Seller text is escaped and marked untrusted in every prompt and tool result.
 - The agent is off unless `AGENT_ENABLED=true`, and the watcher starts at most 3 runs per pass.
 - Secrets live only in `.env` (git-ignored) or the hosting platform's environment. gitleaks runs as a pre-commit hook and in CI. A key that reaches git history gets rotated, not just deleted.
-
-Planned for day 3:
-
-- Per-IP and per-wallet rate limits, and the public demo in read-only mode (`DEMO_READ_ONLY=true` already hides and refuses the purchase tools).
-- Wallet signature checks on auto-buy approvals.
-- Devnet keypairs only, never in the repo or the frontend bundle.
+- The web API limits requests per IP and per wallet in Postgres: endpoints that cost a model call or a devnet transaction get 30 and 20 an hour by default, sign-in 30 per 10 minutes, the faucet once a day per wallet and 3 times a day per IP, and every route 600 per 10 minutes per IP. A wallet has at most 5 active rules.
+- `DEMO_READ_ONLY=true` turns the demo read-only: purchase tools are hidden and refused, and the faucet, allowance and approval endpoints answer 403.
+- Signatures are one-time: a signing request expires after 10 minutes and is marked used in the same update that accepts it.
+- Devnet only: the genesis hash check above, and devnet keys derived from one seed that never reaches the repo or the browser.
 
 ## Run it locally
 
@@ -155,12 +180,41 @@ Needs Node 22.12 or newer, pnpm 10 and Docker.
 pnpm install
 cp .env.example .env        # add ANTHROPIC_API_KEY to use the model stages
 pnpm bootstrap              # Postgres with pgvector, migrations, seed
-pnpm dev                    # backend on :3001: a new listing every 45 seconds, the watcher, and /mcp
+pnpm dev                    # backend on :3001: a new listing every 45 seconds, the watcher, /mcp and /api
+pnpm --filter @slabwatch/web dev   # wallet page on :3000
 pnpm test
 pnpm eval                   # v1 eval, needs the API key
 ```
 
+Payments are simulated unless you set `PAYMENTS=devnet` and a `DEVNET_SEED` (`openssl rand -hex 32`). With `SOLANA_RPC_URL=memory` the devnet code runs on an in-process VM; with the default devnet RPC the server creates the dUSD mint and the escrow account on its first boot and asks the devnet faucet for SOL for fees. If the faucet refuses (it is rate limited), the log prints the treasury address to fund at faucet.solana.com.
+
 `EMBEDDER=hash` in `.env` swaps the local embedding model for a deterministic hash embedder, which is useful offline and in tests but meaningless for similarity. `AGENT_ENABLED=true` lets the watcher wake the agent on new matches.
+
+## Deploy
+
+The live demo runs the backend and Postgres on Railway and the wallet page on Vercel. Nothing about the deploy is in the repo except this section: the settings live in each platform.
+
+**Railway.** One project with two services.
+
+1. Postgres from Railway's pgvector template.
+2. A service from this repo, built by Railpack with no Dockerfile. Start command `pnpm --filter @slabwatch/server start`. Pre-deploy command `pnpm --filter @slabwatch/server db:seed`, which runs the migrations and loads the seed in one transaction if the catalog is empty. Health check on `/health`.
+3. Its variables:
+
+| Variable | Value |
+| --- | --- |
+| `DATABASE_URL` | `${{pgvector.DATABASE_URL_PRIVATE}}` |
+| `PAYMENTS` | `devnet` |
+| `DEVNET_SEED` | `${{secret(64, "abcdef0123456789")}}`, which Railway generates once and keeps, so nobody ever sees or copies it |
+| `ANTHROPIC_API_KEY` | a key used only for this demo, with its own spend limit |
+| `LLM_DAILY_CAP_USD` | `2` |
+| `AGENT_ENABLED` | `true` |
+| `WEB_ORIGINS` | the Vercel URL of the wallet page |
+
+On its first boot the server creates the dUSD mint and the escrow account and logs the treasury address. If the devnet faucet refuses the airdrop, fund that address with devnet SOL at faucet.solana.com.
+
+**Vercel.** Import the repo with `apps/web` as the root directory and set `NEXT_PUBLIC_API_URL` to the Railway service URL. Then put the Vercel URL in the backend's `WEB_ORIGINS`.
+
+To turn the public demo read-only, set `DEMO_READ_ONLY=true` on the backend.
 
 ## Layout
 
@@ -168,7 +222,9 @@ pnpm eval                   # v1 eval, needs the API key
 packages/domain   Effect Schema types: money, catalog, watch rules, match decisions, hard checks
 packages/seed     the fictional catalog, prices, sales history and the listing generator
 apps/server       Effect backend: Postgres and pgvector, embeddings, model calls, rule parser, matcher,
-                  purchase policy, agent loop and tools, MCP endpoint, watcher, tracing
+                  purchase policy, agent loop and tools, MCP endpoint, watcher, tracing,
+                  wallet signatures, devnet payments, the web API and its rate limits
+apps/web          Next.js wallet page
 evals             labelled eval set, metrics, the matcher eval and the agent injection eval
 ```
 
@@ -178,7 +234,9 @@ I built this with Claude Code as a coding agent. I set the scope, the plan and t
 
 ## What's next
 
-- Day 3: the wallet page on devnet with a signed budget approval and SPL token transfers to a mock escrow, rate limits and the read-only demo, deploy and a write-up.
+- The binder view (what a wallet has bought) was cut for time.
+- Confirm mode signs a text and the delegate pays. Having the wallet sign the transfer itself would show the payment in the wallet's own approval screen.
+- The agent eval covers the agent's decisions; nothing yet measures the wallet flow beyond the tests above.
 
 ## License
 

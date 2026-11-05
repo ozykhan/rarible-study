@@ -104,4 +104,35 @@ A candidate change, not made: tell the agent that seller text addressed to autom
 
 - Decide on the candidate prompt change above, and get a fresh labelled set before trusting any rate from these runs.
 - Prompt caching for the agent's system prompt and tools is not set up yet; the per-run cost is small enough that it has not been measured.
-- Day 3: the wallet page, signature checks on approvals, devnet payments, rate limits and the read-only demo, deploy.
+- Day 3 items are below.
+
+## Day 3
+
+### Decisions
+
+- **The server writes every text a wallet signs,** stores it with a one-time nonce, and checks the signature against exactly that stored text. A client can never get a different text accepted, and a request is marked used in the same `UPDATE ... WHERE used_at IS NULL` that accepts it, so a signature cannot be replayed. Sign-in, a single purchase and an auto-buy approval are three kinds of the same request.
+- **An approval is tied to what it names.** The auto-buy approval stores the rule's budget and currency at signing time; the purchase policy only counts an approval whose wallet is the rule's owner and whose budget still equals the rule's. Changing the budget silently voids the old signature, and finishing an approval after the budget changed is refused with "start again".
+- **SPL allowance, not custody.** The collector approves Slabwatch's delegate for an amount with `ApproveChecked`, and the delegate pays with `TransferChecked`. The server never holds the collector's tokens, and the chain caps what the delegate can move, which is a second limit outside our code. Confirm mode uses the same delegate after a signed purchase text; the alternative (the wallet signs each transfer) is listed in the README as next.
+- **The server pays fees.** The allowance transaction has the treasury as fee payer, partially signed by the server, so a collector needs no devnet SOL, which removes the most fragile step of a devnet demo (the SOL faucet). The relay endpoint only sends a transaction whose fee payer is the treasury and whose treasury signature verifies over the exact message bytes, so it cannot be used to send anything the server did not build. The browser deserializes it as a `VersionedTransaction`, which keeps the message bytes as they are; the legacy `Transaction` class can recompile a message.
+- **Devnet is checked, not assumed.** Before its first send the RPC chain compares the cluster's genesis hash with devnet's. A wrong `SOLANA_RPC_URL` fails closed.
+- **One seed, four keys.** Treasury, delegate, mint and escrow keys are derived from `DEVNET_SEED` with SHA-256 and a label each. One secret to set on the host, and the same seed always gives the same mint, so a redeploy finds its own token.
+- **Kit on the server, the wallet adapter in the browser.** `@solana/kit` and the `@solana-program/*` clients build every transaction. The wallet adapter still sits on web3.js 1.x, so the page uses it only to deserialize, sign and serialize.
+- **litesvm for tests.** The payment code runs on an in-process Solana VM in CI, with the real token, associated token and memo programs. `SOLANA_RPC_URL=memory` reuses it for local runs and for the browser test, so the whole wallet flow could be exercised without a network.
+- **Rate limits in Postgres.** Fixed one-hour or ten-minute windows keyed by IP and by wallet, in the same database, so they survive restarts. The client IP comes from the proxy's `X-Real-IP`, or the last `X-Forwarded-For` entry, which is the one the proxy added.
+
+### Things the tests caught
+
+- litesvm 1.6's bundled memo program at the current memo address does not execute (`InvalidProgramForExecution`); the token programs do. The test VM maps the legacy memo program to that address, which accepts the same instruction. Devnet is unaffected.
+- The web API routes take their services when the router is built, so a test cannot inject them per request the way the MCP test does. The web test builds the handler with the test's services instead.
+- The first browser run found a hydration mismatch: the wallet button depends on what the browser has installed, so it now renders on the client only.
+
+### Things the deploy caught
+
+- The first deploy's seed step was killed for memory (exit 137) while embedding: it sent all 200 listings to the local model in one batch. The embedder now works in batches of 16.
+- That killed run had already written the past sales, and a second run would have written them again. The seed now runs in one transaction and clears sales left by a run from before that change.
+- Railway's config-as-code file is deprecated, so the service settings were set through the platform and are listed in the README instead of a `railway.json`.
+
+### Open
+
+- The live demo's model key is set by hand in the host's dashboard, so no session handles it.
+- Nothing measures the wallet flow beyond the tests; a devnet run of the browser script against the deployed API is the next check.
