@@ -23,11 +23,16 @@
     "@modelcontextprotocol/sdk": "1.32.2",
     "@slabwatch/domain": "workspace:*",
     "@slabwatch/seed": "workspace:*",
+    "@solana-program/memo": "0.16.0",
+    "@solana-program/system": "0.16.0",
+    "@solana-program/token": "0.18.0",
+    "@solana/kit": "8.6.0",
     "effect": "4.1.2",
     "zod": "^4.6.7"
   },
   "devDependencies": {
     "@effect/vitest": "4.1.2",
+    "litesvm": "1.6.1",
     "tsx": "^4.23.15",
     "vitest": "^5.1.0"
   }

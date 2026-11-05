@@ -7,10 +7,12 @@ import { DatabaseLive } from "./db/Database.ts"
 import { EmbedderLive } from "./embeddings/Embedder.ts"
 import { LlmLive } from "./llm/Llm.ts"
 import { MatcherLive } from "./matcher/Matcher.ts"
-import { PaymentsSimulated } from "./purchases/Payments.ts"
 import { PurchasesLive } from "./purchases/Purchases.ts"
 import { RuleParserLive } from "./rules/RuleParser.ts"
 import { RuleRepoLive } from "./rules/RuleRepo.ts"
+import type { Chain } from "./solana/Chain.ts"
+import { ChainLive, paymentsFor } from "./solana/PaymentsDevnet.ts"
+import { WalletAuthLive } from "./wallet/WalletAuth.ts"
 
 /**
  * How the app is wired. Each layer declares what it needs; Layer.provide
@@ -21,12 +23,17 @@ export const BaseLive = Layer.mergeAll(DatabaseLive, EmbedderLive).pipe(Layer.pr
 
 export const ReposLive = Layer.mergeAll(CatalogRepoLive, RuleRepoLive, LlmLive, AgentTokensLive).pipe(Layer.provideMerge(BaseLive))
 
-/** Day 2 pays through a simulated ledger; day 3 swaps in the devnet layer here. */
-export const PaymentsLive = PaymentsSimulated
+/**
+ * Everything the app runs on. PAYMENTS picks a simulated ledger or devnet
+ * transfers; the chain is a parameter so tests can run the devnet code
+ * against an in-process Solana VM.
+ */
+export const makeAppLive = <E, R>(chain: Layer.Layer<Chain, E, R>) => {
+  const Services = Layer.mergeAll(MatcherLive, RuleParserLive, PurchasesLive).pipe(
+    Layer.provideMerge(paymentsFor(chain)),
+    Layer.provideMerge(ReposLive)
+  )
+  return Layer.mergeAll(AgentLive, WalletAuthLive).pipe(Layer.provideMerge(Services))
+}
 
-export const ServicesLive = Layer.mergeAll(MatcherLive, RuleParserLive, PurchasesLive).pipe(
-  Layer.provideMerge(PaymentsLive),
-  Layer.provideMerge(ReposLive)
-)
-
-export const AppLive = AgentLive.pipe(Layer.provideMerge(ServicesLive))
+export const AppLive = makeAppLive(ChainLive)

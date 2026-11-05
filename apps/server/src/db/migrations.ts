@@ -214,7 +214,55 @@ const agent = Effect.gen(function* () {
   yield* sql`ALTER TABLE llm_calls ADD COLUMN run_id text`
 })
 
+/**
+ * Day 3: the wallet. A signing request holds the exact text the server asked
+ * a wallet to sign, used once. A session is a hashed bearer token for a
+ * wallet that signed in. Rate limit buckets live here so they survive a
+ * restart and are shared if the server ever runs twice.
+ */
+const wallet = Effect.gen(function* () {
+  const sql = yield* SqlClient
+  yield* sql`
+    CREATE TABLE signing_requests (
+      nonce text PRIMARY KEY,
+      kind text NOT NULL CHECK (kind IN ('sign_in', 'auto_approval', 'purchase_approval')),
+      wallet text NOT NULL,
+      message text NOT NULL,
+      payload jsonb NOT NULL DEFAULT '{}',
+      expires_at timestamptz NOT NULL,
+      used_at timestamptz,
+      created_at timestamptz NOT NULL DEFAULT now()
+    )`
+  yield* sql`
+    CREATE TABLE wallet_sessions (
+      id text PRIMARY KEY,
+      wallet text NOT NULL,
+      token_sha256 text NOT NULL UNIQUE,
+      expires_at timestamptz NOT NULL,
+      created_at timestamptz NOT NULL DEFAULT now()
+    )`
+  yield* sql`
+    CREATE TABLE rate_limits (
+      key text NOT NULL,
+      window_start timestamptz NOT NULL,
+      hits int NOT NULL,
+      PRIMARY KEY (key, window_start)
+    )`
+  yield* sql`
+    CREATE TABLE faucet_grants (
+      id bigserial PRIMARY KEY,
+      wallet text NOT NULL,
+      token_units bigint NOT NULL,
+      lamports bigint NOT NULL,
+      signature text,
+      created_at timestamptz NOT NULL DEFAULT now()
+    )`
+  yield* sql`CREATE INDEX faucet_grants_wallet_idx ON faucet_grants (wallet, created_at)`
+  yield* sql`ALTER TABLE rule_approvals ADD COLUMN nonce text UNIQUE`
+})
+
 export const migrations = {
   "0001_init": init,
-  "0002_agent": agent
+  "0002_agent": agent,
+  "0003_wallet": wallet
 }

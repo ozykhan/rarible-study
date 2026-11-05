@@ -32,6 +32,18 @@ export class AppConfig extends Context.Service<
     readonly otlpTracesUrl: string | null
     /** Extra headers for the OTLP exporter, as k=v pairs separated by commas (the OTEL_EXPORTER_OTLP_HEADERS format). */
     readonly otlpHeaders: Redacted.Redacted<string> | null
+    /** How purchases pay: a simulated ledger, or SPL token transfers on Solana devnet. */
+    readonly payments: "simulated" | "devnet"
+    /** A Solana devnet RPC URL. Any other cluster is refused before a transaction is sent. */
+    readonly solanaRpcUrl: string
+    /** 32 random bytes as hex; the server's devnet keypairs are derived from it. Devnet only, never a real key. */
+    readonly devnetSeed: Redacted.Redacted<string> | null
+    /** Test dUSD a wallet gets from the faucet, at most once a day. */
+    readonly faucetUsd: number
+    /** Browser origins allowed to call the web API, for example the Vercel URL. */
+    readonly webOrigins: ReadonlyArray<string>
+    /** Requests per hour per IP to the endpoints that cost a model call or a devnet transaction. */
+    readonly costlyRequestsPerHour: number
   }
 >()("slabwatch/AppConfig") {}
 
@@ -61,7 +73,19 @@ const config = Config.all({
   otlpHeaders: Config.Redacted("OTLP_HEADERS").pipe(
     Config.option,
     Config.map((o) => (Option.isSome(o) && Redacted.value(o.value).length > 0 ? o.value : null))
-  )
+  ),
+  payments: Config.Literals(["simulated", "devnet"], "PAYMENTS").pipe(Config.withDefault("simulated" as const)),
+  solanaRpcUrl: Config.String("SOLANA_RPC_URL").pipe(Config.withDefault("https://api.devnet.solana.com")),
+  devnetSeed: Config.Redacted("DEVNET_SEED").pipe(
+    Config.option,
+    Config.map((o) => (Option.isSome(o) && Redacted.value(o.value).length > 0 ? o.value : null))
+  ),
+  faucetUsd: Config.Number("FAUCET_USD").pipe(Config.withDefault(2000)),
+  webOrigins: Config.String("WEB_ORIGINS").pipe(
+    Config.withDefault("http://localhost:3000"),
+    Config.map((s) => s.split(",").map((o) => o.trim()).filter((o) => o.length > 0))
+  ),
+  costlyRequestsPerHour: Config.Number("COSTLY_REQUESTS_PER_HOUR").pipe(Config.withDefault(30))
 })
 
 export const AppConfigLive = Layer.effect(AppConfig, config)

@@ -57,6 +57,9 @@ export class RuleRepo extends Context.Service<
     readonly insert: (stored: StoredRule) => Effect.Effect<void, SqlError>
     readonly get: (id: string) => Effect.Effect<StoredRule | null, SqlError>
     readonly listActive: Effect.Effect<ReadonlyArray<StoredRule>, SqlError>
+    readonly listForOwner: (wallet: string) => Effect.Effect<ReadonlyArray<StoredRule>, SqlError>
+    readonly setMode: (id: string, mode: WatchRule["mode"]) => Effect.Effect<void, SqlError>
+    readonly setStatus: (id: string, status: WatchRule["status"]) => Effect.Effect<void, SqlError>
     readonly saveDecisions: (decisions: ReadonlyArray<MatchDecision>) => Effect.Effect<void, SqlError>
   }
 >()("slabwatch/RuleRepo") {}
@@ -94,6 +97,19 @@ export const RuleRepoLive = Layer.effect(
       (rows) => rows.map(toStored)
     )
 
+    const listForOwner = Effect.fn("RuleRepo.listForOwner")(function* (wallet: string) {
+      const rows = yield* sql<RuleRowDb>`${selectRule(sql)} WHERE owner_wallet = ${wallet} ORDER BY created_at DESC`
+      return rows.map(toStored)
+    })
+
+    const setMode = Effect.fn("RuleRepo.setMode")(function* (id: string, mode: WatchRule["mode"]) {
+      yield* sql`UPDATE watch_rules SET mode = ${mode} WHERE id = ${id}`
+    })
+
+    const setStatus = Effect.fn("RuleRepo.setStatus")(function* (id: string, status: WatchRule["status"]) {
+      yield* sql`UPDATE watch_rules SET status = ${status} WHERE id = ${id}`
+    })
+
     const saveDecisions = Effect.fn("RuleRepo.saveDecisions")(function* (decisions: ReadonlyArray<MatchDecision>) {
       for (const d of decisions) {
         yield* sql`
@@ -109,6 +125,6 @@ export const RuleRepoLive = Layer.effect(
       }
     })
 
-    return RuleRepo.of({ insert, get, listActive, saveDecisions })
+    return RuleRepo.of({ insert, get, listActive, listForOwner, setMode, setStatus, saveDecisions })
   })
 )
