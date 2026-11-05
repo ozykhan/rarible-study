@@ -32,45 +32,49 @@ SET_STYLE = {
 CARDS = [
     ("OS-001", "Cinderwing Drake", "a small fierce red dragon with ember wings shedding sparks as it dives"),
     ("OS-002", "Mossback Tortoise", "a pond tortoise with a garden growing on its shell"),
-    ("OS-003", "Gale Sprite", "a small wind elemental creature made of swirling air, leaves and light, with glowing eyes"),
+    ("OS-003", "Gale Sprite", "a small round wind creature made of swirling air and leaves with two glowing eyes, no people"),
     ("OS-004", "Thornmane Lion", "a lion with a mane of bramble and thorns"),
-    ("OS-005", "Ironhide Golem", "a hulking stone golem patched with rusted mismatched armor plates, moss on its shoulders"),
+    ("OS-005", "Ironhide Golem", "a hulking mossy stone golem monster patched with rusted iron plates"),
     ("OS-006", "Duskhollow Owl", "an owl hunting in the last minute of sunset"),
     ("OS-007", "Frostpetal Fox", "a white fox whose tail leaves frost flowers in the snow"),
     ("OS-008", "Emberkit", "a tiny fire kitten napping on warm stones"),
     ("OS-009", "Lumen Moth", "a glowing moth shining in the dark night"),
     ("OS-010", "Verdant Wyrmling", "a leaf-scaled baby dragon rooted in moss"),
-    ("TW-001", "Glimmerfin", "a luminous reef fish schooling in a moonlit lagoon"),
+    ("TW-001", "Glimmerfin", "a glowing goldfish-like reef fish with long flowing fins, close-up, side view"),
     ("TW-002", "Reefguard Crab", "a crab guarding coral with oversized claws"),
-    ("TW-003", "Abyssal Leviathan", "a gigantic scaled sea serpent with glowing eyes coiling out of a deep ocean trench"),
+    ("TW-003", "Abyssal Leviathan", "a huge sea serpent dragon with a long scaly body, fanged jaws and glowing eyes, in the dark deep ocean"),
     ("TW-004", "Kelpie Foal", "a young water horse with a mane of kelp"),
     ("TW-005", "Stormcaller Heron", "a heron calling thunder over a stormy marsh"),
     ("TW-006", "Coralbloom", "a flowering coral opening at high tide"),
-    ("TW-007", "Tidewyrm", "a sea dragon riding the crest of a huge wave"),
-    ("TW-008", "Shellback Hermit", "a hermit crab carrying a shell decorated with bottle caps"),
-    ("TW-009", "Driftwood Sprite", "a small creature made of driftwood and seaweed with glowing eyes, on a beach"),
+    ("TW-007", "Tidewyrm", "a blue-scaled sea dragon with fins swimming up toward the surface"),
+    ("TW-008", "Shellback Hermit", "a cute hermit crab in a big spiral shell decorated with bottle caps, on the sandy sea floor"),
+    ("TW-009", "Driftwood Sprite", "a cute little creature with a body of driftwood, seaweed hair and two big glowing eyes"),
     ("TW-010", "Pearl Otter", "a playful otter juggling pearls on its belly"),
     ("EF-001", "Ashen Wyrm", "an ancient grey dragon sleeping under cooled lava"),
-    ("EF-002", "Magma Hound", "a hound with molten paws leaving glowing tracks"),
+    ("EF-002", "Magma Hound", "a lean wolf-like hound with molten glowing paws leaving burning tracks"),
     ("EF-003", "Cinder Salamander", "a salamander bathing in campfire embers"),
     ("EF-004", "Obsidian Golem", "a golem of black volcanic glass with a hollow glowing chest"),
     ("EF-005", "Pyre Phoenix", "a phoenix of fire reborn from a single spark"),
-    ("EF-006", "Smoke Wisp", "a ghostly creature made of curling smoke with glowing ember eyes"),
+    ("EF-006", "Smoke Wisp", "a small ghost made of curling grey smoke with two glowing ember eyes, floating over embers"),
     ("EF-007", "Basalt Ram", "a ram whose horns are columns of basalt rock"),
     ("EF-008", "Flare Drakeling", "a small red dragon sneezing little flares"),
     ("EF-009", "Charcoal Beetle", "a black beetle rolling a ball of glowing charcoal"),
-    ("EF-010", "Lava Eel", "an eel swimming through a river of lava"),
+    ("EF-010", "Lava Eel", "a long glowing eel-like serpent creature with fins, swimming through a river of lava"),
     ("SE-001", "Nebula Drake", "a dragon with a nebula swirling inside its wings"),
     ("SE-002", "Comet Hare", "a hare leaving a comet tail as it runs"),
     ("SE-003", "Orbit Owl", "an owl circling a glowing moon"),
     ("SE-004", "Void Ray", "a manta ray spirit gliding through space"),
     ("SE-005", "Starlit Unicorn", "a white unicorn whose horn points at a bright star"),
     ("SE-006", "Meteor Golem", "a golem built from a fallen meteorite"),
-    ("SE-007", "Aurora Moth", "a moth whose wings ripple like the northern lights"),
+    ("SE-007", "Aurora Moth", "a large moth with fuzzy body and wide wings rippling like the northern lights"),
     ("SE-008", "Lunar Jellyfish", "a glowing jellyfish spirit drifting between stars"),
     ("SE-009", "Solar Lion", "a lion whose mane burns like the sun's corona"),
-    ("SE-010", "Cinderwing Drake", "a young drake with spark wings flying among the stars"),
+    ("SE-010", "Cinderwing Drake", "a small dragon with glowing ember wings flying through a starfield"),
 ]
+
+# Cards whose name pulls the model the wrong way ("Sprite" draws a girl, "Ironhide" a suit of
+# armor). Their prompt is the description alone.
+NAME_MISLEADS = {"OS-001", "OS-003", "OS-005", "EF-006", "TW-001", "TW-009", "SE-010"}
 
 QUALITY = "fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
 
@@ -88,7 +92,7 @@ HERO = (
 
 
 # A reroll for an image that came out wrong: bump its number and generate it again.
-REROLL: dict[str, int] = {}
+REROLL: dict[str, int] = {"EF-006": 1, "TW-001": 1, "TW-009": 1}
 
 
 def seed_for(key: str) -> int:
@@ -98,7 +102,8 @@ def seed_for(key: str) -> int:
 
 def jobs():
     for cid, name, lore in CARDS:
-        prompt = f"{name}, {lore}, {SET_STYLE[cid[:2]]}, {QUALITY}"
+        subject = lore if cid in NAME_MISLEADS else f"{name}, {lore}"
+        prompt = f"{subject}, {SET_STYLE[cid[:2]]}, {QUALITY}"
         yield cid, prompt, (512, 704), OUT / "cards" / f"{cid}.webp", (384, 528)
     for sid, prompt in BANNERS.items():
         yield f"set-{sid}", prompt, (768, 432), OUT / "sets" / f"{sid}.webp", (768, 432)
