@@ -1,16 +1,7 @@
 import type { Status } from "@/lib/types"
+import { Chip } from "./ui"
 
-/** The safety line under the header. It stays on every view. */
-export function DevnetNotice() {
-  return (
-    <div className="devnet-notice">
-      <strong>Solana devnet only.</strong> Every card, seller and grader here is invented, and dUSD is a test token with no value.
-      Never use a wallet that holds real funds on mainnet for experiments like this one.
-    </div>
-  )
-}
-
-/** The bar pinned to the bottom of the page: what the backend is doing right now. */
+/** The bar pinned to the bottom of the page: what the backend is doing right now. Styles: styles/status-bar.css. */
 export function StatusBar({ status, loaded }: { status: Status | null; loaded: boolean }) {
   return (
     <footer className="statusbar">
@@ -24,20 +15,25 @@ export function StatusBar({ status, loaded }: { status: Status | null; loaded: b
         {status && (
           <>
             <span>
-              <i className={`led ${status.payments === "devnet" ? "on" : ""}`} />
+              <Led on={status.payments === "devnet"} />
               {status.payments === "devnet" ? "SPL on devnet" : "Simulated ledger"}
             </span>
             <span>
-              <i className={`led ${status.agentEnabled ? "on" : ""}`} />
+              <Led on={status.agentEnabled} />
               Agent {status.agentEnabled ? "on" : "off"}
             </span>
             <span className="mono">
               Model ${status.llm.spentTodayUsd.toFixed(2)} / ${status.llm.dailyCapUsd.toFixed(2)}
             </span>
-            {status.readOnly && <span className="chip warn">read-only demo</span>}
+            {status.readOnly && <Chip tone="warn">read-only demo</Chip>}
           </>
         )}
       </span>
     </footer>
   )
+}
+
+/** A status dot: green with a glow when on, grey when off. */
+function Led({ on }: { on: boolean }) {
+  return <i className={on ? "led on" : "led"} />
 }

@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react"
-import { cardArt, gradeWord, setTheme } from "@/lib/art"
+import { cardArt, gradeWord, setTheme, UNKNOWN_TONE } from "@/lib/art"
 import { label } from "@/lib/format"
 import type { Listing } from "@/lib/types"
 
@@ -10,11 +10,13 @@ export type SlabCard = Pick<
 
 /**
  * A graded card in its case, drawn in CSS: the grader's label on top and the
- * card with its generated art inside. Holo finishes get a moving sheen.
+ * card with its generated art inside. Holo finishes get a moving sheen. It
+ * scales with its container, so give it a width through the parent.
+ * Anatomy and styles: styles/slab.css.
  */
 export function Slab({ card, className = "", eager = false }: { card: SlabCard; className?: string; eager?: boolean }) {
   const theme = setTheme(card)
-  const style = { "--tone": theme?.tone ?? "#9aa1ab" } as CSSProperties
+  const style = { "--tone": theme?.tone ?? UNKNOWN_TONE } as CSSProperties
   return (
     <div className={`slab grader-${card.grader} ${className}`} style={style} aria-hidden="true">
       <div className="slab-case">

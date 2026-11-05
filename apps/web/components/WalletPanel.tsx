@@ -7,11 +7,13 @@ import { api } from "@/lib/api"
 import { dusd, explorerTx, fromBase64, toBase64 } from "@/lib/format"
 import type { Funds, Status } from "@/lib/types"
 import { useAction } from "@/lib/useAction"
+import { Button, Panel } from "./ui"
 
 /**
  * The collector's dUSD and what Slabwatch may spend from it. The allowance is
  * an SPL token approval to Slabwatch's delegate, signed in the wallet; the
  * chain itself stops the delegate from spending more than that.
+ * Styles: styles/ui.css (.panel) and styles/desk.css (.facts, .row).
  */
 export function WalletPanel(props: { token: string; status: Status; funds: Funds | null; onChange: () => void }) {
   const { signTransaction } = useWallet()
@@ -22,10 +24,9 @@ export function WalletPanel(props: { token: string; status: Status; funds: Funds
 
   if (props.status.payments !== "devnet") {
     return (
-      <section className="panel">
-        <h2>Wallet</h2>
+      <Panel title="Wallet">
         <p className="muted">This server pays through a simulated ledger, so there is nothing to fund.</p>
-      </section>
+      </Panel>
     )
   }
 
@@ -50,8 +51,7 @@ export function WalletPanel(props: { token: string; status: Status; funds: Funds
     })
 
   return (
-    <section className="panel">
-      <h2>Wallet</h2>
+    <Panel title="Wallet">
       <dl className="facts">
         <dt>dUSD balance</dt>
         <dd>{funds ? dusd(funds.balanceUnits) : "…"}</dd>
@@ -59,18 +59,18 @@ export function WalletPanel(props: { token: string; status: Status; funds: Funds
         <dd>{funds ? dusd(funds.allowanceUnits) : "…"}</dd>
       </dl>
       <div className="row">
-        <button onClick={faucet} disabled={busy !== null || props.status.readOnly}>
+        <Button onClick={faucet} disabled={busy !== null || props.status.readOnly}>
           {busy === "faucet" ? "Minting…" : `Get ${props.status.faucetUsd.toLocaleString("en-US")} test dUSD`}
-        </button>
+        </Button>
       </div>
       <div className="row">
         <label>
           Allowance
           <input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" size={8} /> dUSD
         </label>
-        <button onClick={approve} disabled={busy !== null || props.status.readOnly}>
+        <Button onClick={approve} disabled={busy !== null || props.status.readOnly}>
           {busy === "allowance" ? "Waiting for the wallet…" : "Approve in wallet"}
-        </button>
+        </Button>
       </div>
       <p className="muted small">
         The allowance replaces any earlier one. Slabwatch pays the network fee, so the wallet needs no SOL. Set it to 0 to
@@ -85,6 +85,6 @@ export function WalletPanel(props: { token: string; status: Status; funds: Funds
         </p>
       )}
       {error && <p className="error">{error}</p>}
-    </section>
+    </Panel>
   )
 }

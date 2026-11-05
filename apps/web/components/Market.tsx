@@ -1,11 +1,10 @@
 "use client"
 
-import type { CSSProperties } from "react"
 import { useMemo, useState } from "react"
-import { ago, GRADERS, SETS, setTheme } from "@/lib/art"
-import { label, money } from "@/lib/format"
+import { GRADERS, SETS, setTheme } from "@/lib/art"
 import type { Listing } from "@/lib/types"
-import { Slab } from "./Slab"
+import { ListingTile } from "./ListingTile"
+import { Button, SearchIcon, Section } from "./ui"
 
 type Sort = "recent" | "price_asc" | "price_desc" | "grade"
 
@@ -21,9 +20,10 @@ const roughUsd = (l: Listing) =>
   l.price.currency === "JPY" ? l.price.amountMinor / 150 : l.price.amountMinor / (l.price.currency === "EUR" ? 92 : 100)
 
 /**
- * The newest listings as a card grid. Seller text is not shown here; where it
- * is shown (a rule's matches), it is plain text, because it is untrusted and
- * some of it is written to trick the agent.
+ * The newest listings as a grid of ListingTiles, with set tabs, search and
+ * sort. Seller text is not shown here; where it is shown (a rule's matches),
+ * it is plain text, because it is untrusted and some of it is written to trick
+ * the agent. Styles: styles/market.css.
  */
 export function Market(props: {
   listings: ReadonlyArray<Listing> | null
@@ -63,13 +63,7 @@ export function Market(props: {
   }, [listings, query, set, sort])
 
   return (
-    <section className="section" id="market">
-      <div className="section-head">
-        <div>
-          <p className="eyebrow">Live on devnet</p>
-          <h2>On the market now</h2>
-        </div>
-      </div>
+    <Section id="market" eyebrow="Live on devnet" title="On the market now">
 
       <nav className="tabs" aria-label="Filter by set">
         <button className={`tab ${set === "all" ? "active" : ""}`} onClick={() => props.onSet("all")}>
@@ -113,15 +107,16 @@ export function Market(props: {
         <p className="empty">
           Nothing matches right now. New listings arrive about once a minute.{" "}
           {(query || set !== "all") && (
-            <button
-              className="link"
+            <Button
+              variant="link"
+              size="inline"
               onClick={() => {
                 props.onQuery("")
                 props.onSet("all")
               }}
             >
               Clear the filters
-            </button>
+            </Button>
           )}
         </p>
       )}
@@ -131,44 +126,6 @@ export function Market(props: {
           <ListingTile key={l.listingId} l={l} />
         ))}
       </div>
-    </section>
-  )
-}
-
-export function ListingTile({ l }: { l: Listing }) {
-  const theme = setTheme(l)
-  return (
-    <article className="tile" style={{ "--tone": theme?.tone } as CSSProperties}>
-      <div className="tile-media">
-        <Slab card={l} />
-      </div>
-      <div className="tile-body">
-        <span className="badge">
-          {l.grader} {l.grade}
-        </span>
-        <h3 className="tile-title">{l.cardName}</h3>
-        <p className="tile-meta">
-          {theme?.year ?? ""} · {l.setName} #{l.cardNumber} · {label(l.edition)}
-          {l.finish === "non_holo" ? "" : ` ${label(l.finish)}`}
-        </p>
-        <div className="tile-price">
-          <span className="price">{money(l.price)}</span>
-          {l.price.currency !== "USD" && <span className="chip warn">{l.price.currency}</span>}
-        </div>
-        <p className="tile-foot">
-          <span>@{l.sellerHandle}</span>
-          <span>{ago(l.listedAt)}</span>
-        </p>
-      </div>
-    </article>
-  )
-}
-
-export function SearchIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-      <circle cx="11" cy="11" r="7" />
-      <path d="m20 20-3.5-3.5" />
-    </svg>
+    </Section>
   )
 }

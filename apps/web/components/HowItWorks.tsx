@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { Section } from "./ui"
 
 const STEPS: ReadonlyArray<{ title: string; text: string; icon: ReactNode }> = [
   {
@@ -44,12 +45,10 @@ const STEPS: ReadonlyArray<{ title: string; text: string; icon: ReactNode }> = [
   }
 ]
 
+/** Four step cards for signed-out visitors. Icons are 48px line drawings in the accent. Styles: styles/how-it-works.css. */
 export function HowItWorks() {
   return (
-    <section className="section" id="how">
-      <div className="section-head">
-        <h2>How it works</h2>
-      </div>
+    <Section id="how" title="How it works">
       <div className="how-grid">
         {STEPS.map((s, i) => (
           <article className="how" key={s.title}>
@@ -72,6 +71,6 @@ export function HowItWorks() {
           </article>
         ))}
       </div>
-    </section>
+    </Section>
   )
 }

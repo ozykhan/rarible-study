@@ -1,0 +1,164 @@
+/*
+ * The signed-in desk: a rail of panels on the left (WalletPanel, NewRule,
+ * RuleList) and the selected rule on the right (RuleView).
+ */
+
+.layout {
+  display: grid;
+  grid-template-columns: var(--rail) minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.empty-rule {
+  padding: var(--space-10) var(--space-6);
+  text-align: center;
+}
+
+/* ---------- Panel contents ---------- */
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2-5) 0;
+}
+
+/* Label and value pairs; values in mono. */
+.facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-1-5) var(--space-4);
+  margin: 0 0 var(--space-2-5);
+  font-size: var(--text-md);
+}
+.facts dt {
+  color: var(--muted);
+}
+.facts dd {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: var(--text-sm);
+}
+
+/* NewRule: the drafted rule to check, and the parser's questions in a warn tint. */
+.draft {
+  margin-top: var(--space-3-5);
+  padding-top: var(--space-3-5);
+  border-top: 1px dashed var(--line-strong);
+}
+.questions {
+  padding: var(--space-2-5) var(--space-3-5);
+  font-size: var(--text-md);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--warn) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warn) 25%, transparent);
+}
+
+/* ---------- RuleView ---------- */
+
+.rule-head {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.rule-head h2 {
+  font-size: var(--text-2xl);
+  margin-bottom: var(--space-1);
+}
+/* A titled block inside the rule: matches, purchases, auto-buy, agent runs. */
+.block {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3-5);
+  border-top: 1px solid var(--line);
+}
+
+/* DecisionRow: a listing the matcher judged, with its thumbnail, price, seller text and reasons. */
+.listing {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: var(--space-3-5);
+  margin-bottom: var(--space-2);
+  padding: var(--space-3);
+  background: var(--surface-subtle);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+}
+.thumb {
+  width: 64px;
+  aspect-ratio: 63 / 88;
+  object-fit: cover;
+  border-radius: 5px;
+  border: 2px solid var(--tone, var(--line-strong));
+  background: var(--surface-thumb);
+}
+/* PurchaseRow and an agent run. */
+.purchase,
+.run {
+  margin-bottom: var(--space-2);
+  padding: var(--space-2-5) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+.listing-main {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.listing .price {
+  font-size: var(--text-lg);
+}
+/* Seller text is untrusted, so it is shown as plain preformatted text in a well. */
+.seller-text {
+  margin: var(--space-2) 0;
+  padding: var(--space-2) var(--space-2-5);
+  white-space: pre-wrap;
+  color: var(--ink-soft);
+  background: var(--surface-sunken);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+.reasons {
+  margin: var(--space-1) 0;
+  padding-left: var(--space-4-5);
+  color: var(--muted);
+}
+.quote {
+  margin: var(--space-1) 0 0;
+  white-space: pre-wrap;
+}
+
+/* ---------- RuleList ---------- */
+
+.rule-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--space-2-5);
+}
+.rule-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-5);
+  width: 100%;
+  margin-bottom: var(--space-1-5);
+  padding: 9px var(--space-3);
+  text-align: left;
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+}
+.rule-item.active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}

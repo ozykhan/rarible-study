@@ -1,0 +1,95 @@
+/* Header: the sticky top bar with the logo, section links and the wallet button. */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-header);
+  background: var(--glass-header);
+  backdrop-filter: blur(var(--blur-lg));
+  -webkit-backdrop-filter: blur(var(--blur-lg));
+  border-bottom: 1px solid var(--line);
+}
+.topbar-inner {
+  max-width: calc(var(--wide) + 2 * var(--gutter));
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2-5);
+  color: var(--ink);
+  font-weight: var(--weight-black);
+  font-size: var(--text-3xl);
+  letter-spacing: var(--tracking-brand);
+  text-decoration: none;
+}
+.logo {
+  display: block;
+}
+.nav {
+  display: flex;
+  gap: var(--space-6);
+}
+.nav a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+}
+.nav a:hover {
+  color: var(--ink);
+}
+.topbar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.wallet-placeholder {
+  display: inline-block;
+  width: 150px;
+  height: 40px;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+}
+
+/* The Solana wallet adapter's own button and modal, restyled as an accent pill. */
+.wallet-adapter-button.wallet-adapter-button-trigger {
+  background: var(--accent);
+  color: var(--accent-ink);
+  height: 40px;
+  padding: 0 var(--space-4-5);
+  font-family: var(--sans);
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
+  border-radius: var(--radius-pill);
+}
+.wallet-adapter-button.wallet-adapter-button-trigger:not([disabled]):hover {
+  background: var(--accent);
+  filter: brightness(1.06);
+}
+.wallet-adapter-button-start-icon,
+.wallet-adapter-button-start-icon img {
+  width: 20px;
+  height: 20px;
+}
+.wallet-adapter-dropdown-list {
+  background: var(--surface-solid);
+  border: 1px solid var(--line-strong);
+}
+.wallet-adapter-modal-wrapper {
+  background: var(--surface-raised);
+  border: 1px solid var(--line-strong);
+}
+
+@media (max-width: 700px) {
+  .nav,
+  .topbar-right .chip {
+    display: none;
+  }
+}

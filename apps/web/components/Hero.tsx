@@ -3,7 +3,7 @@
 import { useWalletModal } from "@solana/wallet-adapter-react-ui"
 import type { SlabCard } from "./Slab"
 import { Slab } from "./Slab"
-import { SearchIcon } from "./Market"
+import { Button, SearchIcon } from "./ui"
 
 /** Four showcase slabs around the headline. Fixed picks, so nothing shifts while listings load. */
 const SHOWCASE: ReadonlyArray<SlabCard & { pos: string }> = [
@@ -57,6 +57,10 @@ const SHOWCASE: ReadonlyArray<SlabCard & { pos: string }> = [
   }
 ]
 
+/**
+ * The signed-out welcome: generated art, four floating slabs, the headline,
+ * a market search and the two calls to action. Styles: styles/hero.css.
+ */
 export function Hero(props: {
   wallet: string | null
   signingIn: boolean
@@ -104,17 +108,17 @@ export function Hero(props: {
         </form>
         <div className="hero-actions">
           {props.wallet === null ? (
-            <button className="btn btn-primary" onClick={() => setVisible(true)}>
+            <Button size="lg" onClick={() => setVisible(true)}>
               Connect a devnet wallet
-            </button>
+            </Button>
           ) : (
-            <button className="btn btn-primary" onClick={props.onSignIn} disabled={props.signingIn}>
+            <Button size="lg" onClick={props.onSignIn} disabled={props.signingIn}>
               {props.signingIn ? "Waiting for the wallet…" : "Sign in with this wallet"}
-            </button>
+            </Button>
           )}
-          <button className="btn btn-ring" onClick={props.onBrowse}>
+          <Button size="lg" variant="ring" onClick={props.onBrowse}>
             Browse the market
-          </button>
+          </Button>
         </div>
         {props.wallet !== null && (
           <p className="hero-note">Your wallet signs a one-time text that proves you own it. Signing it moves no funds.</p>

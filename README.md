@@ -104,6 +104,8 @@ The whole flow, from connecting to a paid purchase and auto-buy on and off, was 
 
 The page has a dark marketplace layout: a hero, the four sets, and the market as a grid of graded slabs you can filter by set, search and sort. Each slab is drawn in CSS (the grader's label, the grade, a holo sheen for holo finishes) around generated card art. The art, 40 cards plus 4 set banners and the hero background, was made on CPU with [LCM Dreamshaper v7](https://huggingface.co/SimianLuo/LCM_Dreamshaper_v7) (MIT license) by [`apps/web/scripts/generate_art.py`](apps/web/scripts/generate_art.py). Its prompts describe the fictional creatures in the seed catalog.
 
+The design system is written down in [`apps/web/DESIGN.md`](apps/web/DESIGN.md): tokens in [`apps/web/styles/tokens.css`](apps/web/styles/tokens.css), one stylesheet per component, shared building blocks in [`apps/web/components/ui`](apps/web/components/ui), and a `/design` page that renders every token and component with sample data.
+
 ## Prompt injection, tested where it matters
 
 The tests replace the model with a script that does what an injected model might do, and run it through the real loop, tools and policy against Postgres ([`apps/server/test/agent.db.test.ts`](apps/server/test/agent.db.test.ts)):

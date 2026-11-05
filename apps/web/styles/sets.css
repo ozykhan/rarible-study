@@ -1,0 +1,92 @@
+/* Sets: one chip and one banner card per fictional set, each colored by its --tone. */
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+.chip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 7px 15px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  transition: border-color var(--duration-fast) var(--ease);
+}
+.chip-btn:hover,
+.chip-btn.active {
+  border-color: var(--tone);
+}
+.chip-btn .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--tone);
+  box-shadow: 0 0 10px var(--tone);
+}
+
+.set-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+.set-card {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: border-color var(--duration-base) var(--ease);
+}
+.set-card:hover {
+  border-color: color-mix(in srgb, var(--tone) 60%, transparent);
+}
+.set-media {
+  display: block;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--tone) 20%, var(--surface-inset));
+}
+.set-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform var(--duration-slower) var(--ease);
+}
+.set-card:hover .set-media img {
+  transform: scale(1.04);
+}
+.set-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-5);
+  padding: var(--space-3) var(--space-3-5) var(--space-3-5);
+}
+.set-body strong {
+  font-size: var(--text-base);
+}
+.set-blurb {
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--faint);
+}
+
+@media (max-width: 900px) {
+  .set-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 460px) {
+  .set-blurb {
+    display: none;
+  }
+}

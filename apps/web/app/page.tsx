@@ -1,17 +1,20 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { DevnetNotice } from "@/components/DevnetNotice"
 import { Header } from "@/components/Header"
 import { Hero } from "@/components/Hero"
 import { HowItWorks } from "@/components/HowItWorks"
 import { Market } from "@/components/Market"
 import { NewRule } from "@/components/NewRule"
+import { RuleList } from "@/components/RuleList"
 import { RuleView } from "@/components/RuleView"
 import { Sets } from "@/components/Sets"
-import { DevnetNotice, StatusBar } from "@/components/StatusBar"
+import { StatusBar } from "@/components/StatusBar"
+import { Panel, Section } from "@/components/ui"
 import { WalletPanel } from "@/components/WalletPanel"
 import { api, ApiError } from "@/lib/api"
-import { money, short } from "@/lib/format"
+import { short } from "@/lib/format"
 import { useSession } from "@/lib/session"
 import type { Funds, Listing, Rule, Status } from "@/lib/types"
 import { useAction } from "@/lib/useAction"
@@ -101,13 +104,7 @@ export default function Home() {
         )}
 
         {token && status && (
-          <section className="section desk" id="desk">
-            <div className="section-head">
-              <div>
-                <p className="eyebrow">Signed in as {wallet ? short(wallet, 4) : "…"}</p>
-                <h2>Your watch rules</h2>
-              </div>
-            </div>
+          <Section id="desk" className="desk" eyebrow={`Signed in as ${wallet ? short(wallet, 4) : "…"}`} title="Your watch rules">
             <div className="layout">
               <div className="side">
                 <WalletPanel token={token} status={status} funds={funds} onChange={refresh} />
@@ -119,25 +116,7 @@ export default function Home() {
                     void refresh()
                   }}
                 />
-                <section className="panel">
-                  <h2>Your rules</h2>
-                  {rules.length === 0 && <p className="muted small">No rules yet.</p>}
-                  <ul className="rule-list">
-                    {rules.map((r) => (
-                      <li key={r.id}>
-                        <button className={`rule-item ${selected === r.id ? "active" : ""}`} onClick={() => setSelected(r.id)}>
-                          <span>{r.rawWant}</span>
-                          <span className="muted small">
-                            {r.status} · {r.mode === "auto" ? "auto-buy" : "confirm"} · budget {money(r.budget)}
-                          </span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                  <button className="link small" onClick={signOut}>
-                    Sign out
-                  </button>
-                </section>
+                <RuleList rules={rules} selected={selected} onSelect={setSelected} onSignOut={signOut} />
               </div>
               <div className="main">
                 {note && <p className="note">{note}</p>}
@@ -151,16 +130,15 @@ export default function Home() {
                     onChange={refresh}
                   />
                 ) : (
-                  <section className="panel empty-rule">
-                    <h2>No rule yet</h2>
+                  <Panel className="empty-rule" title="No rule yet">
                     <p className="muted">
                       Describe a card in <strong>New watch rule</strong>. Its matches, purchases and agent runs show up here.
                     </p>
-                  </section>
+                  </Panel>
                 )}
               </div>
             </div>
-          </section>
+          </Section>
         )}
 
         <Sets listings={listings} active={set} onPick={(id) => browse(id)} />

@@ -5,6 +5,7 @@ import { api } from "@/lib/api"
 import { label, toMajor, toMinor } from "@/lib/format"
 import type { Draft, Rule } from "@/lib/types"
 import { useAction } from "@/lib/useAction"
+import { Button, Panel } from "./ui"
 
 /** The parser's question when a want names no price; typing one below answers it. */
 const PRICE_QUESTION = "What is the most you want to pay?"
@@ -18,7 +19,7 @@ const EXAMPLES = [
 /**
  * Plain language in, a watch rule out. The model fills the fields; code maps
  * names to catalog ids and asks when something is unclear. Nothing is saved
- * until the collector confirms.
+ * until the collector confirms. Styles: styles/desk.css (.draft, .facts, .questions).
  */
 export function NewRule(props: { token: string; onCreated: (rule: Rule, note: string) => void }) {
   const [want, setWant] = useState("")
@@ -70,8 +71,7 @@ export function NewRule(props: { token: string; onCreated: (rule: Rule, note: st
   const priceGiven = Number(maxPrice) > 0
   const questions = (draft?.draft.questions ?? []).filter((q) => !(priceGiven && q === PRICE_QUESTION))
   return (
-    <section className="panel">
-      <h2>New watch rule</h2>
+    <Panel title="New watch rule">
       <textarea
         value={want}
         onChange={(e) => setWant(e.target.value)}
@@ -80,11 +80,14 @@ export function NewRule(props: { token: string; onCreated: (rule: Rule, note: st
         maxLength={500}
       />
       <div className="row">
-        <button onClick={makeDraft} disabled={busy !== null || want.trim().length < 3}>
+        <Button onClick={makeDraft} disabled={busy !== null || want.trim().length < 3}>
           {busy === "draft" ? "Reading…" : "Draft the rule"}
-        </button>
+        </Button>
         <span className="muted small">
-          Try: <button className="link" onClick={() => setWant(EXAMPLES[1] ?? "")}>{EXAMPLES[1]}</button>
+          Try:{" "}
+          <Button variant="link" onClick={() => setWant(EXAMPLES[1] ?? "")}>
+            {EXAMPLES[1]}
+          </Button>
         </span>
       </div>
 
@@ -152,14 +155,14 @@ export function NewRule(props: { token: string; onCreated: (rule: Rule, note: st
               />{" "}
               {h.maxPrice.currency}
             </label>
-            <button onClick={create} disabled={busy !== null || !(Number(budget) > 0) || !priceGiven}>
+            <Button onClick={create} disabled={busy !== null || !(Number(budget) > 0) || !priceGiven}>
               {busy === "create" ? "Saving and matching…" : "Save rule"}
-            </button>
+            </Button>
           </div>
           <p className="muted small">New rules start in confirm mode: nothing is bought until you sign for it.</p>
         </div>
       )}
       {error && <p className="error">{error}</p>}
-    </section>
+    </Panel>
   )
 }

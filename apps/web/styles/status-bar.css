@@ -1,0 +1,59 @@
+/* DevnetNotice: the safety line under the header. StatusBar: the bar pinned to the bottom. */
+
+.devnet-notice {
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-inset);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  text-align: center;
+  padding: 9px var(--gutter);
+}
+.devnet-notice strong {
+  color: var(--warn);
+  font-weight: var(--weight-semibold);
+}
+
+.statusbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--z-statusbar);
+  height: var(--statusbar-height);
+  padding: 0 var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--muted);
+  background: var(--glass-footer);
+  backdrop-filter: blur(var(--blur-md));
+  -webkit-backdrop-filter: blur(var(--blur-md));
+  border-top: 1px solid var(--line);
+}
+.statusbar-left,
+.statusbar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4-5);
+  white-space: nowrap;
+}
+.brand-mini {
+  color: var(--ink-soft);
+  font-weight: var(--weight-bold);
+}
+
+@media (max-width: 700px) {
+  .statusbar {
+    font-size: var(--text-xs);
+  }
+  .statusbar-right {
+    gap: var(--space-3);
+  }
+}
+@media (max-width: 460px) {
+  .statusbar .mono {
+    display: none;
+  }
+}
