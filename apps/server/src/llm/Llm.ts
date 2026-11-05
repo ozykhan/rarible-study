@@ -70,7 +70,7 @@ export class Llm extends Context.Service<
 >()("slabwatch/Llm") {}
 
 /** Spend so far today (UTC) in micro-dollars, from the llm_calls ledger. */
-const spentTodayMicros = (sql: SqlClient) => Effect.gen(function* () {
+export const spentTodayMicros = (sql: SqlClient) => Effect.gen(function* () {
   const rows = yield* sql<{ total: number }>`
     SELECT coalesce(sum(cost_usd_micros), 0)::float8 AS total
     FROM llm_calls

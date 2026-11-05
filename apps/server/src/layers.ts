@@ -13,6 +13,7 @@ import { RuleRepoLive } from "./rules/RuleRepo.ts"
 import type { Chain } from "./solana/Chain.ts"
 import { ChainLive, paymentsFor } from "./solana/PaymentsDevnet.ts"
 import { WalletAuthLive } from "./wallet/WalletAuth.ts"
+import { RateLimitsLive } from "./web/RateLimits.ts"
 
 /**
  * How the app is wired. Each layer declares what it needs; Layer.provide
@@ -21,7 +22,9 @@ import { WalletAuthLive } from "./wallet/WalletAuth.ts"
  */
 export const BaseLive = Layer.mergeAll(DatabaseLive, EmbedderLive).pipe(Layer.provideMerge(AppConfigLive))
 
-export const ReposLive = Layer.mergeAll(CatalogRepoLive, RuleRepoLive, LlmLive, AgentTokensLive).pipe(Layer.provideMerge(BaseLive))
+export const ReposLive = Layer.mergeAll(CatalogRepoLive, RuleRepoLive, LlmLive, AgentTokensLive, RateLimitsLive).pipe(
+  Layer.provideMerge(BaseLive)
+)
 
 /**
  * Everything the app runs on. PAYMENTS picks a simulated ledger or devnet
