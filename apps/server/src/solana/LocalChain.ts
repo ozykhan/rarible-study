@@ -1,15 +1,17 @@
 import { type Blockhash, getSignatureFromTransaction, lamports } from "@solana/kit"
 import { LEGACY_MEMO_PROGRAM_ADDRESS_V1, MEMO_PROGRAM_ADDRESS } from "@solana-program/memo"
 import { Effect, Layer } from "effect"
-import { FailedTransactionMetadata, LiteSVM } from "litesvm"
-import { Chain, ChainError } from "../src/solana/Chain.ts"
+import type { LiteSVM } from "litesvm"
+import { Chain, ChainError } from "./Chain.ts"
+
+type LiteSvmModule = typeof import("litesvm")
 
 /**
  * A VM with the SPL programs built in. The memo program bundled at the
  * current memo address does not execute in this litesvm version, so the
  * legacy memo program (which accepts the same instruction) is mapped there.
  */
-export const newSvm = () => {
+export const newSvm = ({ LiteSVM }: LiteSvmModule) => {
   const svm = new LiteSVM()
   const legacy = svm.getAccount(LEGACY_MEMO_PROGRAM_ADDRESS_V1)
   if (legacy.exists) svm.setAccount({ ...legacy, address: MEMO_PROGRAM_ADDRESS })
@@ -20,7 +22,7 @@ export const newSvm = () => {
  * The Chain service over an in-process Solana VM. The SPL token, associated
  * token and memo programs are built in, so the real payment code runs here.
  */
-export const chainLiteSvm = (svm: LiteSVM = newSvm()) =>
+export const chainLiteSvm = (svm: LiteSVM, { FailedTransactionMetadata }: LiteSvmModule) =>
   Layer.succeed(
     Chain,
     Chain.of({
@@ -49,3 +51,11 @@ export const chainLiteSvm = (svm: LiteSVM = newSvm()) =>
         })
     })
   )
+
+/**
+ * SOLANA_RPC_URL=memory: the same code paths on an in-process VM, for local
+ * runs with no network. litesvm is a dev dependency, loaded only here.
+ */
+export const chainInMemory = Layer.unwrap(
+  Effect.promise(() => import("litesvm")).pipe(Effect.map((mod) => chainLiteSvm(newSvm(mod), mod)))
+)

@@ -10,12 +10,12 @@ import { CatalogRepo } from "../src/catalog/CatalogRepo.ts"
 import { migrate } from "../src/db/Database.ts"
 import { makeAppLive } from "../src/layers.ts"
 import type { Chain } from "../src/solana/Chain.ts"
-import { chainLiteSvm } from "./litesvmChain.ts"
+import { chainInMemory } from "../src/solana/LocalChain.ts"
 
 export const seed = generateSeed()
 
 /** Tests never reach a real cluster: with PAYMENTS=devnet the chain is an in-process VM. */
-export const testLayer = (name: string, env: Record<string, string> = {}, chain: Layer.Layer<Chain> = chainLiteSvm()) => {
+export const testLayer = (name: string, env: Record<string, string> = {}, chain: Layer.Layer<Chain> = chainInMemory) => {
   const schema = `test_${name}_${process.pid}`
   process.env["DB_SCHEMA"] = schema
   process.env["EMBEDDER"] = "hash"

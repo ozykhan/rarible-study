@@ -49,6 +49,10 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm test
+      - name: Build the wallet page
+        run: pnpm --filter @slabwatch/web build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
       - name: Eval runner plumbing check (no model calls)
         run: pnpm eval -- v1 --offline
       - name: Migrate and seed from scratch

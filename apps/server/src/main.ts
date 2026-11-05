@@ -63,7 +63,7 @@ const DevnetSetup = Layer.effectDiscard(
     yield* treasury.setup.pipe(
       Effect.tap((r) =>
         r.needsFunding === null
-          ? Effect.logInfo(`devnet ready: mint ${r.mint}, escrow ${r.escrowAccount}, treasury ${r.treasury} (${r.treasuryLamports} lamports); created: ${r.created.join(", ") || "nothing"}`)
+          ? Effect.logInfo(`${r.cluster === "devnet" ? "devnet" : "in-memory chain"} ready: mint ${r.mint}, escrow ${r.escrowAccount}, treasury ${r.treasury} (${r.treasuryLamports} lamports); created: ${r.created.join(", ") || "nothing"}`)
           : Effect.logWarning(`devnet treasury needs SOL: ${r.needsFunding}`)
       ),
       Effect.catchCause((cause) => Effect.logWarning("devnet setup failed; it runs again on the next boot", cause)),

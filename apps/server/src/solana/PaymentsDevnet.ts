@@ -5,6 +5,7 @@ import { Effect, Layer, Redacted } from "effect"
 import { AppConfig } from "../config.ts"
 import { PaymentError, Payments, PaymentsSimulated } from "../purchases/Payments.ts"
 import { Chain, ChainError, chainRpc } from "./Chain.ts"
+import { chainInMemory } from "./LocalChain.ts"
 import { deriveDevnetKeys, makeTreasury, Treasury } from "./Treasury.ts"
 
 const dusd = (units: bigint) => formatMoney({ amountMinor: Number(units), currency: "USD" }).replace("$", "") + " dUSD"
@@ -82,7 +83,7 @@ export const TreasuryLive = Layer.effect(
 export const ChainLive = Layer.unwrap(
   Effect.gen(function* () {
     const config = yield* AppConfig
-    return chainRpc(config.solanaRpcUrl)
+    return config.solanaRpcUrl === "memory" ? chainInMemory : chainRpc(config.solanaRpcUrl)
   })
 )
 

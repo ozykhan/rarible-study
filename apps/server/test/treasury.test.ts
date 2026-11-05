@@ -8,15 +8,15 @@ import {
   type KeyPairSigner
 } from "@solana/kit"
 import { Effect, Layer } from "effect"
-import { LiteSVM } from "litesvm"
+import * as litesvm from "litesvm"
 import { DevnetSeedError, deriveDevnetKeys, makeTreasury, Treasury } from "../src/solana/Treasury.ts"
-import { chainLiteSvm, newSvm } from "./litesvmChain.ts"
+import { chainLiteSvm, newSvm } from "../src/solana/LocalChain.ts"
 
 const SEED = "11".repeat(32)
 
-const treasuryOn = (svm: LiteSVM) =>
+const treasuryOn = (svm: litesvm.LiteSVM) =>
   Layer.effect(Treasury, Effect.flatMap(deriveDevnetKeys(SEED).pipe(Effect.orDie), makeTreasury)).pipe(
-    Layer.provide(chainLiteSvm(svm))
+    Layer.provide(chainLiteSvm(svm, litesvm))
   )
 
 /** What a wallet does with the transaction the server built: add its own signature. */
@@ -38,7 +38,7 @@ describe("Treasury on an in-process Solana VM", () => {
     }).pipe(Effect.runPromise))
 
   it("sets up once, funds a wallet, takes a signed allowance and pays only within it", () => {
-    const svm = newSvm()
+    const svm = newSvm(litesvm)
     return Effect.gen(function* () {
       const treasury = yield* Treasury
       const first = yield* treasury.setup
@@ -75,7 +75,7 @@ describe("Treasury on an in-process Solana VM", () => {
   })
 
   it("relays only transactions it built itself, unchanged", () => {
-    const svm = newSvm()
+    const svm = newSvm(litesvm)
     return Effect.gen(function* () {
       const treasury = yield* Treasury
       yield* treasury.setup
