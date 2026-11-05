@@ -39,6 +39,14 @@ Why needs review and not reject: a duplicate or a cheap price is a reason for a 
 
 Latency and cost are recorded per call in `llm_calls`. For v1: 39 judge calls at 1.6 s mean and 2.3 s p95 latency, 5 parse calls.
 
+### v2 result
+
+v2: precision 100.0%, recall 94.7%, 12 needs review, 0 of 40 trap listings wrongly matched, 0 of 4 harmful injection changes, want parsing 40 of 40, 44 calls for $0.0083.
+
+The four v1 false positives (R1 / E08b, R1 / E09, R5 / E09, R5 / E50a) all became needs review. True positives stayed at 18 and no new errors appeared. R4 / E32 is still the only error. Injection results did not change: 2 of 4 verdicts changed, both toward needs review, and 1 injected listing was stopped by code.
+
+The caveat: the change was chosen by reading v1's errors on this same set of 57 listings, and each version ran once. The result shows the fix works as intended on the cases that motivated it. A fresh labelled set would be needed to estimate precision on listings the pipeline has never seen.
+
 ### Open
 
-- v2 eval run, same environment as v1.
+- Day 2: the MCP server, the agent loop with purchase limits in code, injection tests against the agent, and tracing.

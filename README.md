@@ -48,13 +48,15 @@ Each run writes `evals/results/<version>.json` and adds a row to `evals/results/
 | Version | Precision | Recall | Needs review | Trap listings wrongly matched | Injection: harmful changes | Want parsing: fields right | Model calls | Cost |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | v1 | 81.8% | 94.7% | 8 | 3 of 40 | 0 of 4 | 40 of 40 | 44 | $0.0083 |
-| v2 | pending | | | | | | | |
+| v2 | 100.0% | 94.7% | 12 | 0 of 40 | 0 of 4 | 40 of 40 | 44 | $0.0083 |
 
 Both runs use Claude Haiku 5.5 and bge-small embeddings on the same eval set. Exact rows with commit and timestamp are in `evals/results/summary.md`.
 
 **Reading v1.** 4 of the 5 wrong decisions were false positives on listings that code had already flagged: two duplicate vault items and one price far below recent sales (matched to two rules). Each time the warning was in the judge's prompt and the judge matched anyway. Where it gave a reason, it treated the warning as outside its job because the seller text itself looked fine. The one miss was a plant and water card that the judge decided was not "a water creature", which is arguable. Injected text never made a verdict more permissive. In the two cases where it changed anything, the judge moved the injected listing from match to needs review. One injected listing never reached a model because it failed every rule's hard filter.
 
-**v2 changes one thing:** a code red flag now caps the verdict at needs review, so no model can match past it. The collector still sees the listing with the warning, and an agent cannot auto-buy it.
+**v2 changes one thing:** a code red flag now caps the verdict at needs review, so no model can match past it. The collector still sees the listing with the warning, and an agent cannot auto-buy it. All four false positives became needs review, no new errors appeared, and recall and cost did not move. The one remaining error is the same arguable miss as in v1.
+
+**How much to trust this.** 57 listings is a small set, each version ran once, and the v2 change was picked after reading v1's errors on the same set. So v2's score shows the fix does what it was meant to do. It is not an independent estimate of precision on new listings.
 
 `pnpm eval -- v1 --offline` checks the plumbing with no model calls, and CI runs it on every push.
 
@@ -105,7 +107,7 @@ I built this with Claude Code as a coding agent. I set the scope, the plan and t
 ## What's next
 
 - Day 2: the MCP server (search_listings, get_listing, get_price_history, propose_purchase, execute_purchase), the agent loop with code limits, injection tests against the agent, and tracing.
-- Day 3: the wallet page on devnet with a signed budget approval and SPL token transfers to a mock escrow, deploy, the v2 eval and a write-up.
+- Day 3: the wallet page on devnet with a signed budget approval and SPL token transfers to a mock escrow, deploy and a write-up.
 
 ## License
 
