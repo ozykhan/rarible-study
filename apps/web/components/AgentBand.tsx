@@ -1,6 +1,5 @@
 import Link from "next/link"
-import { AgentIcon } from "./Header"
-import { Pill } from "./ui"
+import { AgentIcon, Pill } from "./ui"
 
 /**
  * A quiet band near the bottom of the home page: the agent is optional, and

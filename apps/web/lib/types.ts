@@ -96,6 +96,20 @@ export interface MarketStats {
   readonly sets: Readonly<Record<string, { readonly count: number; readonly floorUnits: number | null }>>
 }
 
+/** What the set tabs count: listings that match the search and grader, in all and per set id. */
+export interface MarketCounts {
+  readonly all: number
+  readonly sets: Readonly<Record<string, number>>
+}
+
+/** GET /listings: one page for the filters, how many match them, the tab counts and the whole market's stats. */
+export interface MarketResponse {
+  readonly listings: ReadonlyArray<Listing>
+  readonly total: number
+  readonly counts: MarketCounts
+  readonly stats: MarketStats
+}
+
 export type RedFlag = "duplicate_vault_item" | "price_far_below_market" | "grade_claim_mismatch"
 
 export interface Decision {

@@ -1,4 +1,139 @@
-/* Market: set tabs, search and sort, and the grid of ListingTiles. */
+/*
+ * Market: the page head with two live numbers, set tabs with counts, the
+ * grader and sort selects, the grid of ListingTiles and Show more. The
+ * search field sits in the header on a wide screen and above the tabs below
+ * 1100px.
+ */
+
+.market-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-6);
+  padding-top: var(--space-10);
+}
+.market-head-copy {
+  max-width: 640px;
+}
+.market-head h1 {
+  font-size: var(--text-title);
+  font-weight: var(--weight-black);
+  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-display);
+}
+.market-lede {
+  margin: var(--space-2-5) 0 0;
+  font-size: var(--text-xl);
+  line-height: var(--leading-lede);
+  color: var(--ink-soft);
+}
+/* The two numbers: the value in mono above its label, as in the hero. */
+.market-stats {
+  display: flex;
+  gap: var(--space-6);
+  margin: 0;
+}
+.market-stats div {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--space-0-5);
+}
+.market-stats dt {
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.market-stats dd {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-bold);
+}
+
+.market.section {
+  padding-top: var(--space-8);
+}
+/* The tabs on the left, the selects on the right; they wrap under each other when narrow. */
+.market-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.market-bar .tabs {
+  flex: 1 1 520px;
+  min-width: 0;
+  margin-bottom: 0;
+}
+.market-selects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.market-selects label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.market-count {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.market-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-6);
+}
+/* The page's own search field: only where the header has no room for it. */
+/* Phone: a smaller title with the count under it; the lede and the two numbers give way to the grid. */
+@media (max-width: 700px) {
+  .market-head {
+    padding-top: var(--space-6);
+  }
+  .market-head h1 {
+    font-size: var(--text-4xl);
+  }
+  .market-lede,
+  .market-stats {
+    display: none;
+  }
+  .market.section {
+    padding-top: var(--space-4);
+  }
+  .market-selects {
+    flex-wrap: nowrap;
+    width: 100%;
+  }
+  .market-selects label {
+    flex: 1;
+    min-width: 0;
+  }
+  .market-selects select {
+    width: 100%;
+    min-width: 0;
+  }
+  .market-selects .select-word {
+    display: none;
+  }
+}
+.search.market-search {
+  display: none;
+  max-width: none;
+  margin-bottom: var(--space-4);
+}
+@media (max-width: 1100px) {
+  .search.market-search {
+    display: flex;
+  }
+}
+
 
 .tabs {
   display: flex;
@@ -21,6 +156,16 @@
   font-size: var(--text-base);
   font-weight: var(--weight-semibold);
 }
+/* A set's dot in its tone; All sets is muted. */
+.tab .set-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--tone, var(--muted));
+}
+.tab.active .set-dot {
+  box-shadow: 0 0 10px var(--tone, var(--muted));
+}
 /* The tab strip scrolls and would clip an outer outline. */
 .tab:focus-visible {
   outline-offset: -2px;
@@ -33,13 +178,6 @@
   border-bottom-color: var(--accent);
 }
 
-.toolbar {
-  display: flex;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--space-2-5);
-  margin-bottom: var(--space-4);
-}
 .search {
   flex: 1 1 260px;
   max-width: 420px;
@@ -277,7 +415,6 @@
   }
 }
 
-/* The home page's five newest: one row of five on a wide screen. */
 /* The home page's five newest: one row on a wide screen, the market's grid below that, four on a phone. */
 @media (min-width: 1241px) {
   .grid-five {

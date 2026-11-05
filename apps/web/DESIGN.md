@@ -11,10 +11,11 @@ This file is the map. The values live in [`styles/tokens.css`](styles/tokens.css
 | `styles/tokens.css` | Every design token: color, type, space, radius, shadow, motion, layout |
 | `styles/base.css` | Element defaults, text utilities (`.muted`, `.small`, `.mono`, `.error`, `.hide-sm`), form fields |
 | `styles/ui.css` | Shared building blocks: button, chip, pill, badge, count, LED, section, panel, note |
-| `styles/<area>.css` | One file per page area, named after its component: `header`, `status-bar`, `hero`, `sets`, `market`, `slab`, `how-it-works`, `desk`, `checkout`, and `home` for the home page's own blocks (`Graders`, `AgentBand`, `Footer`) |
+| `styles/<area>.css` | One file per page area, named after its component: `header`, `status-bar`, `hero`, `sets`, `market`, `slab`, `how-it-works`, `desk`, `checkout`, `home` for the home page's own blocks (`Graders`, `AgentBand`, `Footer`), and `agent-drawer` for the agent on the market (`AgentStrip`, `AgentDrawer`, the phone's Ask the agent button) |
 | `app/globals.css` | Only the import order of the files above |
-| `components/ui/` | React components for the building blocks: `Button`, `Chip`, `Pill`, `Badge`, `Section`, `Panel`, `SearchIcon` |
-| `components/` | Page components: `Shell`, `Header`, `DevnetNotice`, `Hero`, `Sets` (and `SetCard`), `Market`, `ListingTile`, `Checkout`, `Slab`, `HowItWorks`, `Graders`, `AgentBand`, `Footer`, `StatusBar`, and the agent's desk: `WalletPanel`, `NewRule`, `RuleList`, `RuleView` (with `DecisionRow`, `PurchaseRow`) |
+| `components/ui/` | React components for the building blocks: `Button`, `Chip`, `Pill`, `Badge`, `Section`, `Panel`, `SearchIcon`, `CloseIcon`, `AgentIcon` |
+| `components/` | Page components: `Shell`, `Header`, `DevnetNotice`, `Hero`, `Sets` (and `SetCard`), `Market`, `MarketSearch`, `AgentStrip`, `AgentDrawer`, `ListingTile`, `Checkout`, `Slab`, `HowItWorks`, `Graders`, `AgentBand`, `Footer`, `StatusBar`, and the agent's desk: `WalletPanel`, `NewRule`, `RuleList`, `RuleView` (with `DecisionRow`, `PurchaseRow`) |
+| `lib/market.ts` | `useMarket()`: one filtered, paged view of the market from the server, and the filters as the URL holds them |
 | `lib/account.tsx` | `AccountProvider` and `useAccount()`: the wallet session, backend status, listings and market stats, the signed-in wallet's rules, funds and purchases, and the one checkout dialog, shared by every route |
 | `app/(shop)/` | The marketplace routes, all inside `Shell`: `/` (home), `/market`, `/agent` |
 | `lib/art.ts` | The four sets (name, year, blurb, tone), grade words, grader names, art paths |
@@ -28,7 +29,7 @@ Plain global CSS, no CSS modules or utility framework. Class names are short and
 | Route | What it shows |
 | --- | --- |
 | `/` | The home page, top to bottom: `Hero` with the market search, `Sets` as links, "On the market now" (the five newest `ListingTile`s), `HowItWorks`, `Graders`, `AgentBand`, `Footer` |
-| `/market` | `Sets` as filters, then `Market`. The set, search and sort live in the URL (`?set=`, `?q=`, `?sort=`), so the hero search and the popular searches land on a filtered market |
+| `/market` | `Market`, with `MarketSearch` in the header. The set, grader, search and sort live in the URL (`?set=`, `?grader=`, `?q=`, `?sort=`), so the hero search and the popular searches land on a filtered market. Watch on a tile, the agent line and the phone's Ask the agent button open `AgentDrawer` |
 | `/agent` | The optional agent. Signed out, a panel to connect and sign in; signed in, the desk: `WalletPanel`, `NewRule`, `RuleList`, `RuleView`. A tile's Watch opens it with `?watch=` and fills `NewRule` |
 
 `Shell` wraps every route in `app/(shop)/`: `Header`, `DevnetNotice`, the page, then `StatusBar`. Buy now opens the same `Checkout` from any route.
@@ -72,6 +73,7 @@ Inter for text and JetBrains Mono for numbers, both loaded by `next/font` in `ap
 | Token | Size | Used for |
 | --- | --- | --- |
 | `--text-display` | clamp(40px, 6.2vw, 68px) | The hero headline (weight 800, `--tracking-display`, `--leading-display`) |
+| `--text-title` | clamp(28px, 3.4vw, 44px) | A page title: the market's (23px, `--text-4xl`, on a phone) |
 | `--text-5xl` | 28px | Section titles (23px, `--text-4xl`, on a phone) |
 | `--text-3xl` | 20px | The brand, tile prices |
 | `--text-2xl` | 19px | Step titles, a rule's title |
@@ -108,9 +110,9 @@ The rhythm: 56px between sections (40px on a phone), 20px under a section title,
 
 ### Layout
 
-`--wide` 1376px of content, centered, with `--gutter` 32px each side (16px on a phone). `--header-height` 72px (64px on a phone) and a fixed `--statusbar-height` 40px bar at the bottom; the body pads for it. Anchors land `--scroll-offset` 88px down. The market grid fills rows with tiles of at least `--tile-min` 230px. The signed-in desk is a `--rail` column (300 to 380px) of panels beside the selected rule. Header z-index `--z-header` 50, status bar `--z-statusbar` 40, and the checkout dialog `--z-dialog` 60. The wallet picker belongs to the wallet adapter (z-index 1040), so it opens over the checkout.
+`--wide` 1376px of content, centered, with `--gutter` 32px each side (16px on a phone). `--header-height` 72px (64px on a phone) and a fixed `--statusbar-height` 40px bar at the bottom; the body pads for it. Anchors land `--scroll-offset` 88px down. The market grid fills rows with tiles of at least `--tile-min` 230px. The signed-in desk is a `--rail` column (300 to 380px) of panels beside the selected rule. Header z-index `--z-header` 50, status bar `--z-statusbar` 40, the agent drawer `--z-drawer` 55, and the checkout dialog `--z-dialog` 60. The wallet picker belongs to the wallet adapter (z-index 1040), so it opens over the checkout.
 
-Breakpoints (max-width, written in each stylesheet): **1240px** the five newest on the home page wrap like the market grid; **1100px** the hero slabs shrink and How it works goes two up; **900px** the header links hide, the desk stacks, set cards go two up, graders stack; **700px** phone: smaller gutter, header and wordmark, the header chip and the Agent link hide, a round search button shows, the market goes two up (four of the five newest on the home page), How it works one up; **460px** set blurbs and the model spend hide.
+Breakpoints (max-width, written in each stylesheet): **1240px** the five newest on the home page wrap like the market grid; **1100px** the hero slabs shrink, How it works goes two up, and the market search moves from the header onto the page; **900px** the header links hide, the desk stacks, set cards go two up, graders stack; **700px** phone: smaller gutter, header and wordmark, the header chip and the Agent link hide, a round search button shows, the market goes two up (four of the five newest on the home page) with a smaller title and no lede or numbers, the agent drawer goes full width and Ask the agent floats over the market, How it works one up; **460px** set blurbs and the model spend hide.
 
 ## Components
 
@@ -125,6 +127,8 @@ Breakpoints (max-width, written in each stylesheet): **1240px** the five newest 
 | `Section` | `id`, `eyebrow`, `title`, `lede`, `aside`, `className` | A full-width band with an optional uppercase eyebrow over a 28px title, an optional muted line under it, and an optional `aside` at the right of the title row | Each band of the page; `id` is the header's anchor. `aside` holds a `.section-link` ("All sets", "See all listings") |
 | `Panel` | `title`, `className` | A bordered box on `--surface`, 18px padding, 16px bold title | Everything on the signed-in desk. An `h3` inside renders as an uppercase label |
 | `SearchIcon` | none | 16px magnifier in the current color | Search fields |
+| `CloseIcon` | none | 14px cross in the current color | Inside a `.btn-close`: a round 36px button (44px on a phone), muted until hovered. The checkout's and the agent drawer's Close |
+| `AgentIcon` | `size` (16) | A four-point spark in the current color | The agent's mark: the header's Agent link, the agent band and strip, Ask the agent |
 
 Single-class blocks with no component: `.count` (a number in a tab), `.led` / `.led.on` (status dots), `.note` (an accent-tinted message after an action), `.eyebrow`, `.empty` (centered muted message), `.callout.error` (a page-level error), `.facts` (label and mono value pairs), `.row` (a wrapping line of controls), `.block` (a titled block inside a panel, with a top border), `.questions` (warn-tinted box).
 
@@ -133,11 +137,14 @@ Single-class blocks with no component: `.count` (a number in a tab), `.led` / `.
 | Component | What it is |
 | --- | --- |
 | `Shell` | Every marketplace route: `AccountProvider` around `Header`, `DevnetNotice`, the page and `StatusBar` |
-| `Header` | Sticky glass bar on every route: `Logo` and wordmark, the links (Market, Sets, Graders, How buying works; the current one in `--ink`), a warn `Chip` "devnet", the optional Agent link with its spark icon, the dUSD balance in mono once signed in, and the wallet adapter's button restyled as an accent pill. On a phone the links, the chip and the Agent link fold away and a 44px round search button links to `/market` |
+| `Header` | Sticky glass bar on every route: `Logo` and wordmark, the links (Market, Sets, Graders, How buying works; the current one in `--ink`), a warn `Chip` "devnet", the optional Agent link with its spark icon, the dUSD balance in mono once signed in, and the wallet adapter's button restyled as an accent pill. On `/market` (wider than 1100px) `MarketSearch` sits after the links. On a phone the links, the chip and the Agent link fold away and a 44px round search button goes to `/market`, or to the page's search field when already there |
 | `DevnetNotice` | The line under the header on every view: "Solana devnet only." in warn, then the fictional data and no-real-funds warning |
 | `Hero` | The home page's opening. Hero art faded into the canvas behind two columns: an eyebrow "Live on devnet", the headline "Graded cards, ready to buy.", a lede, a glass search field with a primary Search `Button`, popular searches as outlined `.chip-link`s, and three live numbers in mono (listings now, sets, lowest price). On the right, two tilted floating `Slab`s |
-| `Sets` and `SetCard` | Four banner cards (16:9 art, name, year, "N listed · from X dUSD", blurb). Hover tints the border with the tone and zooms the art. On `/market` the cards filter and set chips (a glowing dot in the set's tone) sit above them; on the home page each card links to its set on `/market`, with "All sets" at the right |
-| `Market` | Set tabs with counts, a pill search and a sort select, then a grid of `ListingTile`s, skeleton tiles while loading |
+| `Sets` and `SetCard` | Browse by set on the home page: four banner cards (16:9 art, name, year, "N listed · from X dUSD", blurb), each a link to its set on `/market`, with "All sets" at the right. Hover tints the border with the tone and zooms the art |
+| `Market` | The whole market. A head with an eyebrow, the title in `--text-title`, a lede and two live numbers in mono (listings now, lowest price). Then set tabs (a dot in the set's tone, the name, a `.count` of what the search and grader match), Grader and Sort selects, a count line ("3 of 194 listings match"), the grid of `ListingTile`s with skeletons while loading, a large secondary "Show 40 more" with "80 of 194 shown", and `AgentStrip`. Filtering, search, sort and paging run on the server over every active listing; search matches the vault record word by word (card, set, number, edition, finish, grader, grade, seller), never the seller's title |
+| `MarketSearch` | The pill search field, bound to `?q=` with a short pause after typing. In the header on `/market`, and on the page itself at 1100px and below |
+| `AgentStrip` | One quiet row under the market's grid: the spark in the accent, "Not listed yet? Let the agent watch for it.", a muted sentence and a small secondary "Set up a watch" |
+| `AgentDrawer` | The optional agent at the right edge of the market (420px, full width on a phone), on `--surface-raised` with a `--line-strong` edge: "Agent", a neutral "optional" `Pill`, "Open full screen" to `/agent`, and Close. Signed out, a large primary connect or sign-in button; signed in, `NewRule` (seeded by Watch on a tile), then a `.note` and a link to `/agent` once saved. Not modal: the market stays usable and the checkout opens over it. Esc closes it |
 | `ListingTile` | A `Slab` on a sunken backdrop with a radial glow in the set's tone, then the card name with its `Badge`, meta line (year, set, number, edition, finish), and the mono price (with a warn `Chip` when not in USD) beside the seller in faint mono. Buy now and Watch sit over the art: shown on hover and on keyboard focus (`:focus-within`), and on touch screens after a tap on the art. Phones show Buy now only. A listing the collector owns shows an ok `Pill`, "In your wallet", instead |
 | `Checkout` | Buying one listing directly, with no rule or agent. A dialog on `--surface-raised` over a `--glass-header` backdrop; a bottom sheet under 700px. The `Slab` beside `.facts` for card, grade and grade word, cert and seller; the code's checks as pills (ok "No red flags", or a warn pill per flag); price, "Network fee: paid by Slabwatch" and the dUSD total. The test-token line sits in a warn tint. One large primary `Button` walks through what is missing (Connect wallet, Sign in, Get test dUSD, Approve, Sign and pay), reads "Waiting for the wallet…" while the wallet is open, and ends in a `.note`, "Bought.", with the explorer link and Keep browsing. Esc and Close are off while the wallet is open. A flagged, over-cap or read-only listing shows why in the warn tint, with no pay button |
 | `Slab` | The graded card in its case. See below |

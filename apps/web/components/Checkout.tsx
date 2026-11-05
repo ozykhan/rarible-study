@@ -9,7 +9,7 @@ import type { Funds, Listing, RedFlag, Status } from "@/lib/types"
 import { useAction } from "@/lib/useAction"
 import { approveAllowance, getTestDusd } from "@/lib/wallet"
 import { Slab } from "./Slab"
-import { Button, Chip, Pill } from "./ui"
+import { Button, Chip, CloseIcon, Pill } from "./ui"
 
 const FLAG_LABEL: Record<RedFlag, string> = {
   duplicate_vault_item: "Duplicate vault item",
@@ -131,10 +131,8 @@ export function CheckoutView(props: {
       <div className="checkout-head">
         <h2 id={props.as === "dialog" ? "checkout-title" : undefined}>Buy {l.cardName}</h2>
         {props.as === "dialog" && (
-          <button type="button" className="checkout-close" aria-label="Close" onClick={props.onClose} disabled={locked}>
-            <svg width="14" height="14" viewBox="0 0 14 14" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
-              <path d="M2 2l10 10M12 2L2 12" strokeLinecap="round" />
-            </svg>
+          <button type="button" className="btn-close" aria-label="Close" onClick={props.onClose} disabled={locked}>
+            <CloseIcon />
           </button>
         )}
       </div>

@@ -1,146 +1,167 @@
 "use client"
 
-import { useMemo, useState } from "react"
-import { cardId, GRADERS, SETS, setTheme } from "@/lib/art"
+import type { CSSProperties } from "react"
+import { cardId, GRADERS, SETS } from "@/lib/art"
+import { cx } from "@/lib/cx"
+import { dusd } from "@/lib/format"
+import { MARKET_SORTS, type MarketFilters, type useMarket } from "@/lib/market"
 import type { Listing } from "@/lib/types"
+import { AgentStrip } from "./AgentStrip"
 import { ListingTile } from "./ListingTile"
-import { Button, SearchIcon, Section } from "./ui"
+import { MarketSearch } from "./MarketSearch"
+import { Button } from "./ui"
 
-type Sort = "recent" | "price_asc" | "price_desc" | "grade"
-
-const SORTS: ReadonlyArray<[Sort, string]> = [
-  ["recent", "Recently listed"],
-  ["price_asc", "Price: low to high"],
-  ["price_desc", "Price: high to low"],
-  ["grade", "Highest grade"]
-]
-
-/** Prices in different currencies only need a rough order for sorting. */
-const roughUsd = (l: Listing) =>
-  l.price.currency === "JPY" ? l.price.amountMinor / 150 : l.price.amountMinor / (l.price.currency === "EUR" ? 92 : 100)
+const TABS: ReadonlyArray<{ id: string; name: string; tone?: string }> = [{ id: "all", name: "All sets" }, ...SETS]
 
 /**
- * The newest listings as a grid of ListingTiles, with set tabs, search and
- * sort. Seller text is not shown here; where it is shown (a rule's matches),
- * it is plain text, because it is untrusted and some of it is written to trick
- * the agent. Styles: styles/market.css.
+ * The whole market: a head with two live numbers, set tabs with counts, the
+ * grader and sort selects, the grid of ListingTiles with Show more, and the
+ * optional agent's line under it. Filtering, search, sort and paging happen
+ * on the server, over every active listing. Seller text is not shown here;
+ * where it is shown (the listing, a watch's matches), it is plain text,
+ * because it is untrusted. Styles: styles/market.css.
  */
 export function Market(props: {
-  listings: ReadonlyArray<Listing> | null
-  failed: boolean
-  query: string
-  onQuery: (q: string) => void
-  set: string
-  onSet: (id: string) => void
-  /** Card ids the collector has an active watch for. */
-  watching?: ReadonlySet<string>
-  /** Listing ids the collector bought. */
-  owned?: ReadonlySet<string>
-  onBuy?: (l: Listing) => void
-  onWatch?: (l: Listing) => void
-  /** A sort from the URL (?sort=); unknown values fall back to recently listed. */
-  initialSort?: string
+  filters: MarketFilters
+  onFilter: (key: "set" | "grader" | "sort", value: string) => void
+  onClear: () => void
+  market: ReturnType<typeof useMarket>
+  /** Listing ids the collector bought, and card ids an active watch targets. */
+  owned: ReadonlySet<string>
+  watching: ReadonlySet<string>
+  onBuy: (l: Listing) => void
+  onWatch: (l: Listing) => void
+  /** Opens the agent drawer. */
+  onAgent: () => void
 }) {
-  const [sort, setSort] = useState<Sort>(SORTS.some(([v]) => v === props.initialSort) ? (props.initialSort as Sort) : "recent")
-  const { listings, query, set } = props
-
-  const counts = useMemo(() => {
-    const m = new Map<string, number>()
-    for (const l of listings ?? []) {
-      const id = setTheme(l)?.id
-      if (id) m.set(id, (m.get(id) ?? 0) + 1)
-    }
-    return m
-  }, [listings])
-
-  const shown = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    const rows = (listings ?? []).filter((l) => {
-      if (set !== "all" && setTheme(l)?.id !== set) return false
-      if (q === "") return true
-      return [l.cardName, l.setName, l.title, l.grader, GRADERS[l.grader] ?? "", l.sellerHandle].some((s) =>
-        s.toLowerCase().includes(q)
-      )
-    })
-    const sorted = [...rows]
-    if (sort === "price_asc") sorted.sort((a, b) => roughUsd(a) - roughUsd(b))
-    if (sort === "price_desc") sorted.sort((a, b) => roughUsd(b) - roughUsd(a))
-    if (sort === "grade") sorted.sort((a, b) => b.grade - a.grade)
-    if (sort === "recent") sorted.sort((a, b) => b.listedAt.localeCompare(a.listedAt))
-    return sorted
-  }, [listings, query, set, sort])
+  const { filters: f, market: m } = props
+  const filtered = f.set !== "all" || f.grader !== "all" || f.q.trim() !== ""
+  const count = (id: string) => (m.counts === null ? "…" : id === "all" ? m.counts.all : (m.counts.sets[id] ?? 0))
+  const left = m.listings === null ? 0 : m.total - m.listings.length
 
   return (
-    <Section id="market" eyebrow="Live on devnet" title="On the market now">
-
-      <nav className="tabs" aria-label="Filter by set">
-        <button className={`tab ${set === "all" ? "active" : ""}`} onClick={() => props.onSet("all")}>
-          All <span className="count">{listings?.length ?? 0}</span>
-        </button>
-        {SETS.map((s) => (
-          <button key={s.id} className={`tab ${set === s.id ? "active" : ""}`} onClick={() => props.onSet(s.id)}>
-            {s.name} <span className="count">{counts.get(s.id) ?? 0}</span>
-          </button>
-        ))}
-      </nav>
-
-      <div className="toolbar">
-        <label className="search">
-          <SearchIcon />
-          <input
-            value={query}
-            onChange={(e) => props.onQuery(e.target.value)}
-            placeholder="Search cards, sets, graders, sellers"
-            aria-label="Search listings"
-          />
-        </label>
-        <select value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Sort listings">
-          {SORTS.map(([v, t]) => (
-            <option key={v} value={v}>
-              {t}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {listings === null && !props.failed && (
-        <div className="grid">
-          {Array.from({ length: 10 }, (_, i) => (
-            <div className="tile skeleton" key={i} />
-          ))}
+    <>
+      <section className="section market-head">
+        <div className="market-head-copy">
+          <p className="eyebrow">Live on devnet</p>
+          <h1>Graded cards, ready to buy</h1>
+          <p className="market-lede">Browse every listing, check the slab, and sign to buy.</p>
         </div>
-      )}
-      {listings === null && props.failed && <p className="empty">Listings are not reachable right now.</p>}
-      {listings !== null && shown.length === 0 && (
-        <p className="empty">
-          Nothing matches right now. New listings arrive about once a minute.{" "}
-          {(query || set !== "all") && (
-            <Button
-              variant="link"
-              size="inline"
-              onClick={() => {
-                props.onQuery("")
-                props.onSet("all")
-              }}
-            >
-              Clear the filters
-            </Button>
-          )}
-        </p>
-      )}
+        <dl className="market-stats">
+          <div>
+            <dt>listings now</dt>
+            <dd>{m.stats ? m.stats.count : "…"}</dd>
+          </div>
+          <div>
+            <dt>lowest price</dt>
+            <dd>{m.stats?.floorUnits != null ? dusd(m.stats.floorUnits) : "…"}</dd>
+          </div>
+        </dl>
+      </section>
 
-      <div className="grid">
-        {shown.map((l) => (
-          <ListingTile
-            key={l.listingId}
-            l={l}
-            watching={props.watching?.has(cardId(l)) ?? false}
-            owned={props.owned?.has(l.listingId) ?? false}
-            {...(props.onBuy ? { onBuy: props.onBuy } : {})}
-            {...(props.onWatch ? { onWatch: props.onWatch } : {})}
-          />
-        ))}
-      </div>
-    </Section>
+      <section id="market" className="section market">
+        <MarketSearch id="market-search" className="market-search" />
+        <div className="market-bar">
+          <nav className="tabs" aria-label="Filter by set">
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                className={cx("tab", f.set === t.id && "active")}
+                aria-pressed={f.set === t.id}
+                style={t.tone ? ({ "--tone": t.tone } as CSSProperties) : undefined}
+                onClick={() => props.onFilter("set", t.id)}
+              >
+                <span className="set-dot" aria-hidden="true" />
+                {t.name} <span className="count">{count(t.id)}</span>
+              </button>
+            ))}
+          </nav>
+          <div className="market-selects">
+            <label>
+              <span className="select-word">Grader</span>
+              <select value={f.grader} aria-label="Grader" onChange={(e) => props.onFilter("grader", e.target.value)}>
+                <option value="all">All graders</option>
+                {Object.entries(GRADERS).map(([code, name]) => (
+                  <option key={code} value={code}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span className="select-word">Sort</span>
+              <select value={f.sort} aria-label="Sort" onChange={(e) => props.onFilter("sort", e.target.value)}>
+                {MARKET_SORTS.map(([v, t]) => (
+                  <option key={v} value={v}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </div>
+
+        {m.listings !== null && m.total > 0 && (
+          <p className="market-count">
+            {filtered ? (
+              <>
+                <span className="mono">{m.total}</span> of <span className="mono">{m.stats?.count ?? "…"}</span> listings match
+              </>
+            ) : (
+              <>
+                <span className="mono">{m.total}</span> listings
+              </>
+            )}
+          </p>
+        )}
+
+        {m.listings === null && !m.failed && (
+          <div className="grid">
+            {Array.from({ length: 10 }, (_, i) => (
+              <div className="tile skeleton" key={i} />
+            ))}
+          </div>
+        )}
+        {m.listings === null && m.failed && <p className="empty">Listings are not reachable right now.</p>}
+        {m.listings !== null && m.listings.length === 0 && (
+          <p className="empty">
+            Nothing matches right now. New listings arrive about once a minute.{" "}
+            {filtered && (
+              <Button variant="link" size="inline" onClick={props.onClear}>
+                Clear the filters
+              </Button>
+            )}
+          </p>
+        )}
+
+        {m.listings !== null && m.listings.length > 0 && (
+          <div className="grid">
+            {m.listings.map((l) => (
+              <ListingTile
+                key={l.listingId}
+                l={l}
+                watching={props.watching.has(cardId(l))}
+                owned={props.owned.has(l.listingId)}
+                onBuy={props.onBuy}
+                onWatch={props.onWatch}
+              />
+            ))}
+          </div>
+        )}
+
+        {left > 0 && (
+          <div className="market-more">
+            <Button variant="secondary" size="lg" onClick={() => void m.more()} disabled={m.loadingMore}>
+              {m.loadingMore ? "Loading…" : `Show ${Math.min(left, 40)} more`}
+            </Button>
+            <span className="muted small">
+              <span className="mono">{m.listings?.length}</span> of <span className="mono">{m.total}</span> shown
+            </span>
+          </div>
+        )}
+
+        <AgentStrip onOpen={props.onAgent} />
+      </section>
+    </>
   )
 }

@@ -18,6 +18,7 @@ import { RuleParser } from "../rules/RuleParser.ts"
 import { RuleRepo } from "../rules/RuleRepo.ts"
 import { Treasury } from "../solana/Treasury.ts"
 import { WalletAuth } from "../wallet/WalletAuth.ts"
+import { marketPage, marketStats, parseMarketQuery } from "./market.ts"
 import { RateLimits } from "./RateLimits.ts"
 
 /** A refusal with the HTTP status it answers with. */
@@ -28,19 +29,8 @@ export class ApiError extends Schema.TaggedError<ApiError>()("ApiError", {
 
 const MAX_ACTIVE_RULES = 5
 const MAX_ALLOWANCE_USD = 100_000
-const MARKET_STATS_LIMIT = 5000
-
-/** How many listings are active and the lowest price in dUSD units, for the whole market and per set. */
-const marketStats = (all: ReadonlyArray<ListingView>) => {
-  const sum = (ls: ReadonlyArray<ListingView>) => ({
-    count: ls.length,
-    floorUnits: ls.length === 0 ? null : Math.min(...ls.map((l) => toUsdCents(l.price.amountMinor, l.price.currency)))
-  })
-  return {
-    ...sum(all),
-    sets: Object.fromEntries(sets.map((s) => [s.id, sum(all.filter((l) => l.setId === s.id))]))
-  }
-}
+/** Every active listing is read for the market's counts; far more than the seed and the generator make. */
+const MARKET_LIMIT = 5000
 
 /** JSON with bigints as strings: token amounts are u64 on chain. */
 const toJson = (v: unknown): unknown => JSON.parse(JSON.stringify(v, (_k, x) => (typeof x === "bigint" ? x.toString() : x)))
@@ -264,9 +254,13 @@ export const WebApiRoutes = HttpRouter.addAll(
       "GET",
       "/listings",
       Effect.gen(function* () {
-        // Every active listing for the counts and floors; only the 40 newest go out in full.
-        const all = yield* catalog.listActive(MARKET_STATS_LIMIT)
-        const ls = all.slice(0, 40)
+        // ?set, ?grader, ?q, ?sort, ?offset and ?limit pick one page; with none, the 40 newest.
+        // stats cover the whole market, counts what matches the search and grader per set.
+        const request = yield* HttpServerRequest.HttpServerRequest
+        // originalUrl keeps the query string; url is the path after the /api prefix.
+        const query = parseMarketQuery(new URL(request.originalUrl, "http://localhost").searchParams)
+        const all = yield* catalog.listActive(MARKET_LIMIT)
+        const { page: ls, total, counts } = marketPage(all, query)
         const facts = new Map((yield* catalog.marketFacts(ls.map((l) => l.listingId))).map((f) => [f.listingId, f]))
         // payUnits is what the listing costs in dUSD units (cents): what checkout funds, approves and pays.
         // redFlags are the same code checks the purchase policy runs; a flagged listing cannot be bought directly.
@@ -276,6 +270,8 @@ export const WebApiRoutes = HttpRouter.addAll(
             payUnits: toUsdCents(l.price.amountMinor, l.price.currency),
             redFlags: redFlagsFor(l, facts.get(l.listingId))
           })),
+          total,
+          counts,
           stats: marketStats(all)
         }
       })

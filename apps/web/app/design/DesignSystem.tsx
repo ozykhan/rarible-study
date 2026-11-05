@@ -3,6 +3,7 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react"
 import { CheckoutView, type CheckoutStep } from "@/components/Checkout"
 import { AgentBand } from "@/components/AgentBand"
+import { AgentStrip } from "@/components/AgentStrip"
 import { DevnetNotice } from "@/components/DevnetNotice"
 import { Footer } from "@/components/Footer"
 import { Graders } from "@/components/Graders"
@@ -464,7 +465,7 @@ export function DesignSystem() {
         <Section eyebrow="Components" title="SetCard">
           <div className="set-grid">
             {SETS.map((s, i) => (
-              <SetCard key={s.id} set={s} count={[9, 7, 12, 8][i]} floorUnits={[4_200, 6_850, 3_900, 12_400][i] ?? null} onPick={() => {}} />
+              <SetCard key={s.id} set={s} count={[9, 7, 12, 8][i]} floorUnits={[4_200, 6_850, 3_900, 12_400][i] ?? null} href="#" />
             ))}
           </div>
         </Section>
@@ -514,6 +515,9 @@ export function DesignSystem() {
         <HowItWorks />
         <Graders />
         <AgentBand />
+        <Section eyebrow="Components" title="AgentStrip">
+          <AgentStrip onOpen={() => {}} />
+        </Section>
       </main>
       <Footer />
       <StatusBar status={STATUS} loaded />

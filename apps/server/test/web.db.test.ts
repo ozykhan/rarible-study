@@ -174,6 +174,17 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("web api"
       expect(market["stats"]["count"]).toBeGreaterThan(listed.length)
       expect(market["stats"]["floorUnits"]).toBeLessThanOrEqual(Math.min(...listed.map((l) => l["payUnits"])))
       expect(Object.keys(market["stats"]["sets"]).sort()).toEqual(["EF", "OS", "SE", "TW"])
+      expect(market["total"]).toBe(market["stats"]["count"])
+
+      // A filtered page: one set, cheapest first, paged; the tabs still count every set.
+      const ef = (yield* call("/listings?set=EF&sort=price_asc&limit=5&offset=2")).body
+      const efListed = ef["listings"] as ReadonlyArray<Record<string, any>>
+      expect(efListed.length).toBe(5)
+      expect(efListed.every((l) => l["setId"] === "EF")).toBe(true)
+      expect(efListed.map((l) => l["payUnits"])).toEqual([...efListed.map((l) => l["payUnits"])].sort((a, b) => a - b))
+      expect(ef["total"]).toBe(market["stats"]["sets"]["EF"]["count"])
+      expect(ef["counts"]["sets"]["OS"]).toBe(market["stats"]["sets"]["OS"]["count"])
+      expect(efListed[0]!["payUnits"]).toBeGreaterThanOrEqual(market["stats"]["sets"]["EF"]["floorUnits"])
       const item = listed.find((l) => l["redFlags"].length === 0 && l["price"]["currency"] === "EUR")!
       const price = toUsdCents(item["price"]["amountMinor"], "EUR")
       expect(item["payUnits"]).toBe(price)
