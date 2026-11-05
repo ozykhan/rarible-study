@@ -2,7 +2,16 @@ import type { Status } from "@/lib/types"
 import { Chip } from "./ui"
 
 /** The bar pinned to the bottom of the page: what the backend is doing right now. Styles: styles/status-bar.css. */
-export function StatusBar({ status, loaded }: { status: Status | null; loaded: boolean }) {
+export function StatusBar({
+  status,
+  loaded,
+  watches
+}: {
+  status: Status | null
+  loaded: boolean
+  /** Signed in: how many of the wallet's watches are active. */
+  watches?: { readonly active: number; readonly total: number } | null
+}) {
   return (
     <footer className="statusbar">
       <span className="statusbar-left">
@@ -21,6 +30,11 @@ export function StatusBar({ status, loaded }: { status: Status | null; loaded: b
             <span>
               <Led on={status.agentEnabled} />
               Agent {status.agentEnabled ? "on" : "off"}
+              {watches && watches.total > 0 && (
+                <span className="hide-sm">
+                  , {watches.active} of {watches.total} watches active
+                </span>
+              )}
             </span>
             <span className="mono">
               Model ${status.llm.spentTodayUsd.toFixed(2)} / ${status.llm.dailyCapUsd.toFixed(2)}

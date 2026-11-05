@@ -181,6 +181,21 @@
   font-size: var(--text-5xl);
   font-weight: var(--weight-bold);
 }
+.section-lede {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-md);
+  color: var(--muted);
+}
+/* The link at the right of a section's title row: "All sets", "See all 180 listings". */
+.section-link {
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.section-link:hover {
+  text-decoration: underline;
+}
 .eyebrow {
   margin: 0 0 var(--space-1-5);
   font-size: var(--text-xs);

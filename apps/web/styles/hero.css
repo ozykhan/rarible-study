@@ -1,88 +1,47 @@
-/* Hero: the signed-out welcome. Generated art, four floating slabs, headline, search and two buttons. */
+/*
+ * Hero: the home page's opening. The copy on the left (eyebrow, headline,
+ * lede, search, popular searches, three live numbers) and two floating slabs
+ * on the right, over the generated art faded into the canvas.
+ */
 
 .hero {
   position: relative;
-  min-height: 580px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   overflow: hidden;
   isolation: isolate;
+  border-bottom: 1px solid var(--line);
 }
-/* The art, darkened in the middle for the copy and faded into the canvas at the bottom. */
+/* The art, darkened behind the copy and faded into the canvas at the bottom. */
 .hero-bg {
   position: absolute;
   inset: 0;
-  z-index: -2;
+  z-index: -1;
   background:
-    linear-gradient(180deg, rgba(8, 8, 8, 0.15) 0%, rgba(8, 8, 8, 0.05) 45%, var(--bg) 100%),
-    radial-gradient(55% 55% at 50% 48%, rgba(8, 8, 8, 0.7), transparent 75%),
+    linear-gradient(90deg, rgba(8, 8, 8, 0.92) 0%, rgba(8, 8, 8, 0.7) 42%, rgba(8, 8, 8, 0.15) 75%),
+    linear-gradient(180deg, transparent 55%, var(--bg) 100%),
     url("/art/hero.webp") center / cover no-repeat,
     var(--surface-inset);
 }
 
-/* Four slabs, each tilted by --r and placed by its letter. */
-.hero-slabs {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  max-width: 1440px;
+.hero-row {
+  max-width: calc(var(--wide) + 2 * var(--gutter));
   margin: 0 auto;
-  pointer-events: none;
-}
-.hero-slab {
-  position: absolute;
-  width: 180px;
-  filter: var(--shadow-float);
-  animation: float 10s ease-in-out infinite;
-}
-.hero-slab .slab {
-  transform: rotate(var(--r, 0deg));
-}
-.hero-slab-a {
-  left: 5%;
-  top: 14%;
-  width: 196px;
-  --r: -9deg;
-}
-.hero-slab-b {
-  left: 18%;
-  top: 50%;
-  width: 150px;
-  --r: 7deg;
-  animation-delay: -3s;
-  opacity: 0.85;
-}
-.hero-slab-c {
-  right: 15.5%;
-  top: 7%;
-  width: 172px;
-  --r: 8deg;
-  animation-delay: -6s;
-  opacity: 0.9;
-}
-.hero-slab-d {
-  right: 4%;
-  top: 40%;
-  width: 200px;
-  --r: -6deg;
-  animation-delay: -1.5s;
-}
-@keyframes float {
-  0%,
-  100% {
-    translate: 0 0;
-  }
-  50% {
-    translate: 0 -14px;
-  }
+  padding: var(--space-22) var(--gutter) var(--space-18);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-12);
 }
 
 .hero-copy {
-  position: relative;
-  max-width: 760px;
-  padding: var(--space-22) var(--space-4) var(--space-18);
-  text-align: center;
+  flex: 1 1 520px;
+  min-width: 0;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.hero-copy .eyebrow {
+  margin: 0;
 }
 .hero h1 {
   font-size: var(--text-display);
@@ -93,29 +52,19 @@
   text-shadow: var(--text-shadow-display);
 }
 .lede {
-  max-width: 580px;
-  margin: var(--space-4-5) auto 26px;
+  margin: 0;
   font-size: var(--text-xl);
   line-height: var(--leading-lede);
   color: var(--ink-soft);
   text-shadow: var(--text-shadow-lede);
 }
-.strong-link {
-  color: var(--ink);
-  font-weight: var(--weight-bold);
-  text-decoration: none;
-}
-.strong-link:hover {
-  text-decoration: underline;
-}
+
 .hero-search {
   display: flex;
   align-items: center;
   gap: var(--space-2-5);
-  max-width: 520px;
   height: 46px;
-  margin: 0 auto 22px;
-  padding: 0 var(--space-3-5);
+  padding: 0 var(--space-1) 0 var(--space-3-5);
   color: var(--muted);
   background: var(--glass-field);
   border: 1px solid var(--line-glass);
@@ -134,22 +83,95 @@
   border: none;
   background: transparent;
   box-shadow: none;
-  font-size: var(--text-base);
+  font-size: var(--text-md);
 }
-.hero-search kbd {
-  font: var(--text-sm) var(--mono);
+.hero-search input:focus {
+  box-shadow: none;
+}
+
+/* Popular searches: outlined chips that link to a filtered market. */
+.hero-popular {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1-5);
+  margin-top: calc(-1 * var(--space-2));
+  font-size: var(--text-sm);
   color: var(--faint);
 }
-.hero-actions {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: var(--space-3);
+.chip-link {
+  padding: var(--space-1-5) var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--ink-soft);
+  text-decoration: none;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  transition: border-color var(--duration-fast) var(--ease);
 }
-.hero-note {
-  margin: var(--space-3-5) 0 0;
+.chip-link:hover {
+  color: var(--ink);
+  border-color: var(--line-active);
+}
+
+/* Three live numbers: the value in mono above its label. */
+.hero-stats {
+  display: flex;
+  gap: var(--space-8);
+  margin: var(--space-1) 0 0;
+}
+.hero-stats div {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--space-0-5);
+}
+.hero-stats dt {
   font-size: var(--text-sm);
   color: var(--muted);
+}
+.hero-stats dd {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-heading);
+}
+
+/* Two slabs, each tilted by --r; the second sits lower and floats out of step. */
+.hero-slabs {
+  flex: 1 1 420px;
+  min-width: 0;
+  min-height: 420px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-8);
+  pointer-events: none;
+}
+.hero-slab {
+  width: 230px;
+  filter: var(--shadow-float);
+  animation: float 10s ease-in-out infinite;
+}
+.hero-slab .slab {
+  transform: rotate(var(--r, 0deg));
+}
+.hero-slab-a {
+  --r: -6deg;
+}
+.hero-slab-b {
+  --r: 5deg;
+  margin-top: var(--space-16);
+  animation-delay: -5s;
+}
+@keyframes float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -14px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -159,36 +181,29 @@
 }
 
 @media (max-width: 1100px) {
-  .hero-slab-b,
-  .hero-slab-c {
-    display: none;
-  }
-  .hero-slab-a {
-    left: -2%;
-  }
-  .hero-slab-d {
-    right: -2%;
-  }
-}
-@media (max-width: 900px) {
   .hero-slabs {
-    opacity: 0.35;
+    min-height: 360px;
+  }
+  .hero-slab {
+    width: 190px;
   }
 }
 @media (max-width: 700px) {
-  .hero {
-    min-height: 0;
+  .hero-row {
+    padding: var(--space-10) var(--gutter);
+    gap: var(--space-6);
   }
-  .hero-copy {
-    padding: var(--space-16) var(--space-4) var(--space-12);
+  .hero-slabs {
+    min-height: 260px;
+    gap: var(--space-4);
   }
-  .hero-slab-a {
-    width: 130px;
-    top: 4%;
+  .hero-slab {
+    width: 140px;
   }
-  .hero-slab-d {
-    width: 130px;
-    top: auto;
-    bottom: 4%;
+  .hero-stats {
+    gap: var(--space-6);
+  }
+  .hero-stats dd {
+    font-size: var(--text-lg);
   }
 }

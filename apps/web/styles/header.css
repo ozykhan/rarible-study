@@ -41,7 +41,8 @@
   font-size: var(--text-base);
   font-weight: var(--weight-medium);
 }
-.nav a:hover {
+.nav a:hover,
+.nav a[aria-current="page"] {
   color: var(--ink);
 }
 .topbar-right {
@@ -49,6 +50,35 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
+}
+/* The optional Agent link, styled as a nav link with the agent's spark. */
+.topbar-agent {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  padding: 0 var(--space-2);
+  color: var(--ink-soft);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+}
+.topbar-agent:hover,
+.topbar-agent[aria-current="page"] {
+  color: var(--ink);
+}
+/* Phone only: a 44px round search button in place of the nav links and the Agent link. */
+.topbar-icon {
+  display: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  color: var(--ink);
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius-pill);
+}
+.topbar-balance {
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
 }
 .wallet-placeholder {
   display: inline-block;
@@ -60,6 +90,7 @@
 
 /* The Solana wallet adapter's own button and modal, restyled as an accent pill. */
 .wallet-adapter-button.wallet-adapter-button-trigger {
+  white-space: nowrap;
   background: var(--accent);
   color: var(--accent-ink);
   height: 40px;
@@ -87,9 +118,30 @@
   border: 1px solid var(--line-strong);
 }
 
+@media (max-width: 900px) {
+  .nav {
+    display: none;
+  }
+}
 @media (max-width: 700px) {
-  .nav,
   .topbar-right .chip {
+    display: none;
+  }
+  .topbar-right {
+    gap: var(--space-1-5);
+  }
+  .brand {
+    gap: var(--space-2);
+    font-size: var(--text-xl);
+  }
+  .brand .logo {
+    width: 28px;
+    height: 28px;
+  }
+  .topbar-icon {
+    display: grid;
+  }
+  .topbar-agent {
     display: none;
   }
 }

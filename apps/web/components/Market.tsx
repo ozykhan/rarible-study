@@ -38,8 +38,10 @@ export function Market(props: {
   owned?: ReadonlySet<string>
   onBuy?: (l: Listing) => void
   onWatch?: (l: Listing) => void
+  /** A sort from the URL (?sort=); unknown values fall back to recently listed. */
+  initialSort?: string
 }) {
-  const [sort, setSort] = useState<Sort>("recent")
+  const [sort, setSort] = useState<Sort>(SORTS.some(([v]) => v === props.initialSort) ? (props.initialSort as Sort) : "recent")
   const { listings, query, set } = props
 
   const counts = useMemo(() => {

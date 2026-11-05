@@ -2,7 +2,10 @@
 
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react"
 import { CheckoutView, type CheckoutStep } from "@/components/Checkout"
+import { AgentBand } from "@/components/AgentBand"
 import { DevnetNotice } from "@/components/DevnetNotice"
+import { Footer } from "@/components/Footer"
+import { Graders } from "@/components/Graders"
 import { HowItWorks } from "@/components/HowItWorks"
 import { ListingTile } from "@/components/ListingTile"
 import { Logo } from "@/components/Logo"
@@ -242,9 +245,9 @@ export function DesignSystem() {
           <div className="ds-inline">
             <Logo size={48} />
             <p className="ds-intro">
-              Every token and component of the wallet page, drawn by the real components with fictional sample data. Tokens live in{" "}
+              Every token and component of the marketplace, drawn by the real components with fictional sample data. Tokens live in{" "}
               <code>styles/tokens.css</code>, and <code>apps/web/DESIGN.md</code> says when to use each one.{" "}
-              <a href="/">Back to the market</a>
+              <a href="/">Back to Slabwatch</a>
             </p>
           </div>
         </Section>
@@ -461,7 +464,7 @@ export function DesignSystem() {
         <Section eyebrow="Components" title="SetCard">
           <div className="set-grid">
             {SETS.map((s, i) => (
-              <SetCard key={s.id} set={s} count={[9, 7, 12, 8][i]} onPick={() => {}} />
+              <SetCard key={s.id} set={s} count={[9, 7, 12, 8][i]} floorUnits={[4_200, 6_850, 3_900, 12_400][i] ?? null} onPick={() => {}} />
             ))}
           </div>
         </Section>
@@ -509,7 +512,10 @@ export function DesignSystem() {
         </Section>
 
         <HowItWorks />
+        <Graders />
+        <AgentBand />
       </main>
+      <Footer />
       <StatusBar status={STATUS} loaded />
     </>
   )

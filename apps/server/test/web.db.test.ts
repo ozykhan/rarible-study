@@ -168,7 +168,12 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("web api"
       const strangerToken = yield* signIn(call, stranger)
 
       // The market list carries what checkout needs: the dUSD amount and the code's red flags.
-      const listed = (yield* call("/listings")).body["listings"] as ReadonlyArray<Record<string, any>>
+      const market = (yield* call("/listings")).body
+      const listed = market["listings"] as ReadonlyArray<Record<string, any>>
+      // The counts cover every active listing, not only the 40 sent in full.
+      expect(market["stats"]["count"]).toBeGreaterThan(listed.length)
+      expect(market["stats"]["floorUnits"]).toBeLessThanOrEqual(Math.min(...listed.map((l) => l["payUnits"])))
+      expect(Object.keys(market["stats"]["sets"]).sort()).toEqual(["EF", "OS", "SE", "TW"])
       const item = listed.find((l) => l["redFlags"].length === 0 && l["price"]["currency"] === "EUR")!
       const price = toUsdCents(item["price"]["amountMinor"], "EUR")
       expect(item["payUnits"]).toBe(price)
