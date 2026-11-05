@@ -1,5 +1,5 @@
 import type { Status } from "@/lib/types"
-import { Chip } from "./ui"
+import { Chip, Led } from "./ui"
 
 /** The bar pinned to the bottom of the page: what the backend is doing right now. Styles: styles/status-bar.css. */
 export function StatusBar({
@@ -47,7 +47,3 @@ export function StatusBar({
   )
 }
 
-/** A status dot: green with a glow when on, grey when off. */
-function Led({ on }: { on: boolean }) {
-  return <i className={on ? "led on" : "led"} />
-}

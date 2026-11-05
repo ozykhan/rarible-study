@@ -21,9 +21,17 @@ const EXAMPLES = [
  * names to catalog ids and asks when something is unclear. Nothing is saved
  * until the collector confirms. `seed` fills the text box, for example from a
  * tile's Watch button; give the component a new key to apply a new seed.
- * Styles: styles/desk.css (.draft, .facts, .questions).
+ * A watch cannot be edited, so with `replaces` saving adds the new watch and
+ * pauses the old one. Styles: styles/desk.css (.draft, .facts, .questions).
  */
-export function NewRule(props: { token: string; seed?: string; onCreated: (rule: Rule, note: string) => void }) {
+export function NewRule(props: {
+  token: string
+  title?: string
+  seed?: string
+  replaces?: Rule | null
+  onCreated: (rule: Rule, note: string) => void
+}) {
+  const replaces = props.replaces ?? null
   const [want, setWant] = useState(props.seed ?? "")
   const [draft, setDraft] = useState<Draft | null>(null)
   const [maxPrice, setMaxPrice] = useState("")
@@ -61,9 +69,18 @@ export function NewRule(props: { token: string; seed?: string; onCreated: (rule:
           budget: { amountMinor: toMinor(Number(budget), currency), currency }
         }
       })
+      // The new watch is saved either way; if pausing the old one fails, the note says so.
+      let paused = ""
+      if (replaces !== null && replaces.status === "active") {
+        paused = await api(`/rules/${replaces.id}/status`, { token: props.token, body: { status: "paused" } }).then(
+          () => " The old watch is paused.",
+          () => " The old watch is still on: pause it from the list."
+        )
+      }
       const note =
         `${r.matches} match${r.matches === 1 ? "" : "es"} and ${r.needsReview} to review among the listings right now.` +
-        (r.unjudgedReason ? ` (Model review skipped: ${r.unjudgedReason}.)` : "")
+        (r.unjudgedReason ? ` (Model review skipped: ${r.unjudgedReason}.)` : "") +
+        paused
       setDraft(null)
       setWant("")
       props.onCreated(r.rule, note)
@@ -73,7 +90,7 @@ export function NewRule(props: { token: string; seed?: string; onCreated: (rule:
   const priceGiven = Number(maxPrice) > 0
   const questions = (draft?.draft.questions ?? []).filter((q) => !(priceGiven && q === PRICE_QUESTION))
   return (
-    <Panel title="New watch rule">
+    <Panel title={props.title ?? "New watch rule"}>
       <textarea
         id="new-rule-want"
         aria-label="Describe the card you want"
@@ -87,12 +104,14 @@ export function NewRule(props: { token: string; seed?: string; onCreated: (rule:
         <Button onClick={makeDraft} disabled={busy !== null || want.trim().length < 3}>
           {busy === "draft" ? "Reading…" : "Draft the rule"}
         </Button>
-        <span className="muted small">
-          Try:{" "}
-          <Button variant="link" onClick={() => setWant(EXAMPLES[1] ?? "")}>
-            {EXAMPLES[1]}
-          </Button>
-        </span>
+        {replaces === null && (
+          <span className="muted small">
+            Try:{" "}
+            <Button variant="link" onClick={() => setWant(EXAMPLES[1] ?? "")}>
+              {EXAMPLES[1]}
+            </Button>
+          </span>
+        )}
       </div>
 
       {draft && h && (
@@ -160,10 +179,14 @@ export function NewRule(props: { token: string; seed?: string; onCreated: (rule:
               {h.maxPrice.currency}
             </label>
             <Button onClick={create} disabled={busy !== null || !(Number(budget) > 0) || !priceGiven}>
-              {busy === "create" ? "Saving and matching…" : "Save rule"}
+              {busy === "create" ? "Saving and matching…" : replaces?.status === "active" ? "Save and pause the old one" : "Save rule"}
             </Button>
           </div>
-          <p className="muted small">New rules start in confirm mode: nothing is bought until you sign for it.</p>
+          <p className="muted small">
+            New rules start in confirm mode: nothing is bought until you sign for it.
+            {replaces !== null && " Saving adds this as a new watch, since a watch cannot be edited."}
+            {replaces?.status === "active" && " The old one is paused, and you can resume it any time."}
+          </p>
         </div>
       )}
       {error && <p className="error">{error}</p>}
