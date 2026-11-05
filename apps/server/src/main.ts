@@ -55,20 +55,34 @@ const Cors = Layer.unwrap(
  * On devnet, makes sure the dUSD mint and the escrow account exist, in the
  * background so a slow RPC never holds up the server.
  */
+/**
+ * Creates the dUSD mint and the escrow account on the first boot. When the
+ * treasury has no SOL for fees and the faucet refuses, it logs the address to
+ * fund once and checks again every minute, so funding it needs no restart.
+ */
 const DevnetSetup = Layer.effectDiscard(
   Effect.gen(function* () {
     const payments = yield* Payments
     if (payments.kind !== "devnet") return
     const treasury = yield* Treasury
-    yield* treasury.setup.pipe(
-      Effect.tap((r) =>
-        r.needsFunding === null
-          ? Effect.logInfo(`${r.cluster === "devnet" ? "devnet" : "in-memory chain"} ready: mint ${r.mint}, escrow ${r.escrowAccount}, treasury ${r.treasury} (${r.treasuryLamports} lamports); created: ${r.created.join(", ") || "nothing"}`)
-          : Effect.logWarning(`devnet treasury needs SOL: ${r.needsFunding}`)
-      ),
-      Effect.catchCause((cause) => Effect.logWarning("devnet setup failed; it runs again on the next boot", cause)),
-      Effect.forkScoped
-    )
+    const attempt = (warned: boolean): Effect.Effect<void> =>
+      treasury.setup.pipe(
+        Effect.flatMap((r) =>
+          r.needsFunding === null
+            ? Effect.logInfo(`${r.cluster === "devnet" ? "devnet" : "in-memory chain"} ready: mint ${r.mint}, escrow ${r.escrowAccount}, treasury ${r.treasury} (${r.treasuryLamports} lamports); created: ${r.created.join(", ") || "nothing"}`)
+            : (warned ? Effect.void : Effect.logWarning(`devnet treasury needs SOL: ${r.needsFunding}. Checking again every minute.`)).pipe(
+                Effect.andThen(Effect.sleep("1 minute")),
+                Effect.andThen(Effect.suspend(() => attempt(true)))
+              )
+        ),
+        Effect.catchCause((cause) =>
+          Effect.logWarning("devnet setup failed; trying again in a minute", cause).pipe(
+            Effect.andThen(Effect.sleep("1 minute")),
+            Effect.andThen(Effect.suspend(() => attempt(warned)))
+          )
+        )
+      )
+    yield* Effect.forkScoped(attempt(false))
   })
 )
 
