@@ -8,6 +8,7 @@ import { DevnetNotice } from "@/components/DevnetNotice"
 import { Footer } from "@/components/Footer"
 import { Graders } from "@/components/Graders"
 import { HowItWorks } from "@/components/HowItWorks"
+import { ListingDetail } from "@/components/ListingDetail"
 import { ListingTile } from "@/components/ListingTile"
 import { Logo } from "@/components/Logo"
 import { RuleList } from "@/components/RuleList"
@@ -17,6 +18,7 @@ import { SetCard } from "@/components/Sets"
 import { StatusBar } from "@/components/StatusBar"
 import { Badge, Button, Chip, Panel, Pill, Section } from "@/components/ui"
 import { SETS } from "@/lib/art"
+import { money } from "@/lib/format"
 import type { Decision, Listing, Purchase, Rule, Status } from "@/lib/types"
 
 /*
@@ -166,8 +168,9 @@ const CHECKOUTS: ReadonlyArray<{
   step: CheckoutStep
   busy?: string
   paid?: string
+  balance?: number
 }> = [
-  { caption: "Ready: one signature left", listing: LISTINGS[0]!, step: { kind: "pay" } },
+  { caption: "Ready: one signature left", listing: LISTINGS[0]!, step: { kind: "pay" }, balance: 200_000 },
   { caption: "The wallet is open", listing: LISTINGS[0]!, step: { kind: "pay" }, busy: "pay" },
   { caption: "A step still missing", listing: LISTINGS[1]!, step: { kind: "allowance", current: 5000 } },
   {
@@ -290,7 +293,7 @@ export function DesignSystem() {
                   <code>.price</code>
                   <span>mono, bold</span>
                 </span>
-                <span className="price">$849.00</span>
+                <span className="price">{money(LISTINGS[0]!.price)}</span>
               </div>
               <div className="ds-row">
                 <span className="ds-label">
@@ -448,6 +451,7 @@ export function DesignSystem() {
                     as="panel"
                     payments="simulated"
                     faucetUsd={STATUS.faucetUsd}
+                    balance={c.balance ?? null}
                     busy={c.busy ?? null}
                     paid={c.paid ?? null}
                     refused={null}
@@ -518,6 +522,37 @@ export function DesignSystem() {
         <Section eyebrow="Components" title="AgentStrip">
           <AgentStrip onOpen={() => {}} />
         </Section>
+        <Section
+          eyebrow="Components"
+          title="ListingDetail"
+          lede="The listing page, here with its price panel open on the last step. On the page, ListingBuy runs that panel."
+        />
+        <ListingDetail
+          l={LISTINGS[0]!}
+          onAgent={() => {}}
+          buy={
+            <section className="panel listing-panel listing-buy" aria-label="Price">
+              <h2>Price</h2>
+              <p className="listing-price">
+                <span className="price">{money(LISTINGS[0]!.price)}</span>
+              </p>
+              <CheckoutView
+                listing={LISTINGS[0]!}
+                step={{ kind: "pay" }}
+                as="inline"
+                payments="simulated"
+                faucetUsd={STATUS.faucetUsd}
+                balance={200_000}
+                busy={null}
+                paid={null}
+                refused={null}
+                error={null}
+                onAct={() => {}}
+                onClose={() => {}}
+              />
+            </section>
+          }
+        />
       </main>
       <Footer />
       <StatusBar status={STATUS} loaded />

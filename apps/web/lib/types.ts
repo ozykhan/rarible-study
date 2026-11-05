@@ -83,9 +83,9 @@ export interface Listing {
   readonly description: string
   readonly status: "active" | "sold" | "withdrawn"
   readonly listedAt: string
-  /** On the market list only: what the listing costs in dUSD units (cents), the amount checkout funds and pays. */
+  /** From /listings and /listings/:id: what the listing costs in dUSD units (cents), the amount checkout funds and pays. */
   readonly payUnits?: number
-  /** On the market list only: the code's red flags. A flagged listing cannot be bought directly. */
+  /** From /listings and /listings/:id: the code's red flags. A flagged listing cannot be bought directly. */
   readonly redFlags?: ReadonlyArray<RedFlag>
 }
 

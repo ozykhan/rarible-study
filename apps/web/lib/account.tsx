@@ -33,6 +33,9 @@ interface Account {
   readonly refresh: () => Promise<void>
   /** Opens the checkout for a listing. */
   readonly buy: (l: Listing) => void
+  /** For a checkout outside the dialog (the listing page): opens the wallet picker, and keeps a bought listing for the visit. */
+  readonly connect: () => void
+  readonly addBought: (l: Listing) => void
   /** Opens the agent page with a New watch drafted from this listing. */
   readonly watch: (l: Listing) => void
 }
@@ -157,6 +160,8 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     watching,
     refresh,
     buy: setBuying,
+    connect: () => setVisible(true),
+    addBought: (l) => setBought((b) => [...b, l]),
     watch
   }
 
@@ -170,11 +175,11 @@ export function AccountProvider({ children }: { children: ReactNode }) {
           wallet={wallet}
           token={token}
           funds={funds}
-          onConnect={() => setVisible(true)}
+          onConnect={value.connect}
           signIn={signIn}
           signText={signText}
           onFunds={refresh}
-          onBought={(l) => setBought((b) => [...b, l])}
+          onBought={value.addBought}
           onClose={() => setBuying(null)}
         />
       )}
