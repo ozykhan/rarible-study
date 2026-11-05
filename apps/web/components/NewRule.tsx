@@ -2,9 +2,12 @@
 
 import { useState } from "react"
 import { api } from "@/lib/api"
-import { label, money, toMajor, toMinor } from "@/lib/format"
+import { label, toMajor, toMinor } from "@/lib/format"
 import type { Draft, Rule } from "@/lib/types"
 import { useAction } from "@/lib/useAction"
+
+/** The parser's question when a want names no price; typing one below answers it. */
+const PRICE_QUESTION = "What is the most you want to pay?"
 
 const EXAMPLES = [
   "Ashen Wyrm, 1st edition holo, grade 9 or better from NVG or QSG, up to $900",
@@ -20,15 +23,26 @@ const EXAMPLES = [
 export function NewRule(props: { token: string; onCreated: (rule: Rule, note: string) => void }) {
   const [want, setWant] = useState("")
   const [draft, setDraft] = useState<Draft | null>(null)
+  const [maxPrice, setMaxPrice] = useState("")
   const [budget, setBudget] = useState("")
+  const [budgetEdited, setBudgetEdited] = useState(false)
   const { busy, error, run } = useAction()
+
+  // The budget follows twice the price until the collector sets it.
+  const changePrice = (value: string) => {
+    setMaxPrice(value)
+    if (!budgetEdited) setBudget(Number(value) > 0 ? String(Number(value) * 2) : "")
+  }
 
   const makeDraft = () =>
     run("draft", async () => {
       const d = await api<Draft>("/rules/draft", { token: props.token, body: { want } })
       setDraft(d)
       const max = d.draft.hard.maxPrice
-      setBudget(String(toMajor(max.amountMinor, max.currency) * 2 || ""))
+      const major = toMajor(max.amountMinor, max.currency)
+      setMaxPrice(major > 0 ? String(major) : "")
+      setBudget(major > 0 ? String(major * 2) : "")
+      setBudgetEdited(false)
     })
 
   const create = () =>
@@ -39,7 +53,7 @@ export function NewRule(props: { token: string; onCreated: (rule: Rule, note: st
         token: props.token,
         body: {
           rawWant: draft.draft.rawWant,
-          hard: draft.draft.hard,
+          hard: { ...draft.draft.hard, maxPrice: { amountMinor: toMinor(Number(maxPrice), currency), currency } },
           softDescription: draft.draft.softDescription,
           budget: { amountMinor: toMinor(Number(budget), currency), currency }
         }
@@ -53,6 +67,8 @@ export function NewRule(props: { token: string; onCreated: (rule: Rule, note: st
     })
 
   const h = draft?.draft.hard
+  const priceGiven = Number(maxPrice) > 0
+  const questions = (draft?.draft.questions ?? []).filter((q) => !(priceGiven && q === PRICE_QUESTION))
   return (
     <section className="card">
       <h2>New watch rule</h2>
@@ -89,28 +105,54 @@ export function NewRule(props: { token: string; onCreated: (rule: Rule, note: st
             <dt>Grade</dt>
             <dd>{h.minGrade} or better</dd>
             <dt>Price</dt>
-            <dd>at most {money(h.maxPrice)}</dd>
+            <dd>
+              <label>
+                at most{" "}
+                <input
+                  value={maxPrice}
+                  onChange={(e) => changePrice(e.target.value)}
+                  inputMode="decimal"
+                  size={8}
+                  placeholder="missing"
+                  aria-label="Most you will pay"
+                />{" "}
+                {h.maxPrice.currency}
+              </label>
+              {!priceGiven && <span className="muted small"> Type the most you will pay.</span>}
+            </dd>
             <dt>Also wants</dt>
             <dd>{draft.draft.softDescription ?? "nothing else"}</dd>
           </dl>
-          {draft.draft.questions.length > 0 && (
+          {questions.length > 0 && (
             <div className="questions">
               <strong>Before you save, the parser asks:</strong>
               <ul>
-                {draft.draft.questions.map((q) => (
+                {questions.map((q) => (
                   <li key={q}>{q}</li>
                 ))}
               </ul>
-              <p className="muted small">Edit the text above and draft again to answer.</p>
+              <p className="muted small">
+                {questions.includes(PRICE_QUESTION)
+                  ? "Type the price in the rule above, or edit the text and draft again."
+                  : "Edit the text above and draft again to answer."}
+              </p>
             </div>
           )}
           <div className="row">
             <label>
               Budget for this rule
-              <input value={budget} onChange={(e) => setBudget(e.target.value)} inputMode="decimal" size={8} />{" "}
+              <input
+                value={budget}
+                onChange={(e) => {
+                  setBudget(e.target.value)
+                  setBudgetEdited(true)
+                }}
+                inputMode="decimal"
+                size={8}
+              />{" "}
               {h.maxPrice.currency}
             </label>
-            <button onClick={create} disabled={busy !== null || !(Number(budget) > 0) || !(h.maxPrice.amountMinor > 0)}>
+            <button onClick={create} disabled={busy !== null || !(Number(budget) > 0) || !priceGiven}>
               {busy === "create" ? "Saving and matching…" : "Save rule"}
             </button>
           </div>

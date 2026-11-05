@@ -14,7 +14,15 @@ This is a three-day study project, not a product. Nothing here is audited or pro
 | --- | --- | --- |
 | 1 | Fictional seed with traps, watch rules from plain language, SQL and pgvector matching, labelled eval set, v1 and v2 numbers | Built, tested, measured |
 | 2 | MCP server, agent loop with limits in code, injection tests, tracing | Built, tested, measured |
-| 3 | Wallet sign-in and signed approvals, SPL payments on devnet, Next.js wallet page, rate limits, deploy | Built, tested; live demo below |
+| 3 | Wallet sign-in and signed approvals, SPL payments on devnet, Next.js wallet page, rate limits, deploy | Built, tested, deployed |
+
+## Live demo
+
+- Wallet page: https://rarible-study.vercel.app
+- API status: https://backend-production-c6233.up.railway.app/api/status
+- MCP endpoint: `https://backend-production-c6233.up.railway.app/mcp`, which needs a bearer token
+
+Everything runs on Solana devnet with test tokens that have no value. Connect a Solana wallet switched to devnet, sign in with a signature, take test dUSD from the faucet, approve an allowance, and describe a card you want. A new listing appears every 45 seconds. The model has a $2 daily cap; once it is reached, drafting a rule refuses and matches that need the judge wait for review until the next day.
 
 ## How a want becomes a watch rule
 
