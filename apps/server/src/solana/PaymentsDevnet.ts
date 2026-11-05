@@ -32,7 +32,7 @@ export const PaymentsDevnet = Layer.effect(
           const funds = yield* treasury.funds(from)
           if (funds.allowanceUnits < units) {
             return yield* new PaymentError({
-              message: `the wallet allows Slabwatch to spend ${dusd(funds.allowanceUnits)} and this purchase needs ${dusd(units)}; approve a larger allowance on the wallet page`
+              message: `the wallet allows Slabwatch to spend ${dusd(funds.allowanceUnits)} and this purchase needs ${dusd(units)}; approve a larger allowance and try again`
             })
           }
           if (funds.balanceUnits < units) {

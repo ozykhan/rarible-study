@@ -139,7 +139,7 @@ const lastAgentText = (transcript: unknown): string => {
 }
 
 /**
- * The JSON API the wallet page calls. A session comes from a wallet
+ * The JSON API the web app calls. A session comes from a wallet
  * signature; everything a collector does after that is checked against the
  * session's wallet. Endpoints that cost a model call or a devnet transaction
  * are rate limited per IP and per wallet, and the read-only demo mode turns

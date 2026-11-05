@@ -1,7 +1,7 @@
 {
   "name": "slabwatch",
   "private": true,
-  "description": "Study project: an AI shopping agent for a mock marketplace of graded collectible cards, on Solana devnet.",
+  "description": "Study project: a mock marketplace of graded collectible cards on Solana devnet, with an optional AI shopping agent.",
   "license": "MIT",
   "packageManager": "pnpm@10.28.0",
   "engines": {

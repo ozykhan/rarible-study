@@ -1,8 +1,8 @@
 # Slabwatch
 
-A study project: an AI shopping agent for a mock marketplace of tokenized, graded trading cards.
+A study project: a mock marketplace of tokenized, graded trading cards, with an optional AI agent that watches for the card you want.
 
-You describe a card you want in plain words. The app turns that into a watch rule, matches new listings with code first and a model second, and lets an agent buy within limits that code enforces. It pays with a test SPL token on Solana devnet, from a wallet you connect in the browser.
+You browse the market and buy a slab directly, from a wallet you connect in the browser. No watch rule or agent is involved. If the card is not listed, you can describe it in plain words instead: the app turns that into a watch rule, matches new listings with code first and a model second, and lets an agent buy within limits that code enforces. Every purchase is paid with a test SPL token on Solana devnet.
 
 **Solana devnet only.** Every card, set, character, grading company and seller in this repo is invented. There is no real marketplace data, no real money and no mainnet code path.
 
@@ -15,14 +15,16 @@ This is a three-day study project, not a product. Nothing here is audited or pro
 | 1 | Fictional seed with traps, watch rules from plain language, SQL and pgvector matching, labelled eval set, v1 and v2 numbers | Built, tested, measured |
 | 2 | MCP server, agent loop with limits in code, injection tests, tracing | Built, tested, measured |
 | 3 | Wallet sign-in and signed approvals, SPL payments on devnet, Next.js wallet page, rate limits, deploy | Built, tested, deployed |
+| Redesign | Marketplace first: a home page, the market with server-side search, listing pages, direct buy with a checkout, and the agent on its own page | Built, tested |
 
 ## Live demo
 
-- Wallet page: https://rarible-study.vercel.app
+- Marketplace: https://rarible-study.vercel.app, with every listing at https://rarible-study.vercel.app/market
+- The optional agent: https://rarible-study.vercel.app/agent
 - API status: https://backend-production-c6233.up.railway.app/api/status
 - MCP endpoint: `https://backend-production-c6233.up.railway.app/mcp`, which needs a bearer token
 
-Everything runs on Solana devnet with test tokens that have no value. Connect a Solana wallet switched to devnet, sign in with a signature, take test dUSD from the faucet, approve an allowance, and describe a card you want. A new listing appears every 45 seconds. The model has a $2 daily cap; once it is reached, drafting a rule refuses and matches that need the judge wait for review until the next day.
+Everything runs on Solana devnet with test tokens that have no value. Switch a Solana wallet to devnet and press Buy now on any slab: the checkout asks for whatever is missing (connect, sign in, test dUSD from the faucet, an allowance), then you sign to buy. To have the agent watch for a card instead, describe it on the agent page and save the watch. A new listing appears every 45 seconds. The model has a $2 daily cap; once it is reached, drafting a rule refuses and matches that need the judge wait for review until the next day.
 
 ## How a want becomes a watch rule
 
@@ -73,6 +75,16 @@ pnpm --filter @slabwatch/server mint-token --revoke T-...
 
 The token is printed once. Only its SHA-256 is stored. Without a valid token the endpoint answers 401. A token without execute rights does not see `execute_purchase`, and calling it anyway fails. Every purchase records which token or agent run asked for it.
 
+## How a direct buy works
+
+Buy now on any listing buys it for the signed-in wallet, with no watch rule and no agent. `POST /api/purchases/direct` proposes it, and the wallet signs the same kind of purchase approval as confirm mode. The policy is `checkDirectPurchase` in [`policy.ts`](apps/server/src/purchases/policy.ts): the rule purchase checks, minus the rule's own (its fields, budget and allow-list).
+
+- Demo read-only mode, the listing active, no code red flags, and no other live purchase of the listing. A flagged listing gets no pay button.
+- The server's daily cap per wallet (`PURCHASE_DAILY_CAP_USD`, $500 by default), counting everything the wallet paid for today, direct and through its rules.
+- To pay, the buyer's own signature on that one purchase. The signed text says `Rule: none (a direct buy)`. An auto-buy approval, an agent run or an MCP token can never complete a direct buy.
+
+Direct buys do not count toward a rule's budget or the agent's daily cap, so buying by hand leaves the agent's room as it was. A direct buy nobody signs lapses after 10 minutes, so nobody can hold a listing by proposing and never signing. When the allowance is too low, the checkout's Approve step sets it to this purchase's amount.
+
 ## How paying works on devnet
 
 The collector's wallet signs three kinds of text, and each is written by the server, stored with a one-time nonce, and checked with ed25519 against exactly that stored text ([`apps/server/src/wallet/`](apps/server/src/wallet)):
@@ -80,7 +92,7 @@ The collector's wallet signs three kinds of text, and each is written by the ser
 | Text | What it does |
 | --- | --- |
 | Sign in | Proves the wallet is yours and opens a 12 hour session. It moves no funds. |
-| Purchase approval | Confirm mode: approves one named purchase, with its listing, price and amount in dUSD. |
+| Purchase approval | Approves one named purchase, a direct buy or a confirm-mode match, with its listing, price and amount in dUSD. |
 | Auto-buy approval | Lets the agent buy for one rule within its budget and a daily cap, until it expires. It names all three, and it stops counting if the rule's budget changes later. |
 
 Every text says it is for Solana devnet with test tokens of no value, because the wallet shows it to the person before they sign.
@@ -96,13 +108,22 @@ Money moves as an SPL token, not SOL ([`apps/server/src/solana/`](apps/server/sr
 
 The payment code runs for real in tests on [litesvm](https://github.com/LiteSVM/litesvm), an in-process Solana VM with the SPL programs built in. `SOLANA_RPC_URL=memory` uses the same VM for a local run with no network.
 
-## The wallet page
+## The web app
 
-[`apps/web`](apps/web) is a Next.js page that connects any Wallet Standard wallet through the Solana wallet adapter. You sign in, get test dUSD, approve an allowance, describe a card, check the rule the model drafted (and answer its questions), set a budget, and then see matches, listings waiting for review and rejections with their reasons. You can buy a match by signing it, ask the agent about a listing, or sign an auto-buy approval and revoke it later. Seller text is shown as plain text, since some of it is written to trick an AI buyer.
+[`apps/web`](apps/web) is a Next.js App Router app that connects any Wallet Standard wallet through the Solana wallet adapter. The four routes below share one header, the devnet notice and a status bar; the `/design` reference page sits outside them.
 
-The whole flow, from connecting to a paid purchase and auto-buy on and off, was driven in headless Chromium with a test wallet against the in-memory chain.
+| Route | What it shows |
+| --- | --- |
+| `/` | The front page: search, the four sets, the five newest listings, how buying works, the graders, and a band that offers the agent |
+| `/market` | Every active listing as a grid of slabs, with set tabs, grader, search, sort and paging. The filters live in the URL and run on the server: `GET /api/listings` takes `?set`, `?grader`, `?q`, `?sort`, `?offset` and `?limit`. Search matches the vault record (card, set, number, edition, finish, grader, grade, seller), never the seller's own title, which can claim a grade the slab does not have. Watch on a tile opens the agent in a drawer |
+| `/listing/[id]` | One listing in full, with Buy now inline and more from the same set. `GET /api/listings/:id` also answers for sold and withdrawn listings, so their pages say so |
+| `/agent` | The optional agent: your watches, the selected watch with its matches, listings to review, skipped listings, purchases and agent runs. You can buy a match by signing it, ask the agent about a listing, or sign an auto-buy approval and revoke it later. A watch cannot be edited, so Change this watch saves a new watch and pauses the old one |
 
-The page has a dark marketplace layout: a hero, the four sets, and the market as a grid of graded slabs you can filter by set, search and sort. Each slab is drawn in CSS (the grader's label, the grade, a holo sheen for holo finishes) around generated card art. The art, 40 cards plus 4 set banners and the hero background, was made on CPU with [LCM Dreamshaper v7](https://huggingface.co/SimianLuo/LCM_Dreamshaper_v7) (MIT license) by [`apps/web/scripts/generate_art.py`](apps/web/scripts/generate_art.py). Its prompts describe the fictional creatures in the seed catalog.
+Seller text is shown as plain text, since some of it is written to trick an AI buyer.
+
+The checkout was driven in headless Chromium with a test wallet against the in-memory chain, from a fresh wallet to a paid purchase. A browser script also checked the agent page: signing a match, the auto-buy state and changing a watch.
+
+Each slab is drawn in CSS (the grader's label, the grade, a holo sheen for holo finishes) around generated card art. The art, 40 cards plus 4 set banners and the hero background, was made on CPU with [LCM Dreamshaper v7](https://huggingface.co/SimianLuo/LCM_Dreamshaper_v7) (MIT license) by [`apps/web/scripts/generate_art.py`](apps/web/scripts/generate_art.py). Its prompts describe the fictional creatures in the seed catalog.
 
 The design system is written down in [`apps/web/DESIGN.md`](apps/web/DESIGN.md): tokens in [`apps/web/styles/tokens.css`](apps/web/styles/tokens.css), one stylesheet per component, shared building blocks in [`apps/web/components/ui`](apps/web/components/ui), and a `/design` page that renders every token and component with sample data.
 
@@ -174,6 +195,7 @@ Every step is an Effect span: rule parsing, each matcher stage, model calls with
 - The model can veto a match but never approve one that code rejected.
 - Catalog ids come from code, never from the model.
 - Purchases are checked in code against the rule's budget, the daily cap and the caller's rule-id allow-list, and checked again under a lock right before payment.
+- A direct buy is checked in code against red flags and the wallet's daily cap, and only the buyer's own signature can pay for it.
 - The MCP endpoint needs a bearer token, and tokens are stored only as hashes.
 - A daily model spend cap ($2 by default) is checked before every call and refuses clearly when reached. Every call is logged with tokens, cost and latency.
 - Seller text is escaped and marked untrusted in every prompt and tool result.
@@ -193,7 +215,7 @@ pnpm install
 cp .env.example .env        # add ANTHROPIC_API_KEY to use the model stages
 pnpm bootstrap              # Postgres with pgvector, migrations, seed
 pnpm dev                    # backend on :3001: a new listing every 45 seconds, the watcher, /mcp and /api
-pnpm --filter @slabwatch/web dev   # wallet page on :3000
+pnpm --filter @slabwatch/web dev   # marketplace on :3000
 pnpm test
 pnpm eval                   # v1 eval, needs the API key
 ```
@@ -204,7 +226,7 @@ Payments are simulated unless you set `PAYMENTS=devnet` and a `DEVNET_SEED` (`op
 
 ## Deploy
 
-The live demo runs the backend and Postgres on Railway and the wallet page on Vercel. Nothing about the deploy is in the repo except this section: the settings live in each platform.
+The live demo runs the backend and Postgres on Railway and the web app on Vercel. Nothing about the deploy is in the repo except this section: the settings live in each platform.
 
 **Railway.** One project with two services.
 
@@ -220,7 +242,7 @@ The live demo runs the backend and Postgres on Railway and the wallet page on Ve
 | `ANTHROPIC_API_KEY` | a key used only for this demo, with its own spend limit |
 | `LLM_DAILY_CAP_USD` | `2` |
 | `AGENT_ENABLED` | `true` |
-| `WEB_ORIGINS` | the Vercel URL of the wallet page |
+| `WEB_ORIGINS` | the Vercel URL of the web app |
 
 On its first boot the server creates the dUSD mint and the escrow account and logs the treasury address. If the devnet faucet refuses the airdrop, fund that address with devnet SOL at faucet.solana.com.
 
@@ -236,7 +258,7 @@ packages/seed     the fictional catalog, prices, sales history and the listing g
 apps/server       Effect backend: Postgres and pgvector, embeddings, model calls, rule parser, matcher,
                   purchase policy, agent loop and tools, MCP endpoint, watcher, tracing,
                   wallet signatures, devnet payments, the web API and its rate limits
-apps/web          Next.js wallet page
+apps/web          Next.js marketplace: home, market, listing pages, checkout and the agent page
 evals             labelled eval set, metrics, the matcher eval and the agent injection eval
 ```
 
@@ -246,8 +268,8 @@ I built this with Claude Code as a coding agent. I set the scope, the plan and t
 
 ## What's next
 
-- The binder view (what a wallet has bought) was cut for time.
-- Confirm mode signs a text and the delegate pays. Having the wallet sign the transfer itself would show the payment in the wallet's own approval screen.
+- A binder view of what a wallet has bought was cut for time. `GET /api/me/purchases` already lists it.
+- Direct buys and confirm mode sign a text and the delegate pays. Having the wallet sign the transfer itself would show the payment in the wallet's own approval screen.
 - The agent eval covers the agent's decisions; nothing yet measures the wallet flow beyond the tests above.
 
 ## License
