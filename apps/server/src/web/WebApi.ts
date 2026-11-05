@@ -1,5 +1,5 @@
 import { HardCriteria, Money, type ListingView, type MatchDecision } from "@slabwatch/domain"
-import { cards, sets } from "@slabwatch/seed"
+import { cards, sets, toUsdCents } from "@slabwatch/seed"
 import { address, isAddress } from "@solana/kit"
 import { Effect, Option, Schema } from "effect"
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/http"
@@ -11,6 +11,7 @@ import { Embedder } from "../embeddings/Embedder.ts"
 import { evaluateWithFallback } from "../jobs/watcher.ts"
 import { spentTodayMicros } from "../llm/Llm.ts"
 import { Matcher, pipelineV2 } from "../matcher/Matcher.ts"
+import { redFlagsFor } from "../matcher/redFlags.ts"
 import { Payments } from "../purchases/Payments.ts"
 import { Purchases } from "../purchases/Purchases.ts"
 import { RuleParser } from "../rules/RuleParser.ts"
@@ -249,7 +250,19 @@ export const WebApiRoutes = HttpRouter.addAll(
     const listings = route(
       "GET",
       "/listings",
-      Effect.map(catalog.listActive(40), (ls) => ({ listings: ls }))
+      Effect.gen(function* () {
+        const ls = yield* catalog.listActive(40)
+        const facts = new Map((yield* catalog.marketFacts(ls.map((l) => l.listingId))).map((f) => [f.listingId, f]))
+        // payUnits is what the listing costs in dUSD units (cents): what checkout funds, approves and pays.
+        // redFlags are the same code checks the purchase policy runs; a flagged listing cannot be bought directly.
+        return {
+          listings: ls.map((l) => ({
+            ...l,
+            payUnits: toUsdCents(l.price.amountMinor, l.price.currency),
+            redFlags: redFlagsFor(l, facts.get(l.listingId))
+          }))
+        }
+      })
     )
 
     const catalogRoute = route(
@@ -478,6 +491,36 @@ export const WebApiRoutes = HttpRouter.addAll(
       })
     )
 
+    const proposeDirect = route(
+      "POST",
+      "/purchases/direct",
+      Effect.gen(function* () {
+        yield* writable
+        const wallet = yield* session
+        const { listingId } = yield* body(Schema.Struct({ listingId: Schema.String }))
+        return yield* purchases.proposeDirect(wallet, listingId)
+      })
+    )
+
+    const myPurchases = route(
+      "GET",
+      "/me/purchases",
+      Effect.gen(function* () {
+        const wallet = yield* session
+        const rows = yield* purchases.listForBuyer(wallet)
+        return {
+          purchases: rows.map((p) => ({
+            id: p.id,
+            ruleId: p.ruleId,
+            listingId: p.listingId,
+            price: p.price,
+            status: p.status,
+            txSignature: p.txSignature
+          }))
+        }
+      })
+    )
+
     const approveStart = route(
       "POST",
       "/purchases/:id/approve/start",
@@ -580,6 +623,8 @@ export const WebApiRoutes = HttpRouter.addAll(
       autoRevoke,
       askAgent,
       propose,
+      proposeDirect,
+      myPurchases,
       approveStart,
       approveFinish,
       funds,

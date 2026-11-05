@@ -1,12 +1,11 @@
 "use client"
 
 import { useWallet } from "@solana/wallet-adapter-react"
-import { VersionedTransaction } from "@solana/web3.js"
 import { useState } from "react"
-import { api } from "@/lib/api"
-import { dusd, explorerTx, fromBase64, toBase64 } from "@/lib/format"
+import { dusd, explorerTx } from "@/lib/format"
 import type { Funds, Status } from "@/lib/types"
 import { useAction } from "@/lib/useAction"
+import { approveAllowance, getTestDusd } from "@/lib/wallet"
 import { Button, Panel } from "./ui"
 
 /**
@@ -32,21 +31,13 @@ export function WalletPanel(props: { token: string; status: Status; funds: Funds
 
   const faucet = () =>
     run("faucet", async () => {
-      const r = await api<{ signature: string }>("/wallet/faucet", { token: props.token, body: {} })
-      setLastTx(r.signature)
+      setLastTx(await getTestDusd(props.token))
       props.onChange()
     })
 
   const approve = () =>
     run("allowance", async () => {
-      if (!signTransaction) throw new Error("this wallet cannot sign transactions")
-      const usd = Number(amount)
-      if (!(usd >= 0)) throw new Error("enter an amount in dUSD")
-      const { transaction } = await api<{ transaction: string }>("/wallet/allowance", { token: props.token, body: { amountUsd: usd } })
-      // The server built this and paid the fee; the wallet only adds its signature.
-      const signed = await signTransaction(VersionedTransaction.deserialize(fromBase64(transaction)))
-      const r = await api<{ signature: string }>("/wallet/submit", { token: props.token, body: { transaction: toBase64(signed.serialize()) } })
-      setLastTx(r.signature)
+      setLastTx(await approveAllowance(props.token, Number(amount), signTransaction))
       props.onChange()
     })
 

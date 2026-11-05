@@ -52,7 +52,8 @@ export const approvalMessage = (t: ApprovalTerms) =>
 
 export interface PurchaseTerms {
   readonly purchaseId: string
-  readonly ruleId: string
+  /** Null for a direct buy from the market. */
+  readonly ruleId: string | null
   readonly listingId: string
   readonly listingTitle: string
   readonly price: Money
@@ -69,7 +70,7 @@ export const purchaseMessage = (t: PurchaseTerms) =>
     `Purchase: ${t.purchaseId}`,
     `Listing: ${t.listingId} ("${t.listingTitle.replace(/[\r\n"]+/g, " ").slice(0, 200)}")`,
     `Price: ${formatMoney(t.price)}, paid as ${formatMoney({ amountMinor: t.payUnits, currency: "USD" }).replace("$", "")} dUSD`,
-    `Rule: ${t.ruleId}`,
+    `Rule: ${t.ruleId ?? "none (a direct buy)"}`,
     `Wallet: ${t.wallet}`,
     `Nonce: ${t.nonce}`,
     "This approves this one purchase. Code checks it again before paying."

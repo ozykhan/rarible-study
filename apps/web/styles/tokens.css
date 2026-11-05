@@ -207,6 +207,7 @@
   --rail: minmax(300px, 380px); /* the signed-in desk's left column */
   --tile-min: 230px; /* market tiles fill the row at this width or more */
 
+  --z-dialog: 60; /* checkout; the wallet picker (wallet adapter, 1040) opens over it */
   --z-header: 50;
   --z-statusbar: 40;
 }

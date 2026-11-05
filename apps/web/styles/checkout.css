@@ -1,0 +1,161 @@
+/*
+ * <Checkout>: buying one listing directly. A dialog centered over the page;
+ * under 700px, a bottom sheet. It sits above the header (--z-dialog) and
+ * under the wallet picker (the wallet adapter's own modal, z-index 1040), so
+ * Connect wallet opens over it.
+ */
+
+.checkout-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-dialog);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: var(--glass-header);
+  backdrop-filter: blur(var(--blur-sm));
+}
+
+.checkout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: 480px;
+  max-height: calc(100dvh - 2 * var(--space-4));
+  overflow-y: auto;
+  padding: var(--space-4-5);
+  background: var(--surface-raised);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-xl);
+}
+
+.checkout-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.checkout-head h2 {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+}
+.checkout-close {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  padding: 0;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  color: var(--muted);
+}
+.checkout-close:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--line-control);
+}
+
+.checkout-card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+.checkout-slab {
+  flex: none;
+  width: 104px;
+}
+
+/* Label and value pairs as in desk.css, with the values pushed right like a receipt. */
+.checkout-facts {
+  flex: 1;
+  margin: 0;
+}
+.checkout-facts dd {
+  text-align: right;
+  color: var(--ink);
+}
+.checkout-facts dd .chip {
+  margin-right: var(--space-1);
+  vertical-align: 1px;
+}
+.checkout-total {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+.checkout-total .total {
+  color: var(--ink);
+  font-weight: var(--weight-semibold);
+}
+.checkout-total dd.total {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+}
+
+.checkout-checks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+}
+.checkout-checks p {
+  margin: 0;
+}
+
+/* The test-token line, and the reason a listing cannot be bought here, in the warn tint. */
+.checkout-test {
+  margin: 0;
+  padding: var(--space-2-5) var(--space-3-5);
+  font-size: var(--text-sm);
+  color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warn) 25%, transparent);
+  border-radius: var(--radius-md);
+}
+.checkout > .muted,
+.checkout > .error,
+.checkout > .note {
+  margin: 0;
+}
+
+.checkout-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+/* "View the payment" is a link to the explorer, drawn as a secondary button. */
+.checkout-actions a.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+@media (max-width: 700px) {
+  .checkout-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .checkout {
+    max-width: none;
+    max-height: 92dvh;
+    padding: var(--space-4-5) var(--space-4) var(--space-6);
+    border-width: 1px 0 0;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  }
+  .checkout-close {
+    width: 44px;
+    height: 44px;
+  }
+  .checkout-slab {
+    width: 72px;
+  }
+  .checkout-actions {
+    flex-direction: column-reverse;
+  }
+  .checkout-actions > * {
+    width: 100%;
+  }
+}

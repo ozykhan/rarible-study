@@ -1,6 +1,6 @@
 import { money, type WatchRule } from "@slabwatch/domain"
 import { describe, expect, it } from "@effect/vitest"
-import { checkPurchase, type PolicyInput } from "../src/purchases/policy.ts"
+import { checkDirectPurchase, checkPurchase, type DirectPolicyInput, type PolicyInput } from "../src/purchases/policy.ts"
 import { listing, rule as hard } from "./fixtures.ts"
 
 const rule = (over: Partial<WatchRule> = {}): WatchRule => ({
@@ -88,5 +88,51 @@ describe("purchase policy", () => {
       "no_red_flags",
       "not_already_bought"
     ])
+  })
+})
+
+const direct = (over: Partial<DirectPolicyInput> = {}): DirectPolicyInput => ({
+  action: "propose",
+  listing: listing(),
+  redFlags: [],
+  readOnly: false,
+  otherLivePurchases: 0,
+  committedTodayUsdCents: 0,
+  dailyCapUsdCents: 500_000,
+  authorization: "none",
+  ...over
+})
+
+const failedDirect = (over: Partial<DirectPolicyInput>) =>
+  checkDirectPurchase(direct(over))
+    .checks.filter((c) => !c.pass)
+    .map((c) => c.name)
+
+describe("direct buy policy", () => {
+  it("allows a proposal that passes every check, with no rule involved", () => {
+    const result = checkDirectPurchase(direct())
+    expect(result.allowed).toBe(true)
+    expect(result.checks.map((c) => c.name)).not.toContain("rule_allowed")
+  })
+
+  it.each([
+    ["read_only", { readOnly: true }],
+    ["listing_exists", { listing: null }],
+    ["listing_active", { listing: listing({ status: "sold" }) }],
+    ["no_red_flags", { redFlags: ["grade_claim_mismatch" as const] }],
+    ["not_already_bought", { otherLivePurchases: 1 }],
+    ["daily_cap", { committedTodayUsdCents: 350_001 }]
+  ] satisfies ReadonlyArray<readonly [string, Partial<DirectPolicyInput>]>)("refuses on %s", (name, over) => {
+    expect(failedDirect(over)).toEqual([name])
+  })
+
+  it("executes only on the collector's own signature, never on an auto-buy approval", () => {
+    const unsigned = checkDirectPurchase(direct({ action: "execute" }))
+    expect(unsigned.allowed).toBe(false)
+    expect(unsigned.waitingForApproval).toBe(true)
+    expect(failedDirect({ action: "execute", authorization: "auto_approval" })).toEqual([
+      "authorized"
+    ])
+    expect(checkDirectPurchase(direct({ action: "execute", authorization: "collector_approved" })).allowed).toBe(true)
   })
 })

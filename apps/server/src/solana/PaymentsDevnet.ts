@@ -25,7 +25,7 @@ export const PaymentsDevnet = Layer.effect(
       transfer: (t) =>
         Effect.gen(function* () {
           if (t.from === null || !isAddress(t.from)) {
-            return yield* new PaymentError({ message: "the rule has no wallet to pay from" })
+            return yield* new PaymentError({ message: "there is no wallet to pay from" })
           }
           const from = address(t.from)
           const units = BigInt(toUsdCents(t.amount.amountMinor, t.amount.currency))

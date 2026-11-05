@@ -1,4 +1,4 @@
-import type { Listing, Money } from "./types"
+import type { Listing, Money, RedFlag } from "./types"
 
 const digits = (c: Money["currency"]) => (c === "JPY" ? 0 : 2)
 
@@ -43,3 +43,10 @@ export const variant = (l: Pick<Listing, "edition" | "finish">) =>
 /** A plain-language want for a watch on this card, to seed the New watch form from a tile. */
 export const watchWant = (l: Listing) =>
   `${l.cardName}, ${l.setName} #${l.cardNumber}, ${variant(l)}, grade ${l.grade} or better, up to ${money(l.price)}`
+
+/** The code's red flags in words, as the purchase policy states them. */
+export const redFlagText: Record<RedFlag, string> = {
+  duplicate_vault_item: "The same vault item has another active listing",
+  price_far_below_market: "The price is under 40% of recent sales for this card, variant and grade",
+  grade_claim_mismatch: "The seller's text claims a grade or grader that differs from the vault record"
+}

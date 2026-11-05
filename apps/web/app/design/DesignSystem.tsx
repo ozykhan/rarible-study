@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react"
+import { CheckoutView, type CheckoutStep } from "@/components/Checkout"
 import { DevnetNotice } from "@/components/DevnetNotice"
 import { HowItWorks } from "@/components/HowItWorks"
 import { ListingTile } from "@/components/ListingTile"
@@ -148,10 +149,29 @@ const listing = (c: SlabCard, n: number, amountMinor: number, currency: Listing[
 })
 
 const LISTINGS: ReadonlyArray<Listing> = [
-  listing(SLABS[0]![0], 1, 84900, "USD", "vaultkeeper"),
-  listing(SLABS[1]![0], 2, 21500, "EUR", "holo_harbor"),
-  listing(SLABS[2]![0], 3, 3200000, "JPY", "foilfox"),
-  listing(SLABS[3]![0], 4, 7400, "USD", "attic_finds")
+  { ...listing(SLABS[0]![0], 1, 84900, "USD", "vaultkeeper"), payUnits: 84900, redFlags: [] },
+  { ...listing(SLABS[1]![0], 2, 21500, "EUR", "holo_harbor"), payUnits: 23370, redFlags: [] },
+  { ...listing(SLABS[2]![0], 3, 3200000, "JPY", "foilfox"), payUnits: 2133333, redFlags: [] },
+  { ...listing(SLABS[3]![0], 4, 7400, "USD", "attic_finds"), payUnits: 7400, redFlags: ["price_far_below_market"] }
+]
+
+/** Each checkout state, drawn by CheckoutView with no wallet or API behind it. */
+const CHECKOUTS: ReadonlyArray<{
+  caption: string
+  listing: Listing
+  step: CheckoutStep
+  busy?: string
+  paid?: string
+}> = [
+  { caption: "Ready: one signature left", listing: LISTINGS[0]!, step: { kind: "pay" } },
+  { caption: "The wallet is open", listing: LISTINGS[0]!, step: { kind: "pay" }, busy: "pay" },
+  { caption: "A step still missing", listing: LISTINGS[1]!, step: { kind: "allowance", current: 5000 } },
+  {
+    caption: "A red-flagged listing",
+    listing: LISTINGS[3]!,
+    step: { kind: "blocked", why: "Slabwatch does not sell a flagged listing directly. Watches skip it for the same reason." }
+  },
+  { caption: "Bought", listing: LISTINGS[0]!, step: { kind: "pay" }, paid: "sample" }
 ]
 
 const DECISION: Decision = {
@@ -405,6 +425,35 @@ export function DesignSystem() {
               <div key={l.listingId} className={i < 2 ? "ds-tile-open" : undefined}>
                 <ListingTile l={l} owned={i === 2} watching={i === 1} onBuy={() => {}} onWatch={() => {}} />
               </div>
+            ))}
+          </div>
+        </Section>
+
+        <Section eyebrow="Components" title="Checkout">
+          <p className="ds-intro">
+            Buy now opens this as a dialog, and as a bottom sheet on a phone. The main button walks through whatever is missing
+            (Connect wallet, Sign in, Get test dUSD, Approve) and then reads Sign and pay.
+          </p>
+          <div className="ds-checkouts">
+            {CHECKOUTS.map((c) => (
+              <figure key={c.caption}>
+                <div className="checkout">
+                  <CheckoutView
+                    listing={c.listing}
+                    step={c.step}
+                    as="panel"
+                    payments="simulated"
+                    faucetUsd={STATUS.faucetUsd}
+                    busy={c.busy ?? null}
+                    paid={c.paid ?? null}
+                    refused={null}
+                    error={null}
+                    onAct={() => {}}
+                    onClose={() => {}}
+                  />
+                </div>
+                <figcaption>{c.caption}</figcaption>
+              </figure>
             ))}
           </div>
         </Section>

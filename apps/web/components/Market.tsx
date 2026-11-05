@@ -34,6 +34,9 @@ export function Market(props: {
   onSet: (id: string) => void
   /** Card ids the collector has an active watch for. */
   watching?: ReadonlySet<string>
+  /** Listing ids the collector bought. */
+  owned?: ReadonlySet<string>
+  onBuy?: (l: Listing) => void
   onWatch?: (l: Listing) => void
 }) {
   const [sort, setSort] = useState<Sort>("recent")
@@ -130,6 +133,8 @@ export function Market(props: {
             key={l.listingId}
             l={l}
             watching={props.watching?.has(cardId(l)) ?? false}
+            owned={props.owned?.has(l.listingId) ?? false}
+            {...(props.onBuy ? { onBuy: props.onBuy } : {})}
             {...(props.onWatch ? { onWatch: props.onWatch } : {})}
           />
         ))}
