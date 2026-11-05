@@ -67,6 +67,8 @@ export interface Draft {
 
 export interface Listing {
   readonly listingId: string
+  readonly setId?: string
+  readonly cardId?: string
   readonly setName: string
   readonly cardName: string
   readonly cardNumber: string

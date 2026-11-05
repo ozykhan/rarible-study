@@ -22,7 +22,7 @@ export function WalletPanel(props: { token: string; status: Status; funds: Funds
 
   if (props.status.payments !== "devnet") {
     return (
-      <section className="card">
+      <section className="panel">
         <h2>Wallet</h2>
         <p className="muted">This server pays through a simulated ledger, so there is nothing to fund.</p>
       </section>
@@ -50,7 +50,7 @@ export function WalletPanel(props: { token: string; status: Status; funds: Funds
     })
 
   return (
-    <section className="card">
+    <section className="panel">
       <h2>Wallet</h2>
       <dl className="facts">
         <dt>dUSD balance</dt>

@@ -1,8 +1,9 @@
 "use client"
 
-import type { ReactNode } from "react"
+import type { CSSProperties, ReactNode } from "react"
 import { useCallback, useEffect, useState } from "react"
 import { api } from "@/lib/api"
+import { cardArt, setTheme } from "@/lib/art"
 import { explorerTx, label, money, toMinor } from "@/lib/format"
 import type { Decision, ExecuteResult, Purchase, RuleDetail, SigningRequest, Status } from "@/lib/types"
 import { useAction } from "@/lib/useAction"
@@ -110,7 +111,7 @@ export function RuleView(props: {
       props.onChange()
     })
 
-  if (detail === null) return <section className="card muted">Loading the rule…</section>
+  if (detail === null) return <section className="panel muted">Loading the rule…</section>
   const { rule } = detail
   const h = rule.hard
   const bought = new Set(detail.purchases.filter((p) => p.status === "executed").map((p) => p.listingId))
@@ -123,7 +124,7 @@ export function RuleView(props: {
   const auto = detail.approvals[0]
 
   return (
-    <section className="card rule">
+    <section className="panel rule">
       <header className="rule-head">
         <div>
           <h2>{rule.rawWant}</h2>
@@ -271,29 +272,32 @@ export function RuleView(props: {
 function DecisionRow({ d, children }: { d: Decision; children?: ReactNode }) {
   const l = d.listing
   return (
-    <div className="listing">
-      <div className="listing-main">
-        <div>
-          <strong>{l ? l.title : d.listingId}</strong>
-          {l && (
-            <div className="muted small">
-              {l.cardName} #{l.cardNumber} · {l.setName} · {label(l.edition)} · {label(l.finish)} · {l.grader} {l.grade} · cert{" "}
-              {l.certNumber} · by {l.sellerHandle}
-              {l.status !== "active" && ` · ${l.status}`}
-            </div>
-          )}
+    <div className="listing" style={l ? ({ "--tone": setTheme(l)?.tone } as CSSProperties) : undefined}>
+      {l ? <img className="thumb" src={cardArt(l)} alt="" loading="lazy" width={64} height={89} /> : <span className="thumb" />}
+      <div>
+        <div className="listing-main">
+          <div>
+            <strong>{l ? l.title : d.listingId}</strong>
+            {l && (
+              <div className="muted small">
+                {l.cardName} #{l.cardNumber} · {l.setName} · {label(l.edition)} · {label(l.finish)} · {l.grader} {l.grade} · cert{" "}
+                {l.certNumber} · by {l.sellerHandle}
+                {l.status !== "active" && ` · ${l.status}`}
+              </div>
+            )}
+          </div>
+          <div className="price">{l ? money(l.price) : ""}</div>
         </div>
-        <div className="price">{l ? money(l.price) : ""}</div>
+        {l && <p className="seller-text small">{l.description}</p>}
+        {d.reasons.length > 0 && (
+          <ul className="reasons small">
+            {d.reasons.slice(0, 4).map((r) => (
+              <li key={r}>{r}</li>
+            ))}
+          </ul>
+        )}
+        {children && <div className="row">{children}</div>}
       </div>
-      {l && <p className="seller-text small">{l.description}</p>}
-      {d.reasons.length > 0 && (
-        <ul className="reasons small">
-          {d.reasons.slice(0, 4).map((r) => (
-            <li key={r}>{r}</li>
-          ))}
-        </ul>
-      )}
-      {children && <div className="row">{children}</div>}
     </div>
   )
 }

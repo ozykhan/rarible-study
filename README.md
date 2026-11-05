@@ -102,6 +102,8 @@ The payment code runs for real in tests on [litesvm](https://github.com/LiteSVM/
 
 The whole flow, from connecting to a paid purchase and auto-buy on and off, was driven in headless Chromium with a test wallet against the in-memory chain.
 
+The page has a dark marketplace layout: a hero, the four sets, and the market as a grid of graded slabs you can filter by set, search and sort. Each slab is drawn in CSS (the grader's label, the grade, a holo sheen for holo finishes) around generated card art. The art, 40 cards plus 4 set banners and the hero background, was made on CPU with [LCM Dreamshaper v7](https://huggingface.co/SimianLuo/LCM_Dreamshaper_v7) (MIT license) by [`apps/web/scripts/generate_art.py`](apps/web/scripts/generate_art.py). Its prompts describe the fictional creatures in the seed catalog.
+
 ## Prompt injection, tested where it matters
 
 The tests replace the model with a script that does what an injected model might do, and run it through the real loop, tools and policy against Postgres ([`apps/server/test/agent.db.test.ts`](apps/server/test/agent.db.test.ts)):
