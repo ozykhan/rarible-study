@@ -2,6 +2,7 @@
 
 import { useWalletModal } from "@solana/wallet-adapter-react-ui"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { Checkout } from "@/components/Checkout"
 import { DevnetNotice } from "@/components/DevnetNotice"
 import { Header } from "@/components/Header"
 import { Hero } from "@/components/Hero"
@@ -17,7 +18,7 @@ import { WalletPanel } from "@/components/WalletPanel"
 import { api, ApiError } from "@/lib/api"
 import { short, watchWant } from "@/lib/format"
 import { useSession } from "@/lib/session"
-import type { Funds, Listing, Rule, Status } from "@/lib/types"
+import type { Funds, Listing, MyPurchase, Rule, Status } from "@/lib/types"
 import { useAction } from "@/lib/useAction"
 
 /** The newest active listings, refreshed every 20 seconds. */
@@ -55,6 +56,10 @@ export default function Home() {
   // A tile's Watch seeds the New watch form; signed out, it waits for the sign-in.
   const [seed, setSeed] = useState<{ text: string; n: number } | null>(null)
   const pendingWatch = useRef<string | null>(null)
+  // Buy now opens the checkout. A bought listing leaves /listings, so the grid keeps it for the visit as "In your wallet".
+  const [buying, setBuying] = useState<Listing | null>(null)
+  const [purchases, setPurchases] = useState<ReadonlyArray<MyPurchase>>([])
+  const [bought, setBought] = useState<ReadonlyArray<Listing>>([])
 
   useEffect(() => {
     void api<Status>("/status")
@@ -66,9 +71,13 @@ export default function Home() {
   const refresh = useCallback(async () => {
     if (!token) return
     try {
-      const me = await api<{ wallet: string; funds: Funds | null; rules: ReadonlyArray<Rule> }>("/me", { token })
+      const [me, mine] = await Promise.all([
+        api<{ wallet: string; funds: Funds | null; rules: ReadonlyArray<Rule> }>("/me", { token }),
+        api<{ purchases: ReadonlyArray<MyPurchase> }>("/me/purchases", { token })
+      ])
       setRules(me.rules)
       setFunds(me.funds)
+      setPurchases(mine.purchases)
       setSelected((s) => s ?? me.rules[0]?.id ?? null)
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) signOut()
@@ -78,6 +87,8 @@ export default function Home() {
   useEffect(() => {
     setRules([])
     setFunds(null)
+    setPurchases([])
+    setBought([])
     setSelected(null)
     void refresh()
   }, [refresh])
@@ -99,6 +110,19 @@ export default function Home() {
     () => new Set(rules.filter((r) => r.status === "active" && r.hard.cardId !== null).map((r) => r.hard.cardId as string)),
     [rules]
   )
+
+  const owned = useMemo(
+    () => new Set([...purchases.filter((p) => p.status === "executed").map((p) => p.listingId), ...bought.map((l) => l.listingId)]),
+    [purchases, bought]
+  )
+
+  /** The market list, plus what was bought on this visit, newest first like the server sends them. */
+  const shown = useMemo(() => {
+    if (listings === null) return null
+    const ids = new Set(listings.map((l) => l.listingId))
+    const kept = bought.filter((l) => !ids.has(l.listingId))
+    return kept.length === 0 ? listings : [...listings, ...kept].sort((a, b) => b.listedAt.localeCompare(a.listedAt))
+  }, [listings, bought])
 
   const watch = (l: Listing) => {
     const text = watchWant(l)
@@ -176,18 +200,35 @@ export default function Home() {
 
         <Sets listings={listings} active={set} onPick={(id) => browse(id)} />
         <Market
-          listings={listings}
+          listings={shown}
           failed={failed}
           query={query}
           onQuery={setQuery}
           set={set}
           onSet={setSet}
           watching={watching}
+          owned={owned}
+          onBuy={setBuying}
           onWatch={watch}
         />
         {!token && <HowItWorks />}
       </main>
       <StatusBar status={status} loaded={statusLoaded} />
+      {buying && (
+        <Checkout
+          listing={buying}
+          status={status}
+          wallet={wallet}
+          token={token}
+          funds={funds}
+          onConnect={() => setVisible(true)}
+          signIn={signIn}
+          signText={signText}
+          onFunds={refresh}
+          onBought={(l) => setBought((b) => [...b, l])}
+          onClose={() => setBuying(null)}
+        />
+      )}
     </>
   )
 }

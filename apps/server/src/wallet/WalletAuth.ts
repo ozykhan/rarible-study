@@ -6,7 +6,7 @@ import { hashToken } from "../agent/AgentTokens.ts"
 import { toUsdCents } from "@slabwatch/seed"
 import { CatalogRepo } from "../catalog/CatalogRepo.ts"
 import { AppConfig } from "../config.ts"
-import { type ExecuteResult, Purchases } from "../purchases/Purchases.ts"
+import { type ExecuteResult, type Purchase, Purchases } from "../purchases/Purchases.ts"
 import { RuleRepo } from "../rules/RuleRepo.ts"
 import { approvalMessage, isWalletAddress, purchaseMessage, signInMessage, verifyWalletSignature } from "./signing.ts"
 
@@ -211,10 +211,21 @@ export const WalletAuthLive = Layer.effect(
       return rows.length
     })
 
+    /**
+     * The wallet may sign for a purchase made for one of its rules, or for its
+     * own direct buy. Returns the rule id, or null for a direct buy.
+     */
+    const purchaseFor = (wallet: string, purchase: Purchase) =>
+      Effect.gen(function* () {
+        if (purchase.ruleId !== null) return (yield* ownedRule(wallet, purchase.ruleId)).id
+        if (purchase.buyerWallet !== wallet) return yield* new WalletError({ message: "no such purchase", status: 404 })
+        return null
+      })
+
     const startPurchaseApproval = Effect.fn("WalletAuth.startPurchaseApproval")(function* (wallet: string, purchaseId: string) {
       const purchase = yield* purchases.get(purchaseId)
       if (purchase === null) return yield* new WalletError({ message: "no such purchase", status: 404 })
-      const rule = yield* ownedRule(wallet, purchase.ruleId)
+      const ruleId = yield* purchaseFor(wallet, purchase)
       if (purchase.status !== "proposed") {
         return yield* new WalletError({ message: `this purchase is already ${purchase.status}`, status: 409 })
       }
@@ -223,7 +234,7 @@ export const WalletAuthLive = Layer.effect(
       const expiresAt = new Date(Date.now() + SIGN_IN_MINUTES * 60_000)
       const message = purchaseMessage({
         purchaseId: purchase.id,
-        ruleId: rule.id,
+        ruleId,
         listingId: purchase.listingId,
         listingTitle: listing?.title ?? "",
         price: purchase.price,
@@ -245,9 +256,12 @@ export const WalletAuthLive = Layer.effect(
       const { purchaseId } = req.payload as { readonly purchaseId: string }
       const purchase = yield* purchases.get(purchaseId)
       if (purchase === null) return yield* new WalletError({ message: "no such purchase", status: 404 })
-      const rule = yield* ownedRule(wallet, purchase.ruleId)
+      const ruleId = yield* purchaseFor(wallet, purchase)
       yield* purchases.approve(purchaseId)
-      return yield* purchases.execute({ actor: `collector:${wallet}`, allowedRuleIds: new Set([rule.id]), runId: null }, purchaseId)
+      return yield* purchases.execute(
+        { actor: `collector:${wallet}`, allowedRuleIds: new Set(ruleId === null ? [] : [ruleId]), runId: null },
+        purchaseId
+      )
     })
 
     return WalletAuth.of({

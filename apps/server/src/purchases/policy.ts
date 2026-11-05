@@ -14,6 +14,7 @@ export type PolicyCheckName =
   | "rule_allowed"
   | "rule_active"
   | "listing_exists"
+  | "listing_active"
   | "listing_matches_rule"
   | "no_red_flags"
   | "not_already_bought"
@@ -137,5 +138,72 @@ export const checkPurchase = (input: PolicyInput): PolicyResult => {
     checks,
     refusals: failed.map((c) => c.detail),
     waitingForApproval: failed.length === 1 && failed[0]?.name === "authorized" && rule.mode === "confirm"
+  }
+}
+
+/**
+ * A direct buy: the collector picked one listing on the market and pays for
+ * it from their own wallet, with no watch rule and no agent involved. The
+ * same plain-code checks apply, minus the rule's own (its fields and budget),
+ * and only the collector's signature on this one purchase authorizes it.
+ */
+export interface DirectPolicyInput {
+  readonly action: PolicyAction
+  readonly listing: ListingView | null
+  readonly redFlags: ReadonlyArray<RedFlag>
+  readonly readOnly: boolean
+  /** Other live purchases (proposed, approved, executing or executed) of this listing. */
+  readonly otherLivePurchases: number
+  /** Executing and executed purchases today (UTC) paid from the same wallet, in USD cents. */
+  readonly committedTodayUsdCents: number
+  readonly dailyCapUsdCents: number
+  readonly authorization: Authorization
+}
+
+export const checkDirectPurchase = (input: DirectPolicyInput): PolicyResult => {
+  const { listing } = input
+  const checks: Array<PolicyCheck> = []
+  const add = (name: PolicyCheckName, pass: boolean, detail: string) => checks.push({ name, pass, detail })
+
+  add("read_only", !input.readOnly, input.readOnly ? "this demo is read-only: purchases are turned off" : "purchases are enabled")
+  if (listing === null) {
+    add("listing_exists", false, "the listing does not exist")
+  } else {
+    add("listing_active", listing.status === "active", `the listing is ${listing.status}`)
+    add(
+      "no_red_flags",
+      input.redFlags.length === 0,
+      input.redFlags.length === 0 ? "no red flags" : input.redFlags.map((f) => describeFlag[f]).join("; ")
+    )
+    add(
+      "not_already_bought",
+      input.otherLivePurchases === 0,
+      input.otherLivePurchases === 0 ? "no other purchase of this listing is in progress" : "this listing already has a live purchase"
+    )
+    const priceUsd = toUsdCents(listing.price.amountMinor, listing.price.currency)
+    const afterDay = input.committedTodayUsdCents + priceUsd
+    add(
+      "daily_cap",
+      afterDay <= input.dailyCapUsdCents,
+      `${usd(input.committedTodayUsdCents)} spent today, this purchase would make ${usd(afterDay)} of a ${usd(input.dailyCapUsdCents)} daily cap`
+    )
+  }
+
+  if (input.action === "execute") {
+    // Only the collector's own signature counts: a budget approval for a rule never covers a direct buy.
+    const authorized = input.authorization === "collector_approved"
+    add(
+      "authorized",
+      authorized,
+      authorized ? "the collector approved this purchase" : "the collector has not approved this purchase yet"
+    )
+  }
+
+  const failed = checks.filter((c) => !c.pass)
+  return {
+    allowed: failed.length === 0,
+    checks,
+    refusals: failed.map((c) => c.detail),
+    waitingForApproval: failed.length === 1 && failed[0]?.name === "authorized"
   }
 }

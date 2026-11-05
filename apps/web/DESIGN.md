@@ -11,10 +11,10 @@ This file is the map. The values live in [`styles/tokens.css`](styles/tokens.css
 | `styles/tokens.css` | Every design token: color, type, space, radius, shadow, motion, layout |
 | `styles/base.css` | Element defaults, text utilities (`.muted`, `.small`, `.mono`, `.error`, `.hide-sm`), form fields |
 | `styles/ui.css` | Shared building blocks: button, chip, pill, badge, count, LED, section, panel, note |
-| `styles/<area>.css` | One file per page area, named after its component: `header`, `status-bar`, `hero`, `sets`, `market`, `slab`, `how-it-works`, `desk` |
+| `styles/<area>.css` | One file per page area, named after its component: `header`, `status-bar`, `hero`, `sets`, `market`, `slab`, `how-it-works`, `desk`, `checkout` |
 | `app/globals.css` | Only the import order of the files above |
 | `components/ui/` | React components for the building blocks: `Button`, `Chip`, `Pill`, `Badge`, `Section`, `Panel`, `SearchIcon` |
-| `components/` | Page components: `Header`, `DevnetNotice`, `Hero`, `Sets` (and `SetCard`), `Market`, `ListingTile`, `Slab`, `HowItWorks`, `StatusBar`, and the signed-in desk: `WalletPanel`, `NewRule`, `RuleList`, `RuleView` (with `DecisionRow`, `PurchaseRow`) |
+| `components/` | Page components: `Header`, `DevnetNotice`, `Hero`, `Sets` (and `SetCard`), `Market`, `ListingTile`, `Checkout`, `Slab`, `HowItWorks`, `StatusBar`, and the signed-in desk: `WalletPanel`, `NewRule`, `RuleList`, `RuleView` (with `DecisionRow`, `PurchaseRow`) |
 | `lib/art.ts` | The four sets (name, year, blurb, tone), grade words, grader names, art paths |
 | `public/art/` | Generated images: 40 cards, 4 set banners, the hero background |
 | `app/design/` | The `/design` reference page |
@@ -96,7 +96,7 @@ The rhythm: 56px between sections (40px on a phone), 20px under a section title,
 
 ### Layout
 
-`--wide` 1376px of content, centered, with `--gutter` 32px each side (16px on a phone). `--header-height` 72px (64px on a phone) and a fixed `--statusbar-height` 40px bar at the bottom; the body pads for it. Anchors land `--scroll-offset` 88px down. The market grid fills rows with tiles of at least `--tile-min` 230px. The signed-in desk is a `--rail` column (300 to 380px) of panels beside the selected rule. Header z-index `--z-header` 50, status bar `--z-statusbar` 40.
+`--wide` 1376px of content, centered, with `--gutter` 32px each side (16px on a phone). `--header-height` 72px (64px on a phone) and a fixed `--statusbar-height` 40px bar at the bottom; the body pads for it. Anchors land `--scroll-offset` 88px down. The market grid fills rows with tiles of at least `--tile-min` 230px. The signed-in desk is a `--rail` column (300 to 380px) of panels beside the selected rule. Header z-index `--z-header` 50, status bar `--z-statusbar` 40, and the checkout dialog `--z-dialog` 60. The wallet picker belongs to the wallet adapter (z-index 1040), so it opens over the checkout.
 
 Breakpoints (max-width, written in each stylesheet): **1100px** the hero keeps two of its four slabs and How it works goes two up; **900px** the desk stacks, set cards go two up, hero slabs fade to 35%; **700px** phone: smaller gutter and header, nav and the header chip hide, the market goes two up, How it works one up; **460px** set blurbs and the model spend hide.
 
@@ -126,6 +126,7 @@ Single-class blocks with no component: `.count` (a number in a tab), `.led` / `.
 | `Sets` and `SetCard` | Set filter chips (a glowing dot in the set's tone) and four banner cards (16:9 art, name, year and count, blurb). Hover tints the border with the tone and zooms the art |
 | `Market` | Set tabs with counts, a pill search and a sort select, then a grid of `ListingTile`s, skeleton tiles while loading |
 | `ListingTile` | A `Slab` on a sunken backdrop with a radial glow in the set's tone, then the card name with its `Badge`, meta line (year, set, number, edition, finish), and the mono price (with a warn `Chip` when not in USD) beside the seller in faint mono. Buy now and Watch sit over the art: shown on hover and on keyboard focus (`:focus-within`), and on touch screens after a tap on the art. Phones show Buy now only. A listing the collector owns shows an ok `Pill`, "In your wallet", instead |
+| `Checkout` | Buying one listing directly, with no rule or agent. A dialog on `--surface-raised` over a `--glass-header` backdrop; a bottom sheet under 700px. The `Slab` beside `.facts` for card, grade and grade word, cert and seller; the code's checks as pills (ok "No red flags", or a warn pill per flag); price, "Network fee: paid by Slabwatch" and the dUSD total. The test-token line sits in a warn tint. One large primary `Button` walks through what is missing (Connect wallet, Sign in, Get test dUSD, Approve, Sign and pay), reads "Waiting for the wallet…" while the wallet is open, and ends in a `.note`, "Bought.", with the explorer link and Keep browsing. Esc and Close are off while the wallet is open. A flagged, over-cap or read-only listing shows why in the warn tint, with no pay button |
 | `Slab` | The graded card in its case. See below |
 | `HowItWorks` | Signed out only. Four step cards: a 48px line icon in the accent, "Step n" in mono caps, a title and a sentence |
 | `StatusBar` | Fixed glass bar at the bottom: wordmark, "A study project", LEDs for payments and the agent, the model spend in mono, a warn chip in read-only mode |

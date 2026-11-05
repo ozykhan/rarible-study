@@ -102,6 +102,36 @@
   color: var(--faint);
   text-align: center;
 }
+/* Checkout states side by side, each in the dialog's own box. */
+.ds-checkouts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: var(--space-6);
+  align-items: start;
+}
+.ds-checkouts figure {
+  margin: 0;
+}
+.ds-checkouts .checkout {
+  max-width: none;
+  max-height: none;
+}
+.ds-checkouts figcaption {
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--faint);
+  text-align: center;
+}
+@media (max-width: 700px) {
+  .ds-checkouts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* On the design page the sheet's phone shape is not wanted: keep each state a full box. */
+  .ds-checkouts .checkout {
+    border-width: 1px;
+    border-radius: var(--radius-xl);
+  }
+}
 .ds-two {
   display: grid;
   grid-template-columns: var(--rail) minmax(0, 1fr);

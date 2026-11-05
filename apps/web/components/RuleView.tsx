@@ -5,24 +5,12 @@ import { useCallback, useEffect, useState } from "react"
 import { api } from "@/lib/api"
 import { cardArt, setTheme } from "@/lib/art"
 import { explorerTx, label, money, toMinor } from "@/lib/format"
-import type { Decision, ExecuteResult, Purchase, RuleDetail, SigningRequest, Status } from "@/lib/types"
+import { outcomeText, signAndPay } from "@/lib/purchase"
+import type { Decision, Purchase, RuleDetail, SigningRequest, Status } from "@/lib/types"
 import { useAction } from "@/lib/useAction"
 import { Button, Panel, Pill, type PillTone } from "./ui"
 
 const VERDICT: Record<Decision["verdict"], string> = { match: "Match", needs_review: "Needs your review", reject: "Rejected" }
-
-const outcomeText = (r: ExecuteResult | { status: "refused"; refusals: ReadonlyArray<string> }) => {
-  switch (r.status) {
-    case "executed":
-      return "Paid. The listing is yours (on devnet)."
-    case "awaiting_collector_approval":
-      return "Waiting for your signature."
-    case "refused":
-      return `Refused by code: ${r.refusals.join("; ")}`
-    case "failed":
-      return `The payment failed: ${r.error}`
-  }
-}
 
 const PURCHASE_TONE: Partial<Record<Purchase["status"], PillTone>> = { executed: "ok", refused: "bad", failed: "bad" }
 
@@ -59,13 +47,7 @@ export function RuleView(props: {
 
   /** Confirm mode: the wallet signs a text naming this one purchase, then the server pays. */
   const signPurchase = async (purchaseId: string) => {
-    const req = await api<SigningRequest>(`/purchases/${purchaseId}/approve/start`, { token, body: {} })
-    const signature = await props.signText(req.message)
-    const result = await api<ExecuteResult>(`/purchases/${purchaseId}/approve/finish`, {
-      token,
-      body: { nonce: req.nonce, signature }
-    })
-    setNote(outcomeText(result))
+    setNote(outcomeText(await signAndPay(token, purchaseId, props.signText)))
     await load()
     props.onChange()
   }

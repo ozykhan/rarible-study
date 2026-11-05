@@ -17,7 +17,9 @@ import {
 } from "@solana/kit"
 import { Effect, Layer } from "effect"
 import { HttpRouter, HttpServer } from "effect/http"
+import { SqlClient } from "effect/sql/SqlClient"
 import { CatalogRepo } from "../src/catalog/CatalogRepo.ts"
+import { Purchases } from "../src/purchases/Purchases.ts"
 import { Treasury } from "../src/solana/Treasury.ts"
 import { WebApiRoutes } from "../src/web/WebApi.ts"
 import { seed, testLayer } from "./db.ts"
@@ -64,6 +66,16 @@ const signTx = (wallet: KeyPairSigner, wire: string) =>
 const counts = new Map<string, number>()
 for (const l of seed.listings) counts.set(l.vaultItem.id, (counts.get(l.vaultItem.id) ?? 0) + 1)
 const target = seed.listings.find((l) => l.trap === "none" && counts.get(l.vaultItem.id) === 1 && l.listing.currency === "USD")!
+
+const signIn = (call: Effect.Success<typeof api>, wallet: KeyPairSigner, ip?: string) =>
+  Effect.gen(function* () {
+    const start = yield* call("/auth/start", { body: { wallet: wallet.address }, ...(ip ? { ip } : {}) })
+    const done = yield* call("/auth/finish", {
+      body: { nonce: start.body["nonce"], signature: yield* signText(wallet, start.body["message"]) },
+      ...(ip ? { ip } : {})
+    })
+    return done.body["token"] as string
+  })
 
 layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("web api", (it) => {
   it.effect("signs in, makes a rule, funds the wallet, and pays for one signed purchase", () =>
@@ -144,6 +156,97 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("web api"
       })
       expect(paid.body).toMatchObject({ status: "executed" })
       expect((yield* call("/wallet/funds", { token })).body["allowanceUnits"]).toBe("0")
+    }))
+
+  it.effect("buys a listing directly, with no rule, on the buyer's own signature", () =>
+    Effect.gen(function* () {
+      const call = yield* api
+      yield* (yield* Treasury).setup
+      const buyer = yield* Effect.promise(() => generateKeyPairSigner())
+      const stranger = yield* Effect.promise(() => generateKeyPairSigner())
+      const token = yield* signIn(call, buyer)
+      const strangerToken = yield* signIn(call, stranger)
+
+      // The market list carries what checkout needs: the dUSD amount and the code's red flags.
+      const listed = (yield* call("/listings")).body["listings"] as ReadonlyArray<Record<string, any>>
+      const item = listed.find((l) => l["redFlags"].length === 0 && l["price"]["currency"] === "EUR")!
+      const price = toUsdCents(item["price"]["amountMinor"], "EUR")
+      expect(item["payUnits"]).toBe(price)
+      const flagged = listed.find((l) => l["redFlags"].length > 0)!
+      expect(flagged).toBeDefined()
+
+      expect((yield* call("/purchases/direct", { body: { listingId: item["listingId"] } })).status).toBe(401)
+      const refused = yield* call("/purchases/direct", { token, body: { listingId: flagged["listingId"] } })
+      expect(refused.body["status"]).toBe("refused")
+      expect(refused.body["refusals"].length).toBeGreaterThan(0)
+
+      expect((yield* call("/wallet/faucet", { token, body: {} })).status).toBe(200)
+      const allowance = yield* call("/wallet/allowance", { token, body: { amountUsd: price / 100 } })
+      yield* call("/wallet/submit", { token, body: { transaction: yield* signTx(buyer, allowance.body["transaction"]) } })
+
+      const proposed = yield* call("/purchases/direct", { token, body: { listingId: item["listingId"] } })
+      expect(proposed.body).toMatchObject({ status: "proposed", next: "awaiting_collector_approval" })
+      const purchaseId = proposed.body["purchaseId"] as string
+      // Asking again before signing (say, after closing the wallet) picks up the same purchase.
+      const retry = yield* call("/purchases/direct", { token, body: { listingId: item["listingId"] } })
+      expect(retry.body["purchaseId"]).toBe(purchaseId)
+      // One live purchase per listing, direct or not.
+      const again = yield* call("/purchases/direct", { token: strangerToken, body: { listingId: item["listingId"] } })
+      expect(again.body["refusals"].join(" ")).toMatch(/already has a live purchase/)
+
+      // Nobody else can sign it, and no agent or MCP caller can execute it.
+      expect((yield* call(`/purchases/${purchaseId}/approve/start`, { token: strangerToken, body: {} })).status).toBe(404)
+      const byAgent = yield* (yield* Purchases).execute({ actor: "agent:run-1", allowedRuleIds: new Set(), runId: null }, purchaseId)
+      expect(byAgent).toMatchObject({ status: "refused" })
+
+      const approval = yield* call(`/purchases/${purchaseId}/approve/start`, { token, body: {} })
+      expect(approval.body["message"]).toContain("Rule: none (a direct buy)")
+      const paid = yield* call(`/purchases/${purchaseId}/approve/finish`, {
+        token,
+        body: { nonce: approval.body["nonce"], signature: yield* signText(buyer, approval.body["message"]) }
+      })
+      expect(paid.body).toMatchObject({ status: "executed" })
+      const funds = (yield* call("/wallet/funds", { token })).body
+      expect(funds).toMatchObject({ balanceUnits: String(500_000 - price), allowanceUnits: "0" })
+
+      // The refused attempt on the flagged listing stays on record next to the purchase.
+      const mine = (yield* call("/me/purchases", { token })).body["purchases"] as ReadonlyArray<Record<string, any>>
+      expect(mine.map((p) => [p["listingId"], p["status"]])).toEqual(
+        expect.arrayContaining([
+          [item["listingId"], "executed"],
+          [flagged["listingId"], "refused"]
+        ])
+      )
+      expect(mine.every((p) => p["ruleId"] === null)).toBe(true)
+      const theirs = (yield* call("/me/purchases", { token: strangerToken })).body["purchases"] as ReadonlyArray<Record<string, any>>
+      expect(theirs.map((p) => p["status"])).toEqual(["refused"])
+      // Sold listings leave the market.
+      const after = (yield* call("/listings")).body["listings"] as ReadonlyArray<Record<string, any>>
+      expect(after.map((l) => l["listingId"])).not.toContain(item["listingId"])
+    }))
+
+  it.effect("lets an unsigned direct buy lapse, so it cannot hold a listing", () =>
+    Effect.gen(function* () {
+      const call = yield* api
+      const sql = yield* SqlClient
+      const first = yield* Effect.promise(() => generateKeyPairSigner())
+      const second = yield* Effect.promise(() => generateKeyPairSigner())
+      const firstToken = yield* signIn(call, first, "203.0.113.20")
+      const secondToken = yield* signIn(call, second, "203.0.113.21")
+      const listed = (yield* call("/listings")).body["listings"] as ReadonlyArray<Record<string, any>>
+      const item = listed.find((l) => l["redFlags"].length === 0)!
+
+      const held = yield* call("/purchases/direct", { token: firstToken, body: { listingId: item["listingId"] } })
+      expect(held.body["status"]).toBe("proposed")
+      expect((yield* call("/purchases/direct", { token: secondToken, body: { listingId: item["listingId"] } })).body["status"]).toBe(
+        "refused"
+      )
+
+      yield* sql`UPDATE purchases SET created_at = now() - interval '11 minutes' WHERE id = ${held.body["purchaseId"]}`
+      const taken = yield* call("/purchases/direct", { token: secondToken, body: { listingId: item["listingId"] } })
+      expect(taken.body["status"]).toBe("proposed")
+      const late = yield* call(`/purchases/${held.body["purchaseId"]}/approve/start`, { token: firstToken, body: {} })
+      expect(late.status).toBe(409)
     }))
 
   it.effect("rejects bad input and limits sign-in attempts per IP", () =>

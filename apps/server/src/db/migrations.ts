@@ -261,8 +261,25 @@ const wallet = Effect.gen(function* () {
   yield* sql`ALTER TABLE rule_approvals ADD COLUMN nonce text UNIQUE`
 })
 
+/**
+ * Direct buys: a collector buys a listing without a watch rule. Every
+ * purchase now names the wallet that pays for it, and only a purchase made
+ * for a rule has a rule.
+ */
+const directBuy = Effect.gen(function* () {
+  const sql = yield* SqlClient
+  yield* sql`ALTER TABLE purchases ADD COLUMN buyer_wallet text`
+  yield* sql`UPDATE purchases p SET buyer_wallet = r.owner_wallet FROM watch_rules r WHERE r.id = p.rule_id`
+  yield* sql`ALTER TABLE purchases ALTER COLUMN rule_id DROP NOT NULL`
+  yield* sql`
+    ALTER TABLE purchases ADD CONSTRAINT purchases_rule_or_buyer
+    CHECK (rule_id IS NOT NULL OR buyer_wallet IS NOT NULL)`
+  yield* sql`CREATE INDEX purchases_buyer_idx ON purchases (buyer_wallet, status)`
+})
+
 export const migrations = {
   "0001_init": init,
   "0002_agent": agent,
-  "0003_wallet": wallet
+  "0003_wallet": wallet,
+  "0004_direct_buy": directBuy
 }

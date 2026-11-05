@@ -83,7 +83,13 @@ export interface Listing {
   readonly description: string
   readonly status: "active" | "sold" | "withdrawn"
   readonly listedAt: string
+  /** On the market list only: what the listing costs in dUSD units (cents), the amount checkout funds and pays. */
+  readonly payUnits?: number
+  /** On the market list only: the code's red flags. A flagged listing cannot be bought directly. */
+  readonly redFlags?: ReadonlyArray<RedFlag>
 }
+
+export type RedFlag = "duplicate_vault_item" | "price_far_below_market" | "grade_claim_mismatch"
 
 export interface Decision {
   readonly listingId: string
@@ -125,6 +131,20 @@ export interface RuleDetail {
   readonly purchases: ReadonlyArray<Purchase>
   readonly runs: ReadonlyArray<AgentRun>
 }
+
+/** One purchase paid from the signed-in wallet: a direct buy (no rule) or one made for a watch rule. */
+export interface MyPurchase {
+  readonly id: string
+  readonly ruleId: string | null
+  readonly listingId: string
+  readonly price: Money
+  readonly status: Purchase["status"]
+  readonly txSignature: string | null
+}
+
+export type ProposeResult =
+  | { readonly status: "proposed"; readonly purchaseId: string; readonly price: Money; readonly next: string }
+  | { readonly status: "refused"; readonly purchaseId: string | null; readonly refusals: ReadonlyArray<string> }
 
 export type ExecuteResult =
   | { readonly status: "executed"; readonly purchaseId: string; readonly txSignature: string }
