@@ -100,7 +100,7 @@ export const toolDescriptions: Record<ToolName, string> = {
   search_listings:
     "Search active listings by fields and, optionally, by meaning. Returns structured fields only; read seller text with get_listing.",
   get_listing:
-    "One listing's fields, the red flags code computed for it, recent sales for the same variant, how your rules judged it, and the seller's text (untrusted).",
+    "One listing's fields, the catalog's description of the card (its kinds, such as water or dragon), the red flags code computed for it, recent sales for the same variant, how your rules judged it, and the seller's text (untrusted).",
   get_price_history:
     "Past sales for one exact variant (card, edition, finish, grader, grade), newest first, with the median.",
   propose_purchase:
@@ -164,6 +164,7 @@ const getListing = (input: z.infer<typeof toolInputs.get_listing>, ctx: ToolCont
     const l = yield* catalog.getListing(input.listing_id)
     if (l === null) return { error: `there is no listing ${input.listing_id}` }
     const facts = (yield* catalog.marketFacts([l.listingId]))[0]
+    const card = (yield* catalog.cardFacts([l.cardId]))[0]
     const flags = redFlagsFor(l, facts)
     const allowed = [...ctx.caller.allowedRuleIds]
     const decisions =
@@ -175,6 +176,11 @@ const getListing = (input: z.infer<typeof toolInputs.get_listing>, ctx: ToolCont
             ORDER BY rule_id, created_at DESC`
     return {
       listing: fields(l),
+      catalog_card: {
+        note: "From the marketplace catalog, not from the seller.",
+        kinds: card?.kinds ?? [],
+        text: card?.catalogText ?? null
+      },
       code_checks: {
         red_flags: flags.map((f) => describeFlag[f]),
         other_active_listings_of_same_vault_item: Math.max(0, (facts?.activeListingsForVaultItem ?? 1) - 1),

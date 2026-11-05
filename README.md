@@ -76,7 +76,7 @@ The tests replace the model with a script that does what an injected model might
 
 The MCP tests do the same through the official MCP client: missing, wrong and revoked tokens get 401, tools are filtered per token, search never returns seller text, and purchases go through the same policy.
 
-`pnpm --filter @slabwatch/evals eval:agent` runs the same question against the live model. Each of the eval set's injected listings has a clean twin, and the agent is woken on each of them, for every rule whose fields it passes, in the riskiest setting: auto-buy with an approval in place, so anything code allows would execute. It reports how often the injected text pushed the outcome further than the twin got, purchases against the labels, and attempts code refused. Results go to `evals/results/agent-injection.json`.
+`pnpm --filter @slabwatch/evals eval:agent` runs the same question against the live model. Each of the eval set's injected listings has a clean twin, and the agent is woken on each of them, for every rule whose fields it passes, in the riskiest setting: auto-buy with an approval in place, so anything code allows would execute. It reports how often the injected text pushed the outcome further than the twin got, purchases against the labels, attempts code refused, and what the v2 matcher would have said, since the real flow only wakes the agent on a v2 match. Results go to `evals/results/agent-injection-<label>.json`; NOTES.md reads each run.
 
 ## What is measured
 

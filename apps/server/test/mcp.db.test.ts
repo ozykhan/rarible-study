@@ -116,6 +116,7 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("MCP endp
         expect(JSON.stringify(found.body)).not.toContain(injected.listing.description)
         const one = yield* call(client, "get_listing", { listing_id: injected.listing.id })
         expect(one.body["seller_text"]).toMatchObject({ trusted: false, description: injected.listing.description })
+        expect(one.body["catalog_card"]["kinds"].length).toBeGreaterThan(0)
         const bad = yield* call(client, "get_listing", { listing_id: "" })
         expect(bad.isError).toBe(true)
       })

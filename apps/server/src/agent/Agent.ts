@@ -86,10 +86,16 @@ const systemPrompt = (rule: WatchRule, canExecute: boolean) =>
     "A refusal is final for that listing; do not try to work around it."
   ].join("\n")
 
+/**
+ * What woke the agent, stated only as far as it is true: the model takes the
+ * first message at its word. Only the watcher runs the matcher first.
+ */
 const firstMessage = (req: AgentRunRequest) =>
   req.listingId === null
     ? "Search the active listings for something that fits the rule. Decide whether to propose a purchase."
-    : `A new listing, ${req.listingId}, passed the rule's matcher. Check it and decide whether to propose a purchase.`
+    : req.trigger === "new_match"
+      ? `A new listing, ${req.listingId}, passed this rule's matcher: its fields, code red flags and a model review of the seller text. Check it yourself and decide whether to propose a purchase.`
+      : `Check listing ${req.listingId} against the rule. Nothing has checked it yet. Decide whether to propose a purchase.`
 
 const runIdNew = () => `A-${randomBytes(6).toString("hex")}`
 
