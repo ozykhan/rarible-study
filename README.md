@@ -197,7 +197,7 @@ The live demo runs the backend and Postgres on Railway and the wallet page on Ve
 **Railway.** One project with two services.
 
 1. Postgres from Railway's pgvector template.
-2. A service from this repo, built by Railpack with no Dockerfile. Start command `pnpm --filter @slabwatch/server start`. Pre-deploy command `pnpm --filter @slabwatch/server db:seed`, which runs the migrations and loads the seed in one transaction if the catalog is empty. Health check on `/health`.
+2. A service from this repo, built by Railpack with no Dockerfile. Start command `pnpm --filter @slabwatch/server start`. Pre-deploy command `pnpm --filter @slabwatch/server db:seed`, which runs the migrations and loads the seed in one locked transaction, so two deploys at once cannot load it twice. Health check on `/health`.
 3. Its variables:
 
 | Variable | Value |
