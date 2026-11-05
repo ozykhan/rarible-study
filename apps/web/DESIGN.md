@@ -23,11 +23,11 @@ Plain global CSS, no CSS modules or utility framework. Class names are short and
 
 ## Principles
 
-1. **One accent.** `--accent` (a lime neon) marks the thing to do next: primary buttons, links, the active tab, the selected rule, focus rings, step icons, tile badges. Nothing else is that color, and there is no second brand color.
+1. **One accent.** `--accent` (a lime neon) marks the thing to do next: primary buttons, links, the active tab, the selected rule, focus states, step icons, tile badges. Nothing else is that color, and there is no second brand color.
 2. **Depth from lines, not shadows.** Surfaces are white at 2 to 8% over the canvas, separated by `--line`. Only the slabs (and the hero's floating ones) cast shadows, because they are objects.
 3. **Color means something.** A set's tone tints what belongs to that set. Green, yellow and red only ever mean ok, warn and bad.
 4. **Numbers in mono.** Prices, counts, wallet amounts, cert numbers, badges, tile footers and the model spend use `--mono`.
-5. **Pills for actions and tags, soft boxes for content.** Buttons, chips, pills and the search field are fully round; tiles and cards are `--radius-lg`, panels `--radius-xl`.
+5. **Pills for actions and tags, soft boxes for content.** Buttons, chips, pills and the market search are fully round; the hero search is `--radius-md`, like other fields; tiles and cards are `--radius-lg`, panels `--radius-xl`.
 6. **Honest and fictional.** The devnet notice is on every view, and all data is invented (see Content rules).
 
 ## Tokens
@@ -42,8 +42,8 @@ All names below are CSS custom properties on `:root` in `styles/tokens.css`. Use
 | Solid surfaces, darkest first | `--surface-inset` #0b0b0c, `--surface-sunken` #0d0d0f, `--surface-solid` #0f0f11, `--surface-raised` #101012, `--surface-thumb` #151518 | Bands and wells, the backdrop behind a slab, form fields, the wallet modal, thumbnails before their art loads |
 | Translucent surfaces | `--surface` (white 3.5%), `--surface-subtle` (2%), `--surface-shine` (7%), `--surface-count` (8%) | Cards, tiles and panels; rows inside a panel; the skeleton shimmer; tab counts |
 | Glass | `--glass-header`, `--glass-footer`, `--glass-field` | Frosted header, status bar and hero search, each with a backdrop blur |
-| Lines | `--line` #1f1f1f, `--line-strong` #2b2b2e, `--line-glass`, `--line-hover`, `--line-active` | Default borders; fields, chips and secondary buttons; a field over art; hovered tile; hovered secondary button |
-| Text | `--ink` #fff, `--ink-soft` #d4d4d8, `--muted` #a1a1aa, `--faint` #71717a, `--off` #52525b | Headings and body; nav, lede, seller text; secondary; tertiary; an LED that is off |
+| Lines | `--line` #1f1f1f, `--line-strong` #2b2b2e, `--line-control` #63636b, `--line-glass`, `--line-hover`, `--line-active` | Default borders; chips, pills and rule items; fields and secondary buttons (3:1 on every surface); a field over art (3:1); hovered tile; hovered secondary button |
+| Text | `--ink` #fff, `--ink-soft` #d4d4d8, `--muted` #a1a1aa, `--faint` #85858e, `--off` #52525b | Headings and body; nav, lede, seller text; secondary; tertiary, 4.5:1 on every surface; an LED that is off, never text |
 | Accent | `--accent` #e4ff3a, `--accent-ink` #0b0b0c, `--accent-2` #7cf3c9 | The one accent; text on it; the second stop of the logo gradient only |
 | Status | `--ok` #4ade80, `--warn` #facc15, `--bad` #f87171 | Pills, chips, LEDs, errors. Warn also marks "devnet", "read-only" and prices not in USD |
 | Set tones | `--set-OS` #8fd16a, `--set-TW` #3fd0d4, `--set-EF` #ff7a3d, `--set-SE` #a98bff, `--set-unknown` #9aa1ab | Origin Set, Tidewild, Emberfall, Starward Expedition. See Set tone below |
@@ -66,8 +66,8 @@ Inter for text and JetBrains Mono for numbers, both loaded by `next/font` in `ap
 | `--text-xl` | 17px | The hero lede |
 | `--text-lg` | 16px | Panel titles, prices in rows, tile prices on a phone |
 | `--text-base` | 15px | Body, nav, tabs, tile titles |
-| `--text-md` | 14px | Buttons, fields, panel copy |
-| `--text-sm` | 13px | Meta lines, notes, the devnet notice, the status bar |
+| `--text-md` | 14px | Buttons, fields, panel copy, notes |
+| `--text-sm` | 13px | Meta lines, the devnet notice, the status bar |
 | `--text-xs` | 12px | Eyebrows, chips, pills, badges, counts, tile footers |
 
 Weights: `--weight-medium` 500, `--weight-semibold` 600, `--weight-bold` 700, `--weight-black` 800. Line heights: `--leading-body` 1.5 (default), `--leading-lede` 1.55, `--leading-relaxed` 1.6, `--leading-display` 1.02. Tracking: `--tracking-caps` 0.08em for uppercase labels, `--tracking-heading` -0.02em, `--tracking-brand` -0.03em, `--tracking-display` -0.035em, `--tracking-snug` -0.01em.
@@ -82,11 +82,12 @@ The rhythm: 56px between sections (40px on a phone), 20px under a section title,
 
 ### Radius
 
-`--radius-xs` 4px (badges, counts), `--radius-sm` 6px (seller text), `--radius-md` 8px (fields, notes, rows, rule items, the hero search), `--radius-lg` 10px (tiles, set cards, step cards, listing rows), `--radius-xl` 12px (panels), `--radius-pill` (buttons, chips, pills, the market search). Inside a slab, radii are shares of its width (see Slab).
+`--radius-xs` 4px (badges, counts), `--radius-thumb` 5px (decision row thumbnails), `--radius-sm` 6px (seller text), `--radius-md` 8px (fields, notes, rows, rule items, the hero search), `--radius-lg` 10px (tiles, set cards, step cards, listing rows), `--radius-xl` 12px (panels), `--radius-pill` (buttons, chips, pills, the market search). Inside a slab, radii are shares of its width (see Slab).
 
 ### Shadow, blur and motion
 
-- `--shadow-focus`: the 3px accent ring on a focused field.
+- `--focus-ring`: the 2px accent outline on a link or button under keyboard focus, set in `styles/base.css`.
+- `--shadow-focus`: the 3px accent glow on a focused field, with a 70% accent border. Both search fields use it through `:focus-within`.
 - `--shadow-card`: the card inside a slab. `--shadow-float`: a drop-shadow filter for the hero slabs. `--glow-ok`: an LED that is on.
 - `--text-shadow-display`, `--text-shadow-lede`: keep hero copy readable over art.
 - `--blur-sm` 6px (hero search), `--blur-md` 12px (status bar), `--blur-lg` 14px (header).
@@ -197,4 +198,7 @@ Kept on purpose, because changing them would change how the page looks today:
 - The large primary button has a dark 1px edge and brightens on hover; the small one has an accent edge and does not.
 - `Chip` and `Pill` are near twins: a chip has a tinted fill and is used for conditions, a pill is outline only and is used for states.
 - A few values sit off the scales and are written out: the small button padding (7px by 15px), chip and pill padding, the 9px rule item padding, the hero copy margins (22px, 26px) and the step card padding (34px, 30px). Slab internals are shares of its width.
+- Control heights differ: a large button is 42px, the wallet button, select and market search 40px, the hero search 46px. The wallet button's side padding is 18px against 20px on a large button.
+- A few more values are written out: the devnet notice's 9px padding, the ring button's 1.5px border, and the hero's 1440px max width, wider than `--wide`.
+- Only fields and secondary buttons use `--line-control`. Chips, pills and rule items keep the quieter `--line-strong` (about 1.4:1), because a word or their fill carries the meaning.
 - The logo's SVG uses the accent colors as hex, so it still works when copied out on its own.

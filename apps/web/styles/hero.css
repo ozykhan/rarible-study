@@ -123,6 +123,10 @@
   backdrop-filter: blur(var(--blur-sm));
   -webkit-backdrop-filter: blur(var(--blur-sm));
 }
+.hero-search:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  box-shadow: var(--shadow-focus);
+}
 .hero-search input {
   flex: 1;
   min-width: 0;

@@ -24,7 +24,7 @@ export function ListingTile({ l }: { l: Listing }) {
         <h3 className="tile-title">{l.cardName}</h3>
         <p className="tile-meta">
           {theme?.year ?? ""} · {l.setName} #{l.cardNumber} · {label(l.edition)}
-          {l.finish === "non_holo" ? "" : ` ${label(l.finish)}`}
+          {l.finish === "non_holo" ? "" : ` ${label(l.finish).toLowerCase()}`}
         </p>
         <div className="tile-price">
           <span className="price">{money(l.price)}</span>

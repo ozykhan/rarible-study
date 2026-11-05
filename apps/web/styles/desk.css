@@ -90,7 +90,7 @@
   width: 64px;
   aspect-ratio: 63 / 88;
   object-fit: cover;
-  border-radius: 5px;
+  border-radius: var(--radius-thumb);
   border: 2px solid var(--tone, var(--line-strong));
   background: var(--surface-thumb);
 }

@@ -47,7 +47,8 @@
 .btn-secondary {
   color: var(--ink);
   background: transparent;
-  border-color: var(--line-strong);
+  border-color: var(--line-control);
+  transition: border-color var(--duration-fast) var(--ease);
 }
 .btn-secondary:hover:not(:disabled) {
   border-color: var(--line-active);
