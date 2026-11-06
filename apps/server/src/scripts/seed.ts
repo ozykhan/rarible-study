@@ -5,6 +5,7 @@ import { SqlClient } from "effect/sql/SqlClient"
 import { CatalogRepo } from "../catalog/CatalogRepo.ts"
 import { migrate } from "../db/Database.ts"
 import { ReposLive } from "../layers.ts"
+import { LoggingLive } from "../logging.ts"
 
 /**
  * Loads the fictional catalog, about 200 listings with traps, and the price
@@ -40,4 +41,4 @@ const program = Effect.gen(function* () {
   else yield* Effect.logInfo(`seeded ${data.listings.length} listings and ${data.sales.length} past sales`)
 })
 
-program.pipe(Effect.provide(ReposLive), NodeRuntime.runMain)
+program.pipe(Effect.provide(ReposLive), Effect.provide(LoggingLive), NodeRuntime.runMain)

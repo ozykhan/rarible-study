@@ -1,5 +1,51 @@
 import { Config, Context, Layer, Option, Redacted } from "effect"
 
+/** How spans leave the process. See `resolveOtlp` for where each field comes from. */
+export interface OtlpSettings {
+  /** The full traces URL, usually ending in /v1/traces. */
+  readonly tracesUrl: string
+  /** Extra exporter headers as k=v pairs separated by commas, values URL-encoded. */
+  readonly headers: Redacted.Redacted<string> | null
+  /** "http/protobuf" (the OpenTelemetry default) or "http/json". gRPC is not supported. */
+  readonly protocol: string
+  readonly serviceName: string
+}
+
+/** The OpenTelemetry variables that decide where traces go, as read from the environment. */
+export interface OtlpEnv {
+  readonly tracesEndpoint: string | null
+  readonly endpoint: string | null
+  readonly tracesHeaders: Redacted.Redacted<string> | null
+  readonly headers: Redacted.Redacted<string> | null
+  readonly tracesProtocol: string | null
+  readonly protocol: string | null
+  readonly exporter: string | null
+  readonly disabled: boolean
+  readonly serviceName: string | null
+}
+
+/**
+ * Applies the OpenTelemetry rules for the standard variables, which Railway
+ * sets when tracing is on for a service and which Langfuse, Jaeger and any
+ * collector document too. A traces-specific variable wins over the general
+ * one, and the general endpoint gets /v1/traces appended. Nothing is
+ * exported without an endpoint, with OTEL_SDK_DISABLED=true, or when
+ * OTEL_TRACES_EXPORTER does not list otlp.
+ */
+export const resolveOtlp = (env: OtlpEnv): OtlpSettings | null => {
+  if (env.disabled) return null
+  if (env.exporter !== null && !env.exporter.split(",").some((e) => e.trim().toLowerCase() === "otlp")) return null
+  const tracesUrl =
+    env.tracesEndpoint ?? (env.endpoint === null ? null : `${env.endpoint.replace(/\/+$/, "")}/v1/traces`)
+  if (tracesUrl === null) return null
+  return {
+    tracesUrl,
+    headers: env.tracesHeaders ?? env.headers,
+    protocol: (env.tracesProtocol ?? env.protocol ?? "http/protobuf").toLowerCase(),
+    serviceName: env.serviceName ?? "slabwatch-server"
+  }
+}
+
 /**
  * All runtime settings, read once from the environment through Effect Config.
  * Secrets stay wrapped in `Redacted` so they never land in a log line.
@@ -28,10 +74,8 @@ export class AppConfig extends Context.Service<
     readonly agentMaxSteps: number
     /** Seconds between checks for new listings to match. 0 turns the watcher off. */
     readonly watcherIntervalSeconds: number
-    /** OTLP/HTTP traces endpoint, for example a Langfuse or collector URL ending in /v1/traces. */
-    readonly otlpTracesUrl: string | null
-    /** Extra headers for the OTLP exporter, as k=v pairs separated by commas (the OTEL_EXPORTER_OTLP_HEADERS format). */
-    readonly otlpHeaders: Redacted.Redacted<string> | null
+    /** Where spans go over OTLP/HTTP, from the standard OpenTelemetry variables. Null when nothing is set. */
+    readonly otlp: OtlpSettings | null
     /** How purchases pay: a simulated ledger, or SPL token transfers on Solana devnet. */
     readonly payments: "simulated" | "devnet"
     /** A Solana devnet RPC URL. Any other cluster is refused before a transaction is sent. */
@@ -46,6 +90,19 @@ export class AppConfig extends Context.Service<
     readonly costlyRequestsPerHour: number
   }
 >()("slabwatch/AppConfig") {}
+
+/** A setting that counts as missing when it is unset or blank. */
+const optionalString = (name: string) =>
+  Config.String(name).pipe(
+    Config.option,
+    Config.map((o) => (Option.isSome(o) && o.value.trim().length > 0 ? o.value.trim() : null))
+  )
+
+const optionalRedacted = (name: string) =>
+  Config.Redacted(name).pipe(
+    Config.option,
+    Config.map((o) => (Option.isSome(o) && Redacted.value(o.value).trim().length > 0 ? o.value : null))
+  )
 
 const config = Config.all({
   databaseUrl: Config.Redacted("DATABASE_URL"),
@@ -66,14 +123,17 @@ const config = Config.all({
   agentEnabled: Config.Boolean("AGENT_ENABLED").pipe(Config.withDefault(false)),
   agentMaxSteps: Config.Number("AGENT_MAX_STEPS").pipe(Config.withDefault(6)),
   watcherIntervalSeconds: Config.Number("WATCHER_INTERVAL_SECONDS").pipe(Config.withDefault(15)),
-  otlpTracesUrl: Config.String("OTLP_TRACES_URL").pipe(
-    Config.option,
-    Config.map((o) => (Option.isSome(o) && o.value.length > 0 ? o.value : null))
-  ),
-  otlpHeaders: Config.Redacted("OTLP_HEADERS").pipe(
-    Config.option,
-    Config.map((o) => (Option.isSome(o) && Redacted.value(o.value).length > 0 ? o.value : null))
-  ),
+  otlp: Config.all({
+    tracesEndpoint: optionalString("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"),
+    endpoint: optionalString("OTEL_EXPORTER_OTLP_ENDPOINT"),
+    tracesHeaders: optionalRedacted("OTEL_EXPORTER_OTLP_TRACES_HEADERS"),
+    headers: optionalRedacted("OTEL_EXPORTER_OTLP_HEADERS"),
+    tracesProtocol: optionalString("OTEL_EXPORTER_OTLP_TRACES_PROTOCOL"),
+    protocol: optionalString("OTEL_EXPORTER_OTLP_PROTOCOL"),
+    exporter: optionalString("OTEL_TRACES_EXPORTER"),
+    disabled: Config.Boolean("OTEL_SDK_DISABLED").pipe(Config.withDefault(false)),
+    serviceName: optionalString("OTEL_SERVICE_NAME")
+  }).pipe(Config.map(resolveOtlp)),
   payments: Config.Literals(["simulated", "devnet"], "PAYMENTS").pipe(Config.withDefault("simulated" as const)),
   solanaRpcUrl: Config.String("SOLANA_RPC_URL").pipe(Config.withDefault("https://api.devnet.solana.com")),
   devnetSeed: Config.Redacted("DEVNET_SEED").pipe(
