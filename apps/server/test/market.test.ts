@@ -4,6 +4,7 @@ import {
   describeSearch,
   emptySearch,
   isEmptySearch,
+  isStopword,
   parseSearch,
   searchChips,
   searchText,
@@ -193,7 +194,8 @@ describe("writing a search back as text", () => {
         expect(back(both), `${a.tag} ${b.tag}`).toEqual(both)
       }
       for (const w of tails) {
-        if (TAGS.some((t) => t.words.some((x) => x === w || x.split(" ")[0] === w))) continue
+        // A filler word ("creature" in "sea creature") is never a search word of its own.
+        if (isStopword(w) || TAGS.some((t) => t.words.some((x) => x === w || x.split(" ")[0] === w))) continue
         const mixed: ParsedSearch = { ...emptySearch, tags: [a], words: [w] }
         expect(back(mixed), `${a.tag} ${w}`).toEqual(mixed)
       }

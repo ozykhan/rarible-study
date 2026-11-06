@@ -9,3 +9,4 @@ One row per run of `pnpm eval:search`, oldest first; the JSON next to this file 
 | run3 | 2026-11-06 18:40 | 4605ffe | claude-haiku-5-5 | 3 | 46 of 50 | 1 | 0 | 982 / 1578 | 2 | 39 | 0.0031 |
 | run4 | 2026-11-06 19:06 | 541c799 | claude-haiku-5-5 | 4 | 43 of 50 | 6 | 1 | 1015 / 1880 | 2 | 39 | 0.0038 |
 | run5 | 2026-11-06 19:09 | 541c799 | claude-haiku-5-5 | 4 | 49 of 50 | 0 | 0 | 1061 / 1734 | 1 | 39 | 0.0033 |
+| run6 | 2026-11-06 19:44 | 36925f7 | claude-haiku-5-5 | 4 | 50 of 51 | 0 | 0 | 1019 / 1542 | 2 | 36 | 0.0031 |
