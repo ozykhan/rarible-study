@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { dusd } from "@/lib/format"
+import { count, dusd } from "@/lib/format"
 import type { MarketStats } from "@/lib/types"
 import type { SlabCard } from "./Slab"
 import { Slab } from "./Slab"
@@ -94,11 +94,11 @@ export function Hero({ stats }: { stats: MarketStats | null }) {
           <dl className="hero-stats">
             <div>
               <dt>listings now</dt>
-              <dd>{stats ? stats.count : "…"}</dd>
+              <dd>{stats ? count(stats.count) : "…"}</dd>
             </div>
             <div>
               <dt>sets</dt>
-              <dd>4</dd>
+              <dd>{stats ? count(stats.setCount) : "…"}</dd>
             </div>
             <div>
               <dt>lowest price</dt>

@@ -108,6 +108,39 @@ Money moves as an SPL token, not SOL ([`apps/server/src/solana/`](apps/server/sr
 
 The payment code runs for real in tests on [litesvm](https://github.com/LiteSVM/litesvm), an in-process Solana VM with the SPL programs built in. `SOLANA_RPC_URL=memory` uses the same VM for a local run with no network.
 
+## How market search works
+
+The market's search box, set tabs and counts run in Postgres behind one service, [`SearchService`](apps/server/src/search/SearchService.ts). It is built for a marketplace's size, not the demo's 200 listings, and a search engine can implement the same interface later.
+
+1. **Code reads the words that have one meaning.** [`search/query.ts`](apps/server/src/search/query.ts) turns graders ("NVG", "Northvale"), grades ("10", "9.5", "9+", "at least 9"), editions, finishes ("holo" is neither "reverse holo" nor "non-holo"), card numbers ("#010"), cert numbers, sellers ("@handle", or a full handle with an underscore) and price limits ("under 100") into exact filters. Words that only appear in grader names ("card", "slab", "grading") are dropped. A test checks that no word of any card, kind or set is taken this way.
+2. **The database matches the rest.** Every other word must start a word of the card's name, its kinds, or its set's name or code: "wyr" finds Ashen Wyrm, "dragon" finds every dragon. The seller's own title and description are never searched, since they can claim a grade the slab does not have.
+3. **One narrow table to search.** `listing_search` has one row per active listing with what search filters and sorts on, copied from the listing, its vault item and its card, and the card's words as a `tsvector` with a GIN index. Triggers keep it in step: a statement trigger on `listings` adds, refreshes and drops rows, so a bulk insert of 5,000 listings is one insert there, and a sold listing leaves search in the same transaction. Each sort has an index that produces it.
+4. **Counts stop at 10,000.** Matches per set (the tabs) are counted exactly up to 10,000; past that the page says "10,000+", as search engines do by default, and paging stops at the same depth. The whole market's numbers (listings, sets, lowest price) are cached for 10 seconds.
+5. **Did you mean.** A word that starts no catalog word gets the closest one by trigram similarity (`pg_trgm`), offered only if the corrected search finds listings: "ashen wyrn" suggests "ashen wyrm".
+
+The response also says what the box was read as ("Northvale Grading, grade 10"), and the page shows it under the tabs. A test runs 42 searches against the seed both in SQL and in a plain TypeScript copy of the rules and expects the same listings, counts and order.
+
+**At scale.** `pnpm db:seed:large` adds a fictional catalog of 20,040 cards in 204 sets, 2,012 sellers and a million active listings; it took 138 seconds here. `pnpm bench:search` times searches through the same service. On a 4-core container with Postgres 16 at default settings, with 1,000,199 active listings:
+
+| Search | Matches | p50 ms | p95 ms |
+| --- | ---: | ---: | ---: |
+| home page (newest) | 1,000,199 | 1.1 | 4.6 |
+| cheapest first | 1,000,199 | 1.1 | 1.6 |
+| one set | 4,949 | 1.2 | 2.7 |
+| card name ("ashen wyrm") | 38 | 12.5 | 29.2 |
+| half a word ("wyr") | 10,000+ | 24.9 | 38.2 |
+| kind ("dragon") | 10,000+ | 31.2 | 44.7 |
+| finish ("holo") | 10,000+ | 6.7 | 38.6 |
+| grader and grade ("NVG 10") | 10,000+ | 64.2 | 88.6 |
+| kind, finish, price ("dragon holo under 200") | 10,000+ | 51.8 | 54.6 |
+| set name and min grade ("emberfall 9+") | 235 | 3.3 | 5.2 |
+| seller ("@vaultkeeper") | 483 | 2.9 | 4.4 |
+| typo ("ashen wyrn") | 0, with a suggestion | 12.7 | 16.2 |
+
+Fifty searches at once ran at about 180 a second on the pool of 10 connections. Recomputing the whole market's numbers takes about 94 ms, once every 10 seconds. Before the 10,000 cap, broad searches took 100 to 200 ms, nearly all of it counting matches per set, and 50 at once ran at about 60 a second.
+
+Bulk listings carry no listing vectors (embedding a million seller texts locally takes hours), so the agent's search by meaning covers the seed and generated listings only.
+
 ## The web app
 
 [`apps/web`](apps/web) is a Next.js App Router app that connects any Wallet Standard wallet through the Solana wallet adapter. The four routes below share one header, the devnet notice and a status bar; the `/design` reference page sits outside them.
@@ -115,7 +148,7 @@ The payment code runs for real in tests on [litesvm](https://github.com/LiteSVM/
 | Route | What it shows |
 | --- | --- |
 | `/` | The front page: search, the four sets, the five newest listings, how buying works, the graders, and a band that offers the agent |
-| `/market` | Every active listing as a grid of slabs, with set tabs, grader, search, sort and paging. The filters live in the URL and run on the server: `GET /api/listings` takes `?set`, `?grader`, `?q`, `?sort`, `?offset` and `?limit`. Search matches the vault record (card, set, number, edition, finish, grader, grade, seller), never the seller's own title, which can claim a grade the slab does not have. Watch on a tile opens the agent in a drawer |
+| `/market` | Every active listing as a grid of slabs, with set tabs, grader, search, sort and paging. The filters live in the URL and run on the server: `GET /api/listings` takes `?set`, `?grader`, `?q`, `?sort`, `?offset` and `?limit`. Search is described [below](#how-market-search-works). Watch on a tile opens the agent in a drawer |
 | `/listing/[id]` | One listing in full, with Buy now inline and more from the same set. `GET /api/listings/:id` also answers for sold and withdrawn listings, so their pages say so |
 | `/agent` | The optional agent: your watches, the selected watch with its matches, listings to review, skipped listings, purchases and agent runs. You can buy a match by signing it, ask the agent about a listing, or sign an auto-buy approval and revoke it later. A watch cannot be edited, so Change this watch saves a new watch and pauses the old one |
 
@@ -220,7 +253,11 @@ pnpm dev                    # backend on :3001: a new listing every 45 seconds, 
 pnpm --filter @slabwatch/web dev   # marketplace on :3000
 pnpm test
 pnpm eval                   # v1 eval, needs the API key
+pnpm db:seed:large          # optional: 20,040 cards and a million listings, for search at scale
+pnpm bench:search           # times market searches against the database
 ```
+
+The large seed is for local databases only and refuses to run on Railway. `BULK_LISTINGS=100000` loads fewer listings, and an interrupted load picks up where it stopped. To keep it apart from the demo data, run both seeds and the server with `DB_SCHEMA=large` (any name), which puts every table in that schema.
 
 Payments are simulated unless you set `PAYMENTS=devnet` and a `DEVNET_SEED` (`openssl rand -hex 32`). With `SOLANA_RPC_URL=memory` the devnet code runs on an in-process VM; with the default devnet RPC the server creates the dUSD mint and the escrow account on its first boot and asks the devnet faucet for SOL for fees. If the faucet refuses (it is rate limited), the log prints the treasury address to fund at faucet.solana.com.
 
@@ -256,10 +293,10 @@ To turn the public demo read-only, set `DEMO_READ_ONLY=true` on the backend.
 
 ```
 packages/domain   Effect Schema types: money, catalog, watch rules, match decisions, hard checks
-packages/seed     the fictional catalog, prices, sales history and the listing generator
+packages/seed     the fictional catalog, prices, sales history, the listing generator and the large test market
 apps/server       Effect backend: Postgres and pgvector, embeddings, model calls, rule parser, matcher,
-                  purchase policy, agent loop and tools, MCP endpoint, watcher, tracing,
-                  wallet signatures, devnet payments, the web API and its rate limits
+                  market search, purchase policy, agent loop and tools, MCP endpoint, watcher,
+                  tracing, wallet signatures, devnet payments, the web API and its rate limits
 apps/web          Next.js marketplace: home, market, listing pages, checkout and the agent page
 evals             labelled eval set, metrics, the matcher eval and the agent injection eval
 ```
@@ -269,6 +306,8 @@ evals             labelled eval set, metrics, the matcher eval and the agent inj
 I built this with Claude Code as a coding agent. I set the scope, the plan and the constraints, and reviewed the changes. The agent wrote most of the code, the tests and the labelled eval set.
 
 ## What's next
+
+- Search by description ("sea animal with hologram"): tags written once per card by a model, a query step that maps a described search onto those tags with a cache and removable chips, and reranking with its own eval. Then the same `SearchService` on OpenSearch, run locally and fed from Postgres, to compare the two.
 
 - A binder view of what a wallet has bought was cut for time. `GET /api/me/purchases` already lists it.
 - Direct buys and confirm mode sign a text and the delegate pays. Having the wallet sign the transfer itself would show the payment in the wallet's own approval screen.

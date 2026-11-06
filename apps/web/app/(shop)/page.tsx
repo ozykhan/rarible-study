@@ -11,6 +11,7 @@ import { Sets } from "@/components/Sets"
 import { Section } from "@/components/ui"
 import { useAccount } from "@/lib/account"
 import { cardId } from "@/lib/art"
+import { count } from "@/lib/format"
 
 /**
  * The home page, in the design's order: hero with search, Browse by set, the
@@ -35,7 +36,7 @@ export default function Home() {
           lede="Hover a card, or tap it on a phone, to buy it right here."
           aside={
             <Link className="section-link" href="/market">
-              {stats ? `See all ${stats.count} listings` : "See all listings"}
+              {stats ? `See all ${count(stats.count)} listings` : "See all listings"}
             </Link>
           }
         >

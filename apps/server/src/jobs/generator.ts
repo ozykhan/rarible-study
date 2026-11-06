@@ -7,10 +7,11 @@ import { AppConfig } from "../config.ts"
 /** Generated listings beyond this many are withdrawn, oldest first, so the demo database stays small. */
 export const MAX_ACTIVE_GENERATED = 150
 
+/** One past the highest VLT- number. Bulk vault items (VLB-) are not counted; the predicate matches a partial index. */
 const nextVaultNumber = Effect.gen(function* () {
   const sql = yield* SqlClient
   const rows = yield* sql<{ readonly next: number }>`
-    SELECT coalesce(max(substring(id from 5)::int), 0) + 1 AS next FROM vault_items`
+    SELECT coalesce(max(substring(id from 5)::int), 0) + 1 AS next FROM vault_items WHERE id ~ '^VLT-[0-9]+$'`
   return rows[0]?.next ?? 1
 })
 

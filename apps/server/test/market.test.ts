@@ -1,59 +1,14 @@
-import { money } from "@slabwatch/domain"
+import { generateLargeCatalog, handWritten } from "@slabwatch/seed"
 import { describe, expect, it } from "@effect/vitest"
-import { marketPage, matchesSearch, parseMarketQuery } from "../src/web/market.ts"
-import { listing } from "./fixtures.ts"
+import { describeSearch, emptySearch, isEmptySearch, parseSearch, searchWords } from "../src/search/query.ts"
+import { parseMarketQuery } from "../src/web/market.ts"
 
 const q = (s: string) => parseMarketQuery(new URLSearchParams(s))
-
-const wyrm = listing({
-  listingId: "L-1",
-  setId: "EF",
-  setName: "Emberfall",
-  cardId: "EF-001",
-  cardNumber: "001",
-  cardName: "Ashen Wyrm",
-  grader: "NVG",
-  grade: 10,
-  price: money(84_900, "USD"),
-  sellerHandle: "vaultkeeper",
-  listedAt: "2026-11-05T10:00:00Z",
-  // The seller's title claims a grade the slab does not have; search ignores it.
-  title: "Ashen Wyrm QSG 9.5 best on the market"
-})
-const eel = listing({
-  listingId: "L-2",
-  setId: "EF",
-  setName: "Emberfall",
-  cardId: "EF-010",
-  cardNumber: "010",
-  cardName: "Lava Eel",
-  edition: "unlimited",
-  finish: "non_holo",
-  grader: "QSG",
-  grade: 7,
-  price: money(1_000_000, "JPY"),
-  listedAt: "2026-11-05T11:00:00Z"
-})
-const foal = listing({
-  listingId: "L-3",
-  setId: "TW",
-  setName: "Tidewild",
-  cardId: "TW-004",
-  cardNumber: "004",
-  cardName: "Kelpie Foal",
-  finish: "reverse_holo",
-  grader: "LCA",
-  grade: 9.5,
-  price: money(9_000, "EUR"),
-  listedAt: "2026-11-05T09:00:00Z"
-})
-const all = [wyrm, eel, foal]
-const ids = (s: string) => marketPage(all, q(s)).page.map((l) => l.listingId)
 
 describe("market query", () => {
   it("defaults to the 40 newest and ignores unknown values", () => {
     expect(q("")).toEqual({ set: null, grader: null, q: "", sort: "recent", offset: 0, limit: 40 })
-    expect(q("set=XX&grader=ABC&sort=cheapest&limit=5000&offset=-3")).toEqual({
+    expect(q("set=X%20Y&grader=ABC&sort=cheapest&limit=5000&offset=-3")).toEqual({
       set: null,
       grader: null,
       q: "",
@@ -69,36 +24,85 @@ describe("market query", () => {
       offset: 40,
       limit: 20
     })
+    // Generated sets are valid ids; whether one exists is the search's business.
+    expect(q("set=X050").set).toBe("X050")
+    // Deep pages stop where search engines stop.
+    expect(q("offset=250000").offset).toBe(10_000)
+  })
+})
+
+describe("reading the search box", () => {
+  const p = (s: string) => parseSearch(s)
+
+  it("leaves card, kind and set words to the database", () => {
+    expect(p("Ashen Wyrm")).toEqual({ ...emptySearch, words: ["ashen", "wyrm"] })
+    expect(p("wyr")).toEqual({ ...emptySearch, words: ["wyr"] })
+    expect(p("dragon, emberfall")).toEqual({ ...emptySearch, words: ["dragon", "emberfall"] })
+    expect(isEmptySearch(p("   "))).toBe(true)
   })
 
-  it("searches the vault record word by word, not the seller's title", () => {
-    expect(matchesSearch(wyrm, "ashen wyrm")).toBe(true)
-    expect(matchesSearch(wyrm, "wyr")).toBe(true)
-    expect(matchesSearch(wyrm, "NVG 10")).toBe(true)
-    expect(matchesSearch(wyrm, "1st edition holo")).toBe(true)
-    expect(matchesSearch(wyrm, "@vaultkeeper")).toBe(true)
-    expect(matchesSearch(wyrm, "northvale")).toBe(true)
-    expect(matchesSearch(wyrm, "QSG 9.5")).toBe(false)
-    // "10" is a grade, not the start of card #010.
-    expect(matchesSearch(eel, "10")).toBe(false)
-    expect(matchesSearch(eel, "#010")).toBe(true)
-    expect(matchesSearch(eel, "holo")).toBe(false)
-    expect(matchesSearch(foal, "reverse holo")).toBe(true)
+  it("tells holo, reverse holo and non-holo apart", () => {
+    expect(p("holo").finishes).toEqual(["holo"])
+    expect(p("hologram").finishes).toEqual(["holo"])
+    expect(p("reverse holo").finishes).toEqual(["reverse_holo"])
+    expect(p("reverse-holo").finishes).toEqual(["reverse_holo"])
+    expect(p("reverse").finishes).toEqual(["reverse_holo"])
+    for (const s of ["non holo", "non-holo", "nonholo", "no holo"]) expect(p(s).finishes, s).toEqual(["non_holo"])
+    expect(p("1st edition holo")).toEqual({ ...emptySearch, editions: ["first"], finishes: ["holo"] })
+    expect(p("unlimited").editions).toEqual(["unlimited"])
   })
 
-  it("filters by set and grader, sorts by the dUSD price, and counts per set", () => {
-    expect(ids("")).toEqual(["L-2", "L-1", "L-3"])
-    expect(ids("set=EF")).toEqual(["L-2", "L-1"])
-    expect(ids("grader=LCA")).toEqual(["L-3"])
-    // 1,000,000 JPY is 6,666.67 USD; 90.00 EUR is 97.83 USD.
-    expect(ids("sort=price_asc")).toEqual(["L-3", "L-1", "L-2"])
-    expect(ids("sort=price_desc")).toEqual(["L-2", "L-1", "L-3"])
-    expect(ids("sort=grade")).toEqual(["L-1", "L-3", "L-2"])
-    expect(ids("offset=1&limit=1")).toEqual(["L-1"])
+  it("reads graders by code or name, and drops the generic words in their names", () => {
+    expect(p("NVG 10")).toEqual({ ...emptySearch, graders: ["NVG"], grades: [10] })
+    expect(p("Northvale Grading")).toEqual({ ...emptySearch, graders: ["NVG"] })
+    expect(p("quarry slab grading 9.5")).toEqual({ ...emptySearch, graders: ["QSG"], grades: [9.5] })
+    expect(p("lantern card authentication")).toEqual({ ...emptySearch, graders: ["LCA"] })
+    expect(p("graded card slab").words).toEqual([])
+  })
 
-    const page = marketPage(all, q("set=TW&q=emberfall"))
-    expect(page.total).toBe(0)
-    // The tabs count what the search matches in each set, whatever set is picked.
-    expect(page.counts).toEqual({ all: 2, sets: { OS: 0, TW: 0, EF: 2, SE: 0 } })
+  it("tells grades from card numbers, and reads minimum grades and price limits", () => {
+    expect(p("10")).toEqual({ ...emptySearch, grades: [10] })
+    expect(p("#010")).toEqual({ ...emptySearch, cardNumber: "010" })
+    expect(p("#10")).toEqual({ ...emptySearch, cardNumber: "010" })
+    expect(p("010")).toEqual({ ...emptySearch, cardNumber: "010" })
+    for (const s of ["9+", "9 +", "9 and up", "9 or better", "at least 9", "min 9"]) expect(p(s), s).toEqual({ ...emptySearch, minGrade: 9 })
+    for (const s of ["under 100", "under $100", "<100", "< 100", "less than 100", "up to 100", "max 100"]) {
+      expect(p(s), s).toEqual({ ...emptySearch, maxUsdCents: 10_000 })
+    }
+    expect(p("below 1.5k").maxUsdCents).toBe(150_000)
+    expect(p("wyrm under 50 under 80").maxUsdCents).toBe(5_000)
+    // A bare price says nothing about up or down: shown as ignored, not matched as a card number.
+    expect(p("$100")).toEqual({ ...emptySearch, ignored: ["$100"] })
+  })
+
+  it("finds sellers by @handle or a full handle, and certs by number", () => {
+    expect(p("@vaultkeeper").handles).toEqual([{ handle: "vaultkeeper", orWords: [] }])
+    expect(p("holo_harbor").handles).toEqual([{ handle: "holo_harbor", orWords: ["holo", "harbor"] }])
+    // Plain "holo" is the finish, never the start of a seller's handle.
+    expect(p("holo").handles).toEqual([])
+    expect(p("cert NVG12345678")).toEqual({ ...emptySearch, cert: "NVG12345678" })
+  })
+
+  it("never swallows a word the catalog uses", () => {
+    for (const catalog of [handWritten, generateLargeCatalog()]) {
+      for (const c of catalog.cards) {
+        const set = catalog.setById(c.setId)
+        for (const w of [...searchWords(c.name), ...c.kinds, ...searchWords(set.name)]) {
+          expect(p(w).words, `${w} (${c.id})`).toEqual([w])
+        }
+      }
+    }
+  })
+
+  it("labels what it understood", () => {
+    expect(describeSearch(p("ashen wyrm NVG 10 1st edition holo under 900"), ["vaultkeeper"])).toEqual([
+      "Northvale Grading",
+      "grade 10",
+      "1st edition",
+      "holo",
+      "900 dUSD or less",
+      "seller @vaultkeeper",
+      '"ashen wyrm"'
+    ])
   })
 })

@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { api } from "./api"
-import { GRADERS, SETS } from "./art"
-import type { Listing, MarketCounts, MarketResponse, MarketStats } from "./types"
+import { GRADERS } from "./art"
+import type { Listing, MarketCounts, MarketResponse, MarketStats, SetRef } from "./types"
 
 export const MARKET_SORTS = [
   ["recent", "Newest"],
@@ -22,13 +22,17 @@ export interface MarketFilters {
   readonly sort: MarketSort
 }
 
-/** Reads ?set, ?grader, ?q and ?sort, with unknown values falling back to the defaults. */
+/**
+ * Reads ?set, ?grader, ?q and ?sort, with unknown values falling back to the
+ * defaults. Any set id is taken as written: the catalog is the server's, and
+ * the server ignores a set it does not have.
+ */
 export const readFilters = (params: URLSearchParams): MarketFilters => {
   const set = params.get("set")
   const grader = params.get("grader")
   const sort = params.get("sort")
   return {
-    set: SETS.some((s) => s.id === set) ? (set as string) : "all",
+    set: set !== null && /^[A-Za-z0-9-]{1,16}$/.test(set) ? set : "all",
     grader: grader !== null && grader in GRADERS ? grader : "all",
     q: params.get("q") ?? "",
     sort: MARKET_SORTS.find(([v]) => v === sort)?.[0] ?? "recent"
@@ -64,21 +68,37 @@ interface MarketState {
   readonly key: string
   readonly listings: ReadonlyArray<Listing> | null
   readonly total: number
+  readonly exact: boolean
   readonly counts: MarketCounts | null
   readonly stats: MarketStats | null
+  readonly sets: ReadonlyArray<SetRef> | null
+  readonly understood: ReadonlyArray<string>
+  readonly suggestion: string | null
   readonly failed: boolean
 }
 
 /**
  * One filtered view of the market from the server: the listings loaded so
- * far, how many match, the set tabs' counts and the whole market's stats.
+ * far, how many match, the set tabs and their counts, the whole market's
+ * stats, what the search was read as and a suggested fix for a typo.
  * `more` loads the next 40. Every 20 seconds the loaded rows are fetched
  * again, keeping listings in `keep` (bought on this visit) in place after they
  * leave the market.
  */
 export function useMarket(filters: MarketFilters, keep: ReadonlySet<string>) {
   const key = JSON.stringify([filters.set, filters.grader, filters.q.trim(), filters.sort])
-  const [state, setState] = useState<MarketState>({ key, listings: null, total: 0, counts: null, stats: null, failed: false })
+  const [state, setState] = useState<MarketState>({
+    key,
+    listings: null,
+    total: 0,
+    exact: true,
+    counts: null,
+    stats: null,
+    sets: null,
+    understood: [],
+    suggestion: null,
+    failed: false
+  })
   const [loadingMore, setLoadingMore] = useState(false)
   const latest = useRef({ filters, keep, state })
   latest.current = { filters, keep, state }
@@ -95,8 +115,12 @@ export function useMarket(filters: MarketFilters, keep: ReadonlySet<string>) {
             key,
             listings: mergeKept(r.listings, s.key === key ? (s.listings ?? []) : [], latest.current.keep),
             total: r.total,
+            exact: r.exact,
             counts: r.counts,
             stats: r.stats,
+            sets: r.sets,
+            understood: r.understood,
+            suggestion: r.suggestion,
             failed: false
           }))
         })
@@ -121,7 +145,13 @@ export function useMarket(filters: MarketFilters, keep: ReadonlySet<string>) {
       setState((now) => {
         if (now.key !== s.key || now.listings === null) return now
         const ids = new Set(now.listings.map((l) => l.listingId))
-        return { ...now, listings: [...now.listings, ...r.listings.filter((l) => !ids.has(l.listingId))], total: r.total, counts: r.counts }
+        return {
+          ...now,
+          listings: [...now.listings, ...r.listings.filter((l) => !ids.has(l.listingId))],
+          total: r.total,
+          exact: r.exact,
+          counts: r.counts
+        }
       })
     } catch {
       // The button stays; the next try or the next refresh picks it up.

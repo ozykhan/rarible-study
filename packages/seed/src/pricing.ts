@@ -1,5 +1,5 @@
 import type { Currency, Edition, Finish, Grader } from "@slabwatch/domain"
-import { cardById } from "./catalog.ts"
+import { cardById, type CardSpec } from "./catalog.ts"
 
 const editionFactor: Record<Edition, number> = { first: 2.2, unlimited: 1 }
 const finishFactor: Record<Finish, number> = { holo: 1.8, reverse_holo: 1.3, non_holo: 1 }
@@ -20,17 +20,20 @@ const gradeFactor = (grade: number): number => {
 export const usdRate: Record<Currency, number> = { USD: 1, EUR: 0.92, JPY: 150 }
 
 /** Fair market value in USD cents for a card, variant, grader and grade. */
-export const marketValueCents = (
-  cardId: string,
+export const valueCents = (
+  card: Pick<CardSpec, "baseValueUsd">,
   edition: Edition,
   finish: Finish,
   grader: Grader,
   grade: number
 ): number => {
-  const c = cardById(cardId)
-  const usd = c.baseValueUsd * editionFactor[edition] * finishFactor[finish] * graderFactor[grader] * gradeFactor(grade)
+  const usd = card.baseValueUsd * editionFactor[edition] * finishFactor[finish] * graderFactor[grader] * gradeFactor(grade)
   return Math.round(usd * 100)
 }
+
+/** valueCents for a card of the hand-written catalog, by id. */
+export const marketValueCents = (cardId: string, edition: Edition, finish: Finish, grader: Grader, grade: number): number =>
+  valueCents(cardById(cardId), edition, finish, grader, grade)
 
 /** Converts a USD cent amount to minor units of another currency at the fixed rate. */
 export const fromUsdCents = (cents: number, currency: Currency): number => {

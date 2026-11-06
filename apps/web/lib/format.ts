@@ -11,6 +11,9 @@ export const money = (m: Money) =>
 export const dusd = (units: string | number) =>
   `${(Number(units) / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} dUSD`
 
+/** A count with thousands separators: 1,000,199. */
+export const count = (n: number) => n.toLocaleString("en-US")
+
 export const toMinor = (major: number, c: Money["currency"]) => Math.round(major * 10 ** digits(c))
 export const toMajor = (minor: number, c: Money["currency"]) => minor / 10 ** digits(c)
 
