@@ -24,20 +24,39 @@ export const parseHeaders = (raw: string): Record<string, string> =>
   )
 
 /**
- * Exports every Effect span (rules, matcher stages, model calls, tool calls,
- * purchases) over OTLP/HTTP when OTLP_TRACES_URL is set. Langfuse, Jaeger and
- * any OpenTelemetry collector accept this. Without the setting, spans still
- * exist in process and their trace ids are stored in the database.
+ * Exports every Effect span (HTTP requests, rules, matcher stages, model
+ * calls, tool calls, purchases, SQL) over OTLP/HTTP when the standard
+ * OpenTelemetry variables name an endpoint. Railway sets them when tracing is
+ * on for the service, so spans show up in its trace view under the edge's
+ * request span. Langfuse, Jaeger and any collector take the same variables.
+ * Without them, spans still exist in process and their trace ids are stored
+ * in the database and written on log lines.
  */
 export const TracingLive = Layer.unwrap(
   Effect.gen(function* () {
-    const config = yield* AppConfig
-    if (config.otlpTracesUrl === null) return Layer.empty
+    const { otlp } = yield* AppConfig
+    if (otlp === null) return Layer.empty
+    if (otlp.protocol !== "http/protobuf" && otlp.protocol !== "http/json") {
+      yield* Effect.logWarning(
+        `traces are not exported: OTLP protocol ${otlp.protocol} is not supported, use http/protobuf or http/json`
+      )
+      return Layer.empty
+    }
+    if (!URL.canParse(otlp.tracesUrl)) {
+      yield* Effect.logWarning("traces are not exported: the OTLP endpoint is not a valid URL")
+      return Layer.empty
+    }
+    yield* Effect.logInfo(
+      `exporting traces to ${new URL(otlp.tracesUrl).host} as ${otlp.serviceName} (${otlp.protocol})`
+    )
     return OtlpTracer.layer({
-      url: config.otlpTracesUrl,
-      resource: { serviceName: "slabwatch-server" },
-      headers: config.otlpHeaders === null ? {} : parseHeaders(Redacted.value(config.otlpHeaders)),
+      url: otlp.tracesUrl,
+      resource: { serviceName: otlp.serviceName },
+      headers: otlp.headers === null ? {} : parseHeaders(Redacted.value(otlp.headers)),
       exportInterval: "2 seconds"
-    }).pipe(Layer.provide(OtlpSerialization.layerJson), Layer.provide(FetchHttpClient.layer))
+    }).pipe(
+      Layer.provide(otlp.protocol === "http/json" ? OtlpSerialization.layerJson : OtlpSerialization.layerProtobuf),
+      Layer.provide(FetchHttpClient.layer)
+    )
   })
 )
