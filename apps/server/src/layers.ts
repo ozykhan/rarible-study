@@ -10,6 +10,7 @@ import { MatcherLive } from "./matcher/Matcher.ts"
 import { PurchasesLive } from "./purchases/Purchases.ts"
 import { RuleParserLive } from "./rules/RuleParser.ts"
 import { RuleRepoLive } from "./rules/RuleRepo.ts"
+import { SearchServicePg } from "./search/SearchService.ts"
 import type { Chain } from "./solana/Chain.ts"
 import { ChainLive, paymentsFor } from "./solana/PaymentsDevnet.ts"
 import { WalletAuthLive } from "./wallet/WalletAuth.ts"
@@ -22,7 +23,7 @@ import { RateLimitsLive } from "./web/RateLimits.ts"
  */
 export const BaseLive = Layer.mergeAll(DatabaseLive, EmbedderLive).pipe(Layer.provideMerge(AppConfigLive))
 
-export const ReposLive = Layer.mergeAll(CatalogRepoLive, RuleRepoLive, LlmLive, AgentTokensLive, RateLimitsLive).pipe(
+export const ReposLive = Layer.mergeAll(CatalogRepoLive, RuleRepoLive, SearchServicePg, LlmLive, AgentTokensLive, RateLimitsLive).pipe(
   Layer.provideMerge(BaseLive)
 )
 

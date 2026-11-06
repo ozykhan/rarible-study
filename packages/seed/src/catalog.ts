@@ -100,20 +100,46 @@ export const cards: ReadonlyArray<CardSpec> = [
   card("SE", 10, "Cinderwing Drake", "rare", ["dragon"], 180, "A reprint of the classic drake with new star art.")
 ]
 
-export const setById = (id: string): SetSpec => {
-  const s = sets.find((x) => x.id === id)
-  if (!s) throw new Error(`Unknown set ${id}`)
-  return s
+/**
+ * A catalog: its sets and cards, with lookups by id. The hand-written one
+ * below is the default everywhere; the large generated one (large.ts) is for
+ * testing search and storage at a realistic size.
+ */
+export interface Catalog {
+  readonly sets: ReadonlyArray<SetSpec>
+  readonly cards: ReadonlyArray<CardSpec>
+  readonly setById: (id: string) => SetSpec
+  readonly cardById: (id: string) => CardSpec
 }
 
-export const cardById = (id: string): CardSpec => {
-  const c = cards.find((x) => x.id === id)
-  if (!c) throw new Error(`Unknown card ${id}`)
-  return c
+export const makeCatalog = (setList: ReadonlyArray<SetSpec>, cardList: ReadonlyArray<CardSpec>): Catalog => {
+  const setMap = new Map(setList.map((s) => [s.id, s]))
+  const cardMap = new Map(cardList.map((c) => [c.id, c]))
+  return {
+    sets: setList,
+    cards: cardList,
+    setById: (id) => {
+      const s = setMap.get(id)
+      if (!s) throw new Error(`Unknown set ${id}`)
+      return s
+    },
+    cardById: (id) => {
+      const c = cardMap.get(id)
+      if (!c) throw new Error(`Unknown card ${id}`)
+      return c
+    }
+  }
 }
+
+/** The 40 hand-written cards in four sets. */
+export const handWritten: Catalog = makeCatalog(sets, cards)
+
+export const setById = (id: string): SetSpec => handWritten.setById(id)
+
+export const cardById = (id: string): CardSpec => handWritten.cardById(id)
 
 /** Trusted text about a card, written by us. This is what catalog embeddings are built from. */
-export const catalogText = (c: CardSpec): string => {
-  const set = setById(c.setId)
+export const catalogText = (c: CardSpec, catalog: Catalog = handWritten): string => {
+  const set = catalog.setById(c.setId)
   return `${set.name} #${c.number} ${c.name}. ${c.kinds.join(" and ")} type card. ${c.lore} Rarity: ${c.rarity.replace("_", " ")}.`
 }

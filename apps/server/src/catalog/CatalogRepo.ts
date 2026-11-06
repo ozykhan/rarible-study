@@ -1,5 +1,5 @@
 import type { HardCriteria, ListingView, Money } from "@slabwatch/domain"
-import { catalogText, cards, sets, type LabelledListing, type SaleRow, type SellerRow } from "@slabwatch/seed"
+import { catalogText, handWritten, type Catalog, type LabelledListing, type SaleRow, type SellerRow } from "@slabwatch/seed"
 import { Context, Effect, Layer } from "effect"
 import type { SqlError } from "effect/sql/SqlError"
 import { SqlClient } from "effect/sql/SqlClient"
@@ -83,13 +83,25 @@ export const listingEmbeddingText = (l: { readonly title: string; readonly descr
 export class CatalogRepo extends Context.Service<
   CatalogRepo,
   {
-    readonly insertCatalog: (sellers: ReadonlyArray<SellerRow>) => Effect.Effect<void, SqlError | EmbedError>
+    /** Sets, cards with their catalog vectors, and sellers; rows already present are left alone. Defaults to the hand-written catalog. */
+    readonly insertCatalog: (
+      sellers: ReadonlyArray<SellerRow>,
+      catalog?: Catalog
+    ) => Effect.Effect<void, SqlError | EmbedError>
     readonly insertSales: (sales: ReadonlyArray<SaleRow>) => Effect.Effect<void, SqlError>
     readonly insertListings: (
       listings: ReadonlyArray<LabelledListing>,
       options?: { readonly listedAt?: Date }
     ) => Effect.Effect<void, SqlError | EmbedError>
+    /**
+     * Many listings in one statement, with no listing vectors: the large test
+     * market. Embedding a million seller texts would take hours on a laptop,
+     * so meaning search covers the seed and generated listings only.
+     */
+    readonly insertBulkListings: (listings: ReadonlyArray<LabelledListing>, now: Date) => Effect.Effect<void, SqlError>
     readonly getListing: (id: string) => Effect.Effect<ListingView | null, SqlError>
+    /** Listings by id, in the order given; ids that do not exist are skipped. */
+    readonly getListings: (ids: ReadonlyArray<string>) => Effect.Effect<ReadonlyArray<ListingView>, SqlError>
     readonly listActive: (limit: number) => Effect.Effect<ReadonlyArray<ListingView>, SqlError>
     readonly listedSince: (since: Date) => Effect.Effect<ReadonlyArray<ListingView>, SqlError>
     /** Free search for agents: optional filters, optionally ranked by meaning against a query vector. */
@@ -136,22 +148,46 @@ export const CatalogRepoLive = Layer.effect(
     const sql = yield* SqlClient
     const embedder = yield* Embedder
 
-    const insertCatalog = Effect.fn("CatalogRepo.insertCatalog")(function* (sellers: ReadonlyArray<SellerRow>) {
-      for (const s of sets) {
-        yield* sql`INSERT INTO sets (id, code, name, release_year)
-                   VALUES (${s.id}, ${s.code}, ${s.name}, ${s.releaseYear}) ON CONFLICT (id) DO NOTHING`
+    const insertCatalog = Effect.fn("CatalogRepo.insertCatalog")(function* (
+      sellers: ReadonlyArray<SellerRow>,
+      catalog: Catalog = handWritten
+    ) {
+      // unnest() turns parallel arrays into rows: one statement per chunk instead of one per row.
+      yield* sql`
+        INSERT INTO sets (id, code, name, release_year)
+        SELECT * FROM unnest(
+          ${toTextArray(catalog.sets.map((s) => s.id))}::text[],
+          ${toTextArray(catalog.sets.map((s) => s.code))}::text[],
+          ${toTextArray(catalog.sets.map((s) => s.name))}::text[],
+          ${toTextArray(catalog.sets.map((s) => String(s.releaseYear)))}::int[]
+        ) ON CONFLICT (id) DO NOTHING`
+      const chunk = 1000
+      for (let i = 0; i < catalog.cards.length; i += chunk) {
+        const rows = catalog.cards.slice(i, i + chunk)
+        const texts = rows.map((c) => catalogText(c, catalog))
+        const vectors = yield* embedder.embed(texts, "document")
+        // kinds go in as one text per card ("dragon,water"): unnest cannot take a ragged 2-D array.
+        yield* sql`
+          INSERT INTO cards (id, set_id, number, name, rarity, kinds, catalog_text, embedding)
+          SELECT id, set_id, number, name, rarity, string_to_array(kinds, ','), catalog_text, embedding
+          FROM unnest(
+            ${toTextArray(rows.map((c) => c.id))}::text[],
+            ${toTextArray(rows.map((c) => c.setId))}::text[],
+            ${toTextArray(rows.map((c) => c.number))}::text[],
+            ${toTextArray(rows.map((c) => c.name))}::text[],
+            ${toTextArray(rows.map((c) => c.rarity))}::text[],
+            ${toTextArray(rows.map((c) => c.kinds.join(",")))}::text[],
+            ${toTextArray(texts)}::text[],
+            ${toTextArray(rows.map((_, j) => toVector(vectors[j] ?? [])))}::vector[]
+          ) AS t(id, set_id, number, name, rarity, kinds, catalog_text, embedding)
+          ON CONFLICT (id) DO NOTHING`
       }
-      const texts = cards.map(catalogText)
-      const vectors = yield* embedder.embed(texts, "document")
-      for (const [i, c] of cards.entries()) {
-        const vec = vectors[i] ?? []
-        yield* sql`INSERT INTO cards (id, set_id, number, name, rarity, kinds, catalog_text, embedding)
-                   VALUES (${c.id}, ${c.setId}, ${c.number}, ${c.name}, ${c.rarity},
-                           ${toTextArray(c.kinds)}::text[], ${texts[i] ?? ""}, ${toVector(vec)}::vector)
-                   ON CONFLICT (id) DO NOTHING`
-      }
-      for (const s of sellers) {
-        yield* sql`INSERT INTO sellers (id, handle) VALUES (${s.id}, ${s.handle}) ON CONFLICT (id) DO NOTHING`
+      for (let i = 0; i < sellers.length; i += chunk) {
+        const rows = sellers.slice(i, i + chunk)
+        yield* sql`
+          INSERT INTO sellers (id, handle)
+          SELECT * FROM unnest(${toTextArray(rows.map((s) => s.id))}::text[], ${toTextArray(rows.map((s) => s.handle))}::text[])
+          ON CONFLICT (id) DO NOTHING`
       }
     })
 
@@ -193,6 +229,47 @@ export const CatalogRepoLive = Layer.effect(
                            ${l.currency}, ${l.status}, ${listedAt.toISOString()}::timestamptz, ${l.source},
                            ${toVector(vectors[i] ?? [])}::vector)`
       }
+    })
+
+    const insertBulkListings = Effect.fn("CatalogRepo.insertBulkListings")(function* (
+      listings: ReadonlyArray<LabelledListing>,
+      now: Date
+    ) {
+      if (listings.length === 0) return
+      const v = listings.map((x) => x.vaultItem)
+      const l = listings.map((x) => x.listing)
+      yield* sql`
+        INSERT INTO vault_items (id, card_id, edition, finish, grader, grade, cert_number)
+        SELECT * FROM unnest(
+          ${toTextArray(v.map((x) => x.id))}::text[],
+          ${toTextArray(v.map((x) => x.cardId))}::text[],
+          ${toTextArray(v.map((x) => x.edition))}::text[],
+          ${toTextArray(v.map((x) => x.finish))}::text[],
+          ${toTextArray(v.map((x) => x.grader))}::text[],
+          ${toTextArray(v.map((x) => String(x.grade)))}::numeric[],
+          ${toTextArray(v.map((x) => x.certNumber))}::text[]
+        ) ON CONFLICT (id) DO NOTHING`
+      yield* sql`
+        INSERT INTO listings (id, vault_item_id, seller_id, title, description, price_minor, currency, status, listed_at, source)
+        SELECT * FROM unnest(
+          ${toTextArray(l.map((x) => x.id))}::text[],
+          ${toTextArray(l.map((x) => x.vaultItemId))}::text[],
+          ${toTextArray(l.map((x) => x.sellerId))}::text[],
+          ${toTextArray(l.map((x) => x.title))}::text[],
+          ${toTextArray(l.map((x) => x.description))}::text[],
+          ${toTextArray(l.map((x) => String(x.priceMinor)))}::bigint[],
+          ${toTextArray(l.map((x) => x.currency))}::text[],
+          ${toTextArray(l.map((x) => x.status))}::text[],
+          ${toTextArray(l.map((x) => new Date(now.getTime() - x.listedMinutesAgo * 60_000).toISOString()))}::timestamptz[],
+          ${toTextArray(l.map((x) => x.source))}::text[]
+        )`
+    })
+
+    const getListings = Effect.fn("CatalogRepo.getListings")(function* (ids: ReadonlyArray<string>) {
+      if (ids.length === 0) return []
+      const rows = yield* sql<ListingRowDb>`${selectView(sql)} WHERE l.id IN ${sql.in(ids)}`
+      const byId = new Map(rows.map((r) => [r.listingId, toView(r)]))
+      return ids.flatMap((id) => byId.get(id) ?? [])
     })
 
     const getListing = Effect.fn("CatalogRepo.getListing")(function* (id: string) {
@@ -271,11 +348,12 @@ export const CatalogRepoLive = Layer.effect(
         return rows.map((r) => ({ listing: toView(r), similarity: null }))
       }
       const vec = toVector(queryVector)
+      // Bulk test listings carry no vector, so ranking by meaning covers the listings that have one.
       const rows = yield* sql<ListingRowDb & { readonly similarity: number }>`
-        SELECT * FROM (${selectView(sql)} WHERE ${where}) AS v0
+        SELECT * FROM (${selectView(sql)} WHERE ${where} AND l.embedding IS NOT NULL) AS v0
         JOIN LATERAL (SELECT (1 - (l2.embedding <=> ${vec}::vector))::float8 AS similarity FROM listings l2
                       WHERE l2.id = v0.listing_id) AS s ON true
-        ORDER BY s.similarity DESC LIMIT ${limit}`
+        ORDER BY s.similarity DESC NULLS LAST LIMIT ${limit}`
       return rows.map((r) => ({ listing: toView(r), similarity: r.similarity }))
     })
 
@@ -320,7 +398,9 @@ export const CatalogRepoLive = Layer.effect(
       insertCatalog,
       insertSales,
       insertListings,
+      insertBulkListings,
       getListing,
+      getListings,
       listActive,
       listedSince,
       hardCandidates,

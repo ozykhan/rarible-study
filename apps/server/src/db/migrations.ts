@@ -277,9 +277,152 @@ const directBuy = Effect.gen(function* () {
   yield* sql`CREATE INDEX purchases_buyer_idx ON purchases (buyer_wallet, status)`
 })
 
+/**
+ * Market search that holds up at a million listings. The database keeps three
+ * things in step with the tables people write to, so no code path can forget:
+ *
+ * - cards.search_terms: the words a card can be found by (its name, kinds,
+ *   set name and set code), set by a trigger whenever a card is written.
+ * - search_vocab: every such word once, for "is this a word we know" and, with
+ *   trigram similarity, "did you mean".
+ * - listing_search: one narrow row per active listing, with what search
+ *   filters and sorts on, copied from the listing, its vault item and its card.
+ *   Statement triggers on listings add, refresh and drop rows, so a bulk insert
+ *   of 5,000 listings is one INSERT here, not 5,000.
+ *
+ * The seller's own title and description are left out on purpose: they can
+ * claim things the slab does not say.
+ */
+const search = Effect.gen(function* () {
+  const sql = yield* SqlClient
+  yield* sql`CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public`
+  yield* sql`
+    ALTER TABLE listings DROP CONSTRAINT listings_source_check,
+      ADD CONSTRAINT listings_source_check CHECK (source IN ('seed', 'generator', 'eval', 'bulk'))`
+
+  // Lowercase runs of letters and digits, the same split the query parser uses.
+  yield* sql`
+    CREATE FUNCTION search_words(t text) RETURNS text[] LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$
+      SELECT coalesce(array_agg(w), '{}') FROM regexp_split_to_table(lower(t), '[^[:alnum:]]+') AS w WHERE w <> ''
+    $$`
+  // The same arithmetic as toUsdCents in @slabwatch/seed, in float8 like JavaScript, rounding half up like Math.round.
+  yield* sql`
+    CREATE FUNCTION usd_cents(price_minor bigint, currency text) RETURNS bigint LANGUAGE sql IMMUTABLE PARALLEL SAFE AS $$
+      SELECT CASE currency
+        WHEN 'USD' THEN price_minor
+        WHEN 'EUR' THEN floor(price_minor::float8 / 0.92 + 0.5)::bigint
+        ELSE floor(price_minor::float8 / 150 * 100 + 0.5)::bigint
+      END
+    $$`
+
+  yield* sql`ALTER TABLE cards ADD COLUMN search_terms tsvector NOT NULL DEFAULT ''`
+  yield* sql`
+    CREATE FUNCTION card_search_terms() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN
+      NEW.search_terms := array_to_tsvector(search_words(
+        NEW.name || ' ' || array_to_string(NEW.kinds, ' ') || ' ' ||
+        coalesce((SELECT s.name || ' ' || s.code FROM sets s WHERE s.id = NEW.set_id), '')));
+      RETURN NEW;
+    END $$`
+  yield* sql`
+    CREATE TRIGGER cards_search_terms BEFORE INSERT OR UPDATE OF name, kinds, set_id ON cards
+    FOR EACH ROW EXECUTE FUNCTION card_search_terms()`
+  yield* sql`UPDATE cards SET name = name`
+
+  yield* sql`CREATE TABLE search_vocab (term text PRIMARY KEY)`
+  // text_pattern_ops serves "term LIKE 'wyr%'" whatever the database collation is.
+  yield* sql`CREATE INDEX search_vocab_prefix_idx ON search_vocab (term text_pattern_ops)`
+  yield* sql`CREATE INDEX search_vocab_trgm_idx ON search_vocab USING gin (term gin_trgm_ops)`
+  yield* sql`
+    CREATE FUNCTION add_search_vocab() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN
+      INSERT INTO search_vocab (term)
+      SELECT DISTINCT unnest(tsvector_to_array(search_terms)) FROM written_cards
+      ON CONFLICT DO NOTHING;
+      RETURN NULL;
+    END $$`
+  yield* sql`
+    CREATE TRIGGER cards_vocab_insert AFTER INSERT ON cards
+    REFERENCING NEW TABLE AS written_cards FOR EACH STATEMENT EXECUTE FUNCTION add_search_vocab()`
+  yield* sql`
+    CREATE TRIGGER cards_vocab_update AFTER UPDATE ON cards
+    REFERENCING NEW TABLE AS written_cards FOR EACH STATEMENT EXECUTE FUNCTION add_search_vocab()`
+  yield* sql`INSERT INTO search_vocab (term) SELECT DISTINCT unnest(tsvector_to_array(search_terms)) FROM cards`
+
+  yield* sql`
+    CREATE TABLE listing_search (
+      listing_id text PRIMARY KEY REFERENCES listings(id) ON DELETE CASCADE,
+      card_id text NOT NULL,
+      set_id text NOT NULL,
+      card_number text NOT NULL,
+      edition text NOT NULL,
+      finish text NOT NULL,
+      grader text NOT NULL,
+      grade numeric(3,1) NOT NULL,
+      cert_number text NOT NULL,
+      seller_id text NOT NULL,
+      usd_cents bigint NOT NULL,
+      listed_at timestamptz NOT NULL,
+      terms tsvector NOT NULL
+    )`
+  // One index per sort, each ending in the newest first, plus the words and the exact lookups.
+  yield* sql`CREATE INDEX listing_search_terms_idx ON listing_search USING gin (terms)`
+  yield* sql`CREATE INDEX listing_search_recent_idx ON listing_search (listed_at DESC, listing_id)`
+  yield* sql`CREATE INDEX listing_search_price_idx ON listing_search (usd_cents, listed_at DESC)`
+  yield* sql`CREATE INDEX listing_search_grade_idx ON listing_search (grade DESC, listed_at DESC)`
+  yield* sql`CREATE INDEX listing_search_set_idx ON listing_search (set_id, listed_at DESC)`
+  yield* sql`CREATE INDEX listing_search_card_idx ON listing_search (card_id)`
+  yield* sql`CREATE INDEX listing_search_seller_idx ON listing_search (seller_id, listed_at DESC)`
+  yield* sql`CREATE INDEX listing_search_cert_idx ON listing_search (cert_number)`
+
+  yield* sql`
+    CREATE FUNCTION sync_listing_search() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN
+      IF TG_OP = 'UPDATE' THEN
+        DELETE FROM listing_search ls USING written_listings w WHERE ls.listing_id = w.id;
+      END IF;
+      INSERT INTO listing_search (listing_id, card_id, set_id, card_number, edition, finish, grader, grade,
+                                  cert_number, seller_id, usd_cents, listed_at, terms)
+      SELECT w.id, c.id, c.set_id, c.number, v.edition, v.finish, v.grader, v.grade,
+             v.cert_number, w.seller_id, usd_cents(w.price_minor, w.currency), w.listed_at, c.search_terms
+      FROM written_listings w
+      JOIN vault_items v ON v.id = w.vault_item_id
+      JOIN cards c ON c.id = v.card_id
+      WHERE w.status = 'active';
+      RETURN NULL;
+    END $$`
+  yield* sql`
+    CREATE TRIGGER listings_search_insert AFTER INSERT ON listings
+    REFERENCING NEW TABLE AS written_listings FOR EACH STATEMENT EXECUTE FUNCTION sync_listing_search()`
+  yield* sql`
+    CREATE TRIGGER listings_search_update AFTER UPDATE ON listings
+    REFERENCING NEW TABLE AS written_listings FOR EACH STATEMENT EXECUTE FUNCTION sync_listing_search()`
+  // A renamed card carries its new words to its listings.
+  yield* sql`
+    CREATE FUNCTION card_terms_to_listings() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN
+      UPDATE listing_search SET terms = NEW.search_terms WHERE card_id = NEW.id;
+      RETURN NULL;
+    END $$`
+  yield* sql`
+    CREATE TRIGGER cards_terms_to_listings AFTER UPDATE OF name, kinds, set_id ON cards
+    FOR EACH ROW EXECUTE FUNCTION card_terms_to_listings()`
+  yield* sql`UPDATE listings SET status = status WHERE status = 'active'`
+
+  // What other queries need once listings number in the millions.
+  yield* sql`CREATE INDEX vault_items_card_idx ON vault_items (card_id)`
+  yield* sql`
+    CREATE INDEX vault_items_vlt_number_idx ON vault_items ((substring(id from 5)::int))
+    WHERE id ~ '^VLT-[0-9]+$'`
+  yield* sql`
+    CREATE INDEX listings_generator_active_idx ON listings (listed_at DESC)
+    WHERE source = 'generator' AND status = 'active'`
+})
+
 export const migrations = {
   "0001_init": init,
   "0002_agent": agent,
   "0003_wallet": wallet,
-  "0004_direct_buy": directBuy
+  "0004_direct_buy": directBuy,
+  "0005_search": search
 }

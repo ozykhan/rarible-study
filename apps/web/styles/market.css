@@ -67,6 +67,10 @@
   min-width: 0;
   margin-bottom: 0;
 }
+/* A catalog of many sets: the tabs take the whole row and the set menu joins the selects under it. */
+.market-bar.many-sets .tabs {
+  flex-basis: 100%;
+}
 .market-selects {
   display: flex;
   flex-wrap: wrap;
@@ -81,6 +85,12 @@
 }
 .market-count {
   margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+/* What the search box was read as: "Northvale Grading · grade 10". */
+.market-understood {
+  margin: 0 0 var(--space-1);
   font-size: var(--text-sm);
   color: var(--muted);
 }

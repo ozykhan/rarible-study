@@ -18,7 +18,8 @@ import { RuleParser } from "../rules/RuleParser.ts"
 import { RuleRepo } from "../rules/RuleRepo.ts"
 import { Treasury } from "../solana/Treasury.ts"
 import { WalletAuth } from "../wallet/WalletAuth.ts"
-import { marketPage, marketStats, parseMarketQuery } from "./market.ts"
+import { SearchService } from "../search/SearchService.ts"
+import { parseMarketQuery } from "./market.ts"
 import { RateLimits } from "./RateLimits.ts"
 
 /** A refusal with the HTTP status it answers with. */
@@ -29,8 +30,6 @@ export class ApiError extends Schema.TaggedError<ApiError>()("ApiError", {
 
 const MAX_ACTIVE_RULES = 5
 const MAX_ALLOWANCE_USD = 100_000
-/** Every active listing is read for the market's counts; far more than the seed and the generator make. */
-const MARKET_LIMIT = 5000
 
 /** JSON with bigints as strings: token amounts are u64 on chain. */
 const toJson = (v: unknown): unknown => JSON.parse(JSON.stringify(v, (_k, x) => (typeof x === "bigint" ? x.toString() : x)))
@@ -154,6 +153,7 @@ export const WebApiRoutes = HttpRouter.addAll(
     const treasury = yield* Treasury
     const payments = yield* Payments
     const catalog = yield* CatalogRepo
+    const search = yield* SearchService
     const rules = yield* RuleRepo
     const parser = yield* RuleParser
     const matcher = yield* Matcher
@@ -275,9 +275,9 @@ export const WebApiRoutes = HttpRouter.addAll(
         const request = yield* HttpServerRequest.HttpServerRequest
         // originalUrl keeps the query string; url is the path after the /api prefix.
         const query = parseMarketQuery(new URL(request.originalUrl, "http://localhost").searchParams)
-        const all = yield* catalog.listActive(MARKET_LIMIT)
-        const { page: ls, total, counts } = marketPage(all, query)
-        return { listings: yield* forSale(ls), total, counts, stats: marketStats(all) }
+        const found = yield* search.search(query)
+        const { ids, ...rest } = found
+        return { listings: yield* forSale(yield* catalog.getListings(ids)), ...rest }
       })
     )
 

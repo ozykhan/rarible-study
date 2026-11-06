@@ -154,3 +154,28 @@ The web app went from one agent-first page to a marketplace with the agent as an
 ### Gotchas
 
 - Behind the `/api` prefix, `request.url` is only the path, without the query string, so the listings route reads `request.originalUrl`.
+
+## Search at marketplace scale
+
+The market search moved from code over every listing in memory to Postgres behind a `SearchService`, and a generated market of a million listings came with it to test against.
+
+### Decisions
+
+- **Postgres first, behind an interface.** The route asks `SearchService` for ids and counts; the Postgres version is the one that runs. A search engine (OpenSearch, run locally) comes later as a second implementation of the same interface, so the two can be compared on the same data. The live demo stays on Postgres.
+- **A search table, kept by triggers.** `listing_search` is one narrow row per active listing, denormalized from the listing, vault item and card: the same shape a search engine's document has. Statement triggers with transition tables keep it in step, so no code path can forget it, and a 5,000-row bulk insert costs one insert into it.
+- **Code for the words with one meaning, SQL for the rest.** Graders, grades, editions, finishes, numbers, certs, sellers and price limits become exact filters before any SQL runs. That fixed the old gaps: "holo" no longer finds reverse holo or the seller holo_harbor, "non holo" with a space works, and "card", "slab" and "grading" no longer have to match a card.
+- **Counts stop at 10,000, after measuring.** At a million listings a page query took 1 to 2 ms, but counting every match per set took 100 to 200 ms on broad searches, and would grow with the market. Counting the first 10,001 matches and saying "10,000+" brought every search under 90 ms at p95 and tripled throughput. Search engines default to the same cap, so the later engine keeps the same API.
+- **Every sort has its index.** Newest, cheapest, highest grade and per set each read an index in order and stop after one page. Price high to low reads the price index backwards, so among equal prices it lists the oldest first; a separate index for the other tie order was not worth it.
+- **The large market is deterministic and local.** Same seed, same 20,040 cards, 2,012 sellers and listings on every machine. Bulk vault items are `VLB-` and listings `B-`, so the live generator's next number (now read through a partial index) never counts them. The loader refuses to run on Railway.
+- **No vectors for bulk listings.** Embedding a million seller texts on a laptop takes hours. Meaning search skips listings without a vector instead of ranking them first, which `ORDER BY ... DESC` did with NULLs.
+
+### Things the tests caught
+
+- `cards.map(catalogText)` passed the array index as `catalogText`'s new second argument, the catalog. The catalog test failed on the first run.
+- The trigger test first picked a listing whose vault item the seed lists twice (one of the traps), so after it was sold the other listing still matched its cert. Tests now pick a vault item listed once.
+
+### Open
+
+- The want parser's prompt lists every hand-written card, which does not scale to 20,040 cards. The query step planned for search by description replaces it.
+- `GET /api/catalog` and the home page's Browse by set still show the four hand-written sets.
+

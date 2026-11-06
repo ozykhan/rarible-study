@@ -93,7 +93,15 @@ export interface Listing {
 export interface MarketStats {
   readonly count: number
   readonly floorUnits: number | null
+  /** Sets with at least one active listing. */
+  readonly setCount: number
   readonly sets: Readonly<Record<string, { readonly count: number; readonly floorUnits: number | null }>>
+}
+
+/** A set as the market's tabs name it. */
+export interface SetRef {
+  readonly id: string
+  readonly name: string
 }
 
 /** What the set tabs count: listings that match the search and grader, in all and per set id. */
@@ -105,9 +113,18 @@ export interface MarketCounts {
 /** GET /listings: one page for the filters, how many match them, the tab counts and the whole market's stats. */
 export interface MarketResponse {
   readonly listings: ReadonlyArray<Listing>
+  /** Exact up to 10,000. */
   readonly total: number
+  /** False when more than 10,000 listings match: counts.sets is then empty and the page says "10,000+". */
+  readonly exact: boolean
   readonly counts: MarketCounts
   readonly stats: MarketStats
+  /** Every set with active listings, in catalog order: the tabs. */
+  readonly sets: ReadonlyArray<SetRef>
+  /** What the search box was read as, one label per filter ("Northvale Grading", "grade 10"). */
+  readonly understood: ReadonlyArray<string>
+  /** A corrected search that has results, when this one has none because of a misspelled word. */
+  readonly suggestion: string | null
 }
 
 export type RedFlag = "duplicate_vault_item" | "price_far_below_market" | "grade_claim_mismatch"
