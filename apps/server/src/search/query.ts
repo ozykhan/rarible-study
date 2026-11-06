@@ -111,6 +111,9 @@ const STOPWORDS = new Set([
   "edition", "ed", "cert", "certified", "listing", "listings"
 ])
 
+/** A word that carries no meaning in a search ("the", "from", "graded"). */
+export const isStopword = (w: string) => STOPWORDS.has(w)
+
 const GRADER_WORDS: Record<string, Grader> = { nvg: "NVG", qsg: "QSG", lca: "LCA" }
 for (const [code, name] of Object.entries(graderNames)) {
   // The first word of each grader's name is distinctive: northvale, quarry, lantern.

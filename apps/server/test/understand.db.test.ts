@@ -2,6 +2,7 @@ import { expect, layer } from "@effect/vitest"
 import { Effect } from "effect"
 import { SqlClient } from "effect/sql/SqlClient"
 import { Llm, LlmError, SpendCapReached, type StructuredRequest, type Usage } from "../src/llm/Llm.ts"
+import { parseSearch } from "../src/search/query.ts"
 import { SearchService } from "../src/search/SearchService.ts"
 import { makeSearchUnderstanding, understandKey, type Reading } from "../src/search/SearchUnderstanding.ts"
 import { testLayer } from "./db.ts"
@@ -48,11 +49,17 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("reading 
       const fake = scripted(() =>
         Effect.succeed({
           ...nothing,
-          // dragon is inferred from the name wyrm: with a name in the search, only tags the words ask for stay.
-          tags: ["sea_creature", "dragon"],
+          // "ocean" is already sea creature (code reads it), and "wyrm" is a name: neither can stand for
+          // a second filter. "lava" was never typed, and 9.3 is not a grade.
+          tags: [
+            { tag: "sea_creature", from: "from the ocean" },
+            { tag: "water", from: "ocean" },
+            { tag: "dragon", from: "wyrm" },
+            { tag: "fire", from: "lava" }
+          ],
           names: ["wyrm", "blorp"],
-          finishes: ["holo"],
-          min_grade: 9.3,
+          finishes: [{ finish: "holo", from: "shiny" }],
+          min_grade: { grade: 9.3, from: "thing" },
           not_understood: ["cheapest", "drop every table"]
         })
       )
@@ -97,7 +104,13 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("reading 
   it.effect("finds the search the rewritten text asks for", () =>
     Effect.gen(function* () {
       const search = yield* SearchService
-      const fake = scripted(() => Effect.succeed({ ...nothing, tags: ["sea_creature"], finishes: ["holo"] }))
+      const fake = scripted(() =>
+        Effect.succeed({
+          ...nothing,
+          tags: [{ tag: "sea_creature", from: "lives in the ocean" }],
+          finishes: [{ finish: "holo", from: "shiny" }]
+        })
+      )
       const reader = yield* makeSearchUnderstanding.pipe(Effect.provideService(Llm, fake.llm))
       const read = yield* reader.understand("something that lives in the ocean, shiny", open)
       expect(read).toMatchObject({ status: "understood", q: "ocean, holo" })
@@ -115,6 +128,46 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("reading 
         { label: "sea creatures", q: "holo" },
         { label: "holo", q: "ocean" }
       ])
+    }))
+
+  it.effect("lets each typed word stand for one filter", () =>
+    Effect.gen(function* () {
+      const fake = scripted(() =>
+        Effect.succeed({
+          ...nothing,
+          // "shiny" is the holo finish, so it cannot also be glowing; "volcano" was never typed.
+          tags: [
+            { tag: "glows", from: "shiny" },
+            { tag: "space", from: "glimmery" },
+            { tag: "fire", from: "volcano" }
+          ],
+          finishes: [{ finish: "holo", from: "shiny" }]
+        })
+      )
+      const reader = yield* makeSearchUnderstanding.pipe(Effect.provideService(Llm, fake.llm))
+      const read = yield* reader.understand("a shiny glimmery thing", open)
+      expect(read.status).toBe("understood")
+      const p = parseSearch((read as { readonly q: string }).q)
+      expect(p.tags.map((t) => t.tag)).toEqual(["space"])
+      expect(p.finishes).toEqual(["holo"])
+    }))
+
+  it.effect("lets a corrected name keep its misspelling, and the model leave out a tag code saw", () =>
+    Effect.gen(function* () {
+      const answers: Record<string, Reading> = {
+        // "stormcaler" was offered as close to stormcaller, so it cannot also be the storm tag.
+        "stormcaler heron": { ...nothing, names: ["stormcaller", "heron"], tags: [{ tag: "storm", from: "stormcaler" }] },
+        // Code reads "fire" as a tag word, but the shopper ruled it out and the model left it out.
+        "dragon that is not fire": { ...nothing, tags: [{ tag: "dragon", from: "dragon" }], not_understood: ["not fire"] }
+      }
+      const fake = scripted((user) => Effect.succeed(Object.entries(answers).find(([q]) => user.includes(`<search>${q}</search>`))![1]))
+      const reader = yield* makeSearchUnderstanding.pipe(Effect.provideService(Llm, fake.llm))
+      expect(yield* reader.understand("stormcaler heron", open)).toMatchObject({ status: "understood", q: "stormcaller heron" })
+      expect(yield* reader.understand("dragon that is not fire", open)).toMatchObject({
+        status: "understood",
+        q: "dragon",
+        notUnderstood: ["not fire"]
+      })
     }))
 
   it.effect("remembers when there is nothing to search for", () =>

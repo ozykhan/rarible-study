@@ -216,8 +216,9 @@ Described search, second part: when a submitted search has words code cannot rea
 - **The model sees words, not the catalog.** Code tells it which of the shopper's words start a catalog word and, for the others, the three catalog words spelled most like them. That is all the catalog it sees, so the prompt is the same 3,000 tokens for any catalog size, and a misspelled name is fixed from real card words.
 - **The reading is search text.** The answer is checked, then written back as text the parser reads alone (`ocean, holo, wyrm`). Search runs exactly as for a typed search, the URL carries it, and paging, sorting, reloads and shared links never call the model. `?from=` keeps what was typed, for the page to show. A comma is a phrase boundary, so a reading can never glue two tags into a different phrase ("fire, breathing" is not "fire breathing"); "1,000" still reads as a number. A test round-trips every pair of tags and every tag beside a free word.
 - **Only on submit, only for unknown words.** The page searches while the shopper types and calls the model only when Enter is pressed (or the home page's Search) and some word starts no catalog word. Searches code reads alone, including every popular search on the home page, never reach it.
-- **Code keeps the model honest.** Tags are enum ids; a name must start a catalog word; grades are 1 to 10 in halves, prices positive and below ten million; what it could not use must be phrases the shopper typed. When the search names a card, tags its own words do not spell are dropped: in trials the model turned "wyrm" into dragon and serpent, and "owl" into bird, which hid nothing here but would at scale.
-- **Thinking off, prompt cached.** This is classification against a list, and a shopper is waiting: with thinking off a reading takes about a second. The system prompt is cached, so a reading reads 3,000 tokens from the cache and costs about $0.00008.
+- **Code keeps the model honest.** Tags are enum ids; a name must start a catalog word; grades are 1 to 10 in halves, prices positive and below ten million; what it could not use must be phrases the shopper typed.
+- **One typed word, one filter.** Every filter the model returns carries `from`, the typed words it stands for, and code keeps it only if those words were typed and no earlier filter used them. Names claim first (a corrected name claims the misspelling it was offered for), then the fixed-meaning filters, then tags, with tags code also read from the words ahead of the rest. The first version (prompt 3) dropped every tag its own words did not spell whenever a name was present; in trials the model had turned "wyrm" into dragon and serpent, and "owl" into bird. Claims cover that case and the ones it missed: "ocean" as both sea creature and water, "shiny" as both holo and glowing. They also stop a name from swallowing a tag the shopper did type: "glowng moth" keeps glowing now.
+- **Thinking off, prompt cached, no temperature.** This is classification against a list, and a shopper is waiting: with thinking off a reading takes about a second. The system prompt is cached, so a reading reads 3,700 tokens from the cache and costs about $0.00009. Haiku 5.5 accepts no temperature but the default, so steadiness has to come from the checks in code, not from sampling.
 - **One cache row per set of words.** The key is the search's words lowercased, deduplicated and sorted, so "WYRM shiny" and "shiny wyrm" share a row. The row records the tag vocabulary and prompt versions, and a row from another version is a miss. "Nothing to search for" is cached; failures are not, so a timeout is retried on the next Enter. Hits are counted, for a later look at what shoppers describe.
 - **The model-call limit is spent only on a miss.** The per-IP limit for costly endpoints is checked after the cache lookup, so a popular described search costs one call in total, and a cached one is never refused.
 - **Fail soft, and say why.** No key, the daily cap, the per-IP limit, a 3-second timeout and an error each leave the keyword results in place with a line saying which.
@@ -225,7 +226,10 @@ Described search, second part: when a submitted search has words code cannot rea
 - **Typo hints are looser for the model than for did you mean.** A swapped pair in a short word ("moht") scores 0.25 against "moth", under Postgres's 0.3 default. The model's hints use 0.2, set for that transaction only so the trigram index still serves the lookup; did you mean, which acts without a model, keeps 0.3.
 - **Card vectors move to the rerank PR.** Nothing in this step would read them: a reading becomes tags and words. They matter when results are ranked by meaning, which is the next PR.
 
-### Things the eval and tests caught
+### Things the eval, tests and live site caught
+
+- Live, right after merging, "shiny thing from the ocean" read as sea creatures, water, glowing and holo, 5 listings instead of 17, and was cached for 30 days. No eval run had shown the glowing: the model varies between runs. That led to one typed word, one filter, and prompt version 4 retired the cached reading.
+- The first cut of those claims added code's own tag words to every reading, which put fire back into "dragon that is not fire". Readings take the model's tags again; code's reading only breaks ties.
 
 - Four labelled "described" searches never reach the model: code reads "sea animal with hologram", "armored sea critters", "rocky beast" and "dragon hatchling" alone, through tag words and catalog words. The eval checks routing first for this reason.
 - "made of fire" and "made of sunlight" came back with golem: the model read "made of" as a construct. "from the ocean" added water and "lives in the ocean" added animal. A rule that each tag must stand for words in the search fixed three of the four.
@@ -234,8 +238,8 @@ Described search, second part: when a submitted search has words code cannot rea
 
 ### Open
 
-- "shiny thing from the ocean" still adds water. Inferred tags could rank instead of filter once there is a reranker.
-- A typo in a tag word next to a card name loses the tag ("glowng moth" reads as moth), because tags the typed words do not spell are dropped when a name is present. "sea animl" reads as animal and sea creature, which drops the one sea creature not tagged animal.
-- A misspelled first word beside a correct name is sometimes dropped instead of corrected ("abysal leviathan" reads as leviathan). It still finds the card.
+- "sea animl" reads as animal and sea creature, each from its own word, which drops the one sea creature not tagged animal.
+- The model still varies between runs ("gem" once read as crystal instead of part of "gem mint"); one eval run is one sample.
+- A word that really means two filters ("firebird") can keep only one.
 - Old cache rows are never deleted, only ignored after 30 days or a version change. A nightly delete belongs with the other jobs once there are many.
 - Sorting by relevance: a described search is still sorted newest first.
