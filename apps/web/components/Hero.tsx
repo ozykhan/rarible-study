@@ -70,7 +70,8 @@ export function Hero({ stats }: { stats: MarketStats | null }) {
             onSubmit={(e) => {
               e.preventDefault()
               const q = query.trim()
-              router.push(q === "" ? "/market" : `/market?q=${encodeURIComponent(q)}`)
+              // Submitted, so words nothing matches may be read as a description.
+              router.push(q === "" ? "/market" : `/market?q=${encodeURIComponent(q)}&ask=1`)
             }}
           >
             <SearchIcon />

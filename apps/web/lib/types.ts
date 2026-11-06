@@ -123,9 +123,33 @@ export interface MarketResponse {
   readonly sets: ReadonlyArray<SetRef>
   /** What the search box was read as, one label per filter ("Northvale Grading", "grade 10"). */
   readonly understood: ReadonlyArray<string>
+  /** The same filters as removable chips, each with the search text that drops it. */
+  readonly chips: ReadonlyArray<SearchChip>
+  /** Words that start no card, kind or set word: while there are any, nothing matches. */
+  readonly unknown: ReadonlyArray<string>
   /** A corrected search that has results, when this one has none because of a misspelled word. */
   readonly suggestion: string | null
 }
+
+export interface SearchChip {
+  readonly label: string
+  /** The search without this filter. */
+  readonly q: string
+}
+
+/** GET /api/search/understand: a submitted search read by the model, or why not. */
+export type Understanding =
+  | { readonly status: "not_needed" }
+  | {
+      readonly status: "understood"
+      /** The search to run instead, in words the server reads without a model. */
+      readonly q: string
+      readonly understood: ReadonlyArray<string>
+      readonly notUnderstood: ReadonlyArray<string>
+      readonly source: "cache" | "model"
+    }
+  | { readonly status: "nothing"; readonly notUnderstood: ReadonlyArray<string>; readonly source: "cache" | "model" }
+  | { readonly status: "unavailable"; readonly reason: "no_key" | "spend_cap" | "busy" | "slow" | "failed" }
 
 export type RedFlag = "duplicate_vault_item" | "price_far_below_market" | "grade_claim_mismatch"
 

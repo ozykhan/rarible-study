@@ -143,15 +143,23 @@ const sameWord = (typed: string, word: string) => typed === word || typed === `$
 
 const money = (digits: string, k: string | undefined) => Math.round(Number(digits) * (k ? 1000 : 1) * 100)
 
-/** One piece of the query: a token kept whole because its punctuation means something, or a plain word. */
+/**
+ * One piece of the query: a token kept whole because its punctuation means
+ * something, a plain word, or "," where the text had a comma or semicolon. A
+ * comma ends a phrase: "fire, breathing" is fire and a word, not "fire
+ * breathing". searchText relies on it. A comma between digits ("1,000") is a
+ * thousands separator.
+ */
 const atoms = (q: string): Array<string> =>
   q
     .toLowerCase()
-    .split(/[\s,;]+/)
+    .replace(/(\d),(?=\d{3}(?!\d))/g, "$1")
+    .replace(/[,;]/g, " , ")
+    .split(/\s+/)
     .filter((t) => t.length > 0)
     .flatMap((t) =>
       HANDLE.test(t) || BARE_HANDLE.test(t) || CERT.test(t) || CARD_NUMBER.test(t) || GRADE.test(t) || GRADE_UP.test(t) ||
-      MONEY.test(t) || BELOW.test(t) || t === "<" || t === "<=" || t === "+"
+      MONEY.test(t) || BELOW.test(t) || t === "<" || t === "<=" || t === "+" || t === ","
         ? [t]
         : searchWords(t)
     )
@@ -189,6 +197,7 @@ export const parseSearch = (q: string): ParsedSearch => {
   for (let i = 0; i < a.length; i++) {
     const t = at(i)
     const next = at(i + 1)
+    if (t === ",") continue
 
     // Two- and three-word phrases first.
     if ((t === "reverse" || t === "rev") && HOLO_WORDS.has(next)) {
@@ -278,23 +287,77 @@ export const parseSearch = (q: string): ParsedSearch => {
 }
 
 const editionLabel: Record<Edition, string> = { first: "1st edition", unlimited: "unlimited" }
+const editionText: Record<Edition, string> = { first: "1st", unlimited: "unlimited" }
 const finishLabel: Record<Finish, string> = { holo: "holo", reverse_holo: "reverse holo", non_holo: "non-holo" }
+const finishText: Record<Finish, string> = { holo: "holo", reverse_holo: "reverse holo", non_holo: "non holo" }
 const dollars = (cents: number) => (cents % 100 === 0 ? String(cents / 100) : (cents / 100).toFixed(2))
+
+/**
+ * One filter of a parsed search: how the page labels it (null for a seller
+ * nobody has, which gets no label), the text that asks for it, and the search
+ * without it.
+ */
+interface Part {
+  readonly label: string | null
+  readonly text: string
+  readonly without: () => ParsedSearch
+}
+
+const drop = <A>(list: ReadonlyArray<A>, i: number) => list.filter((_, j) => j !== i)
+
+/** The filters of a search, in the order the page shows them. `sellers` are the handles that turned out to be sellers. */
+const parts = (p: ParsedSearch, sellers: ReadonlyArray<string>): Array<Part> => [
+  ...p.tags.map((t, i) => ({ label: tagById(t.tag)?.label ?? t.tag, text: t.words.join(" "), without: () => ({ ...p, tags: drop(p.tags, i) }) })),
+  ...p.graders.map((g, i) => ({ label: graderNames[g], text: g.toLowerCase(), without: () => ({ ...p, graders: drop(p.graders, i) }) })),
+  ...p.grades.map((g, i) => ({ label: `grade ${g}`, text: String(g), without: () => ({ ...p, grades: drop(p.grades, i) }) })),
+  ...(p.minGrade === null ? [] : [{ label: `grade ${p.minGrade} or higher`, text: `${p.minGrade}+`, without: () => ({ ...p, minGrade: null }) }]),
+  ...p.editions.map((e, i) => ({ label: editionLabel[e], text: editionText[e], without: () => ({ ...p, editions: drop(p.editions, i) }) })),
+  ...p.finishes.map((f, i) => ({ label: finishLabel[f], text: finishText[f], without: () => ({ ...p, finishes: drop(p.finishes, i) }) })),
+  ...(p.cardNumber === null ? [] : [{ label: `#${p.cardNumber}`, text: `#${p.cardNumber}`, without: () => ({ ...p, cardNumber: null }) }]),
+  ...(p.cert === null ? [] : [{ label: `cert ${p.cert}`, text: p.cert.toLowerCase(), without: () => ({ ...p, cert: null }) }]),
+  ...(p.maxUsdCents === null
+    ? []
+    : [{ label: `${dollars(p.maxUsdCents)} dUSD or less`, text: `under ${dollars(p.maxUsdCents)}`, without: () => ({ ...p, maxUsdCents: null }) }]),
+  ...p.handles.map((h, i) => ({
+    label: sellers.includes(h.handle) ? `seller @${h.handle}` : null,
+    // A bare handle reads as a seller or as words, as typed; "@name" must be a seller.
+    text: h.orWords.length === 0 ? `@${h.handle}` : h.handle,
+    without: () => ({ ...p, handles: drop(p.handles, i) })
+  })),
+  ...(p.words.length === 0 ? [] : [{ label: `"${p.words.join(" ")}"`, text: p.words.join(" "), without: () => ({ ...p, words: [] }) }])
+]
+
+/** The parts of two searches agree; `ignored` tokens ask for nothing and are left out. */
+const sameSearch = (a: ParsedSearch, b: ParsedSearch) =>
+  JSON.stringify({ ...a, ignored: [] }) === JSON.stringify({ ...b, ignored: [] })
+
+/**
+ * A parsed search written back as text that reads as the same search: what
+ * the URL keeps once a model has read a described search, and what each chip's
+ * remove link searches for. Parts are separated by commas, which end a phrase,
+ * so "fire" next to "breathing" never turns into "fire breathing". Free words
+ * stay together ("ashen wyrm") unless that would read as a tag, then they are
+ * split by commas too.
+ */
+export const searchText = (p: ParsedSearch): string => {
+  const text = parts(p, []).map((x) => x.text).join(", ")
+  if (sameSearch(parseSearch(text), p)) return text
+  return [...parts({ ...p, words: [] }, []).map((x) => x.text), ...p.words].join(", ")
+}
 
 /**
  * What the search understood, one short label per filter, for the page to
  * show and for anyone reading the API. Sellers are labelled after the lookup.
  */
-export const describeSearch = (p: ParsedSearch, sellers: ReadonlyArray<string> = []): Array<string> => [
-  ...p.tags.map((t) => tagById(t.tag)?.label ?? t.tag),
-  ...p.graders.map((g) => graderNames[g]),
-  ...p.grades.map((g) => `grade ${g}`),
-  ...(p.minGrade === null ? [] : [`grade ${p.minGrade} or higher`]),
-  ...p.editions.map((e) => editionLabel[e]),
-  ...p.finishes.map((f) => finishLabel[f]),
-  ...(p.cardNumber === null ? [] : [`#${p.cardNumber}`]),
-  ...(p.cert === null ? [] : [`cert ${p.cert}`]),
-  ...(p.maxUsdCents === null ? [] : [`${dollars(p.maxUsdCents)} dUSD or less`]),
-  ...sellers.map((h) => `seller @${h}`),
-  ...(p.words.length === 0 ? [] : [`"${p.words.join(" ")}"`])
-]
+export const describeSearch = (p: ParsedSearch, sellers: ReadonlyArray<string> = []): Array<string> =>
+  parts(p, sellers).flatMap((x) => (x.label === null ? [] : [x.label]))
+
+/** A removable chip: its label, and the search without it. */
+export interface SearchChip {
+  readonly label: string
+  readonly q: string
+}
+
+/** One chip per labelled filter, each with the text of the search without it. */
+export const searchChips = (p: ParsedSearch, sellers: ReadonlyArray<string> = []): Array<SearchChip> =>
+  parts(p, sellers).flatMap((x) => (x.label === null ? [] : [{ label: x.label, q: searchText(x.without()) }]))

@@ -89,8 +89,39 @@
   color: var(--muted);
 }
 /* What the search box was read as: "Northvale Grading · grade 10". */
-.market-understood {
-  margin: 0 0 var(--space-1);
+/* What the search was read as: one removable chip per filter, then what the model read it from. */
+.market-read {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1-5);
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--muted);
+}
+.read-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  padding: 3px 9px 3px 11px;
+  color: var(--ink-soft);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  transition: border-color var(--duration-fast) var(--ease);
+}
+.read-chip:hover,
+.read-chip:focus-visible {
+  color: var(--ink);
+  border-color: var(--line-active);
+}
+.read-chip svg {
+  width: 10px;
+  height: 10px;
+}
+.market-from {
+  margin: 0 0 var(--space-2);
   font-size: var(--text-sm);
   color: var(--muted);
 }
@@ -189,7 +220,10 @@
   border-bottom-color: var(--accent);
 }
 
+/* A form, so Enter submits the search. */
 .search {
+  display: flex;
+  align-items: center;
   flex: 1 1 260px;
   max-width: 420px;
   height: 40px;

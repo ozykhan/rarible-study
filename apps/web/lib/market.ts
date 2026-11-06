@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { api } from "./api"
 import { GRADERS } from "./art"
-import type { Listing, MarketCounts, MarketResponse, MarketStats, SetRef } from "./types"
+import type { Listing, MarketCounts, MarketResponse, MarketStats, SearchChip, SetRef, Understanding } from "./types"
 
 export const MARKET_SORTS = [
   ["recent", "Newest"],
@@ -20,10 +20,14 @@ export interface MarketFilters {
   readonly grader: string
   readonly q: string
   readonly sort: MarketSort
+  /** What the shopper typed, when q is the model's rewrite of it. Shown, never searched. */
+  readonly from: string
+  /** The search was submitted (Enter, or the home page's Search): words nothing matches may be read by the model. */
+  readonly ask: boolean
 }
 
 /**
- * Reads ?set, ?grader, ?q and ?sort, with unknown values falling back to the
+ * Reads ?set, ?grader, ?q, ?sort, ?from and ?ask, with unknown values falling back to the
  * defaults. Any set id is taken as written: the catalog is the server's, and
  * the server ignores a set it does not have.
  */
@@ -35,7 +39,9 @@ export const readFilters = (params: URLSearchParams): MarketFilters => {
     set: set !== null && /^[A-Za-z0-9-]{1,16}$/.test(set) ? set : "all",
     grader: grader !== null && grader in GRADERS ? grader : "all",
     q: params.get("q") ?? "",
-    sort: MARKET_SORTS.find(([v]) => v === sort)?.[0] ?? "recent"
+    sort: MARKET_SORTS.find(([v]) => v === sort)?.[0] ?? "recent",
+    from: (params.get("from") ?? "").slice(0, 200),
+    ask: params.get("ask") === "1"
   }
 }
 
@@ -73,6 +79,8 @@ interface MarketState {
   readonly stats: MarketStats | null
   readonly sets: ReadonlyArray<SetRef> | null
   readonly understood: ReadonlyArray<string>
+  readonly chips: ReadonlyArray<SearchChip>
+  readonly unknown: ReadonlyArray<string>
   readonly suggestion: string | null
   readonly failed: boolean
 }
@@ -96,6 +104,8 @@ export function useMarket(filters: MarketFilters, keep: ReadonlySet<string>) {
     stats: null,
     sets: null,
     understood: [],
+    chips: [],
+    unknown: [],
     suggestion: null,
     failed: false
   })
@@ -120,6 +130,8 @@ export function useMarket(filters: MarketFilters, keep: ReadonlySet<string>) {
             stats: r.stats,
             sets: r.sets,
             understood: r.understood,
+            chips: r.chips,
+            unknown: r.unknown,
             suggestion: r.suggestion,
             failed: false
           }))
@@ -162,4 +174,76 @@ export function useMarket(filters: MarketFilters, keep: ReadonlySet<string>) {
 
   const current = state.key === key ? state : { ...state, listings: null }
   return { ...current, loadingMore, more }
+}
+
+const without = <A>(all: Readonly<Record<string, A>>, key: string) => {
+  const { [key]: _, ...rest } = all
+  return rest
+}
+
+/** What the page says about reading a search with the model, for the search it applies to. */
+export type ReadNote =
+  | { readonly kind: "reading" }
+  /** On the rewritten search: what of the typed search became no filter. */
+  | { readonly kind: "read"; readonly notUnderstood: ReadonlyArray<string> }
+  | { readonly kind: "nothing"; readonly notUnderstood: ReadonlyArray<string> }
+  | { readonly kind: "unavailable"; readonly reason: Extract<Understanding, { status: "unavailable" }>["reason"] }
+
+/**
+ * Reads a submitted search with the model when the server says some of its
+ * words match nothing. Only a submitted search (?ask=1) is read, never one
+ * that is still being typed. A reading replaces ?q with the rewritten search,
+ * which the server reads without a model, and keeps what was typed in ?from:
+ * paging, sorting and a shared link never call the model again. When it
+ * cannot be read the keyword results stay, and the note says why.
+ * `go` changes URL parameters; null removes one.
+ */
+export function useUnderstanding(
+  filters: MarketFilters,
+  market: { readonly listings: ReadonlyArray<Listing> | null; readonly unknown: ReadonlyArray<string> },
+  go: (changes: Readonly<Record<string, string | null>>) => void
+) {
+  const [notes, setNotes] = useState<Readonly<Record<string, ReadNote>>>({})
+  const q = filters.q.trim()
+  const loaded = market.listings !== null
+  const unknown = market.unknown.join(" ")
+  const goRef = useRef(go)
+  goRef.current = go
+
+  useEffect(() => {
+    if (!filters.ask || !loaded) return
+    if (q === "" || unknown === "") {
+      goRef.current({ ask: null })
+      return
+    }
+    let live = true
+    const note = (key: string, n: ReadNote) => setNotes((all) => ({ ...without(all, q), [key]: n }))
+    note(q, { kind: "reading" })
+    api<Understanding>(`/search/understand?q=${encodeURIComponent(q)}`)
+      .then((r) => {
+        if (!live) return
+        live = false
+        if (r.status === "understood") {
+          note(r.q, { kind: "read", notUnderstood: r.notUnderstood })
+          goRef.current({ q: r.q, from: q, ask: null })
+          return
+        }
+        if (r.status === "nothing") note(q, { kind: "nothing", notUnderstood: r.notUnderstood })
+        else if (r.status === "unavailable") note(q, { kind: "unavailable", reason: r.reason })
+        goRef.current({ ask: null })
+      })
+      .catch(() => {
+        if (!live) return
+        live = false
+        note(q, { kind: "unavailable", reason: "failed" })
+        goRef.current({ ask: null })
+      })
+    return () => {
+      // Left before the answer (typed on, cleared): no "reading" stays behind for this search.
+      if (live) setNotes((all) => without(all, q))
+      live = false
+    }
+  }, [filters.ask, q, loaded, unknown])
+
+  return notes[q] ?? null
 }
