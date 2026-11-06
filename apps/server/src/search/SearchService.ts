@@ -4,7 +4,7 @@ import type { SqlError } from "effect/sql/SqlError"
 import { SqlClient } from "effect/sql/SqlClient"
 import type { Fragment } from "effect/sql/Statement"
 import { toTextArray } from "../db/Database.ts"
-import { describeSearch, isEmptySearch, parseSearch, type MarketQuery, type MarketSort, type ParsedSearch } from "./query.ts"
+import { describeSearch, isEmptySearch, parseSearch, type MarketQuery, type MarketSort, type ParsedSearch, type TagFilter } from "./query.ts"
 
 /**
  * Market search as a service: a query in, listing ids and counts out. The web
@@ -71,6 +71,19 @@ export const COUNT_LIMIT = 10_000
 
 /** Search words become a prefix query: 'ashen':* & 'wyrm':*. Words are letters and digits only, so they need no escaping. */
 const prefixQuery = (words: ReadonlyArray<string>) => words.map((w) => `'${w}':*`).join(" & ")
+
+/**
+ * A tag is the lexeme '#id' in the card's terms (migration 0006), or else the
+ * words that asked for it: ('#sea_creature' | 'sea':* & 'animal':*). Tag ids
+ * are lowercase letters and underscores, so they need no escaping either.
+ */
+const tagQuery = (t: TagFilter) => `('#${t.tag}' | ${prefixQuery(t.words)})`
+
+/** Everything the words and tags ask of a card, as one tsquery, or null when they ask nothing. */
+export const termsQuery = (words: ReadonlyArray<string>, tags: ReadonlyArray<TagFilter>): string | null => {
+  const parts = [...(words.length === 0 ? [] : [prefixQuery(words)]), ...tags.map(tagQuery)]
+  return parts.length === 0 ? null : parts.join(" & ")
+}
 
 /** Every sort ends in the listing id so pages never overlap; each matches an index in 0005_search. */
 const orderBy = (sql: SqlClient, sort: MarketSort) => {
@@ -158,7 +171,8 @@ export const SearchServicePg = Layer.effect(
     const where = (r: Resolved, grader: Grader | null, set: string | null): Array<Fragment> => {
       const p = r.parsed
       const c: Array<Fragment> = []
-      if (r.words.length > 0) c.push(sql`terms @@ ${prefixQuery(r.words)}::tsquery`)
+      const terms = termsQuery(r.words, p.tags)
+      if (terms !== null) c.push(sql`terms @@ ${terms}::tsquery`)
       if (set !== null) c.push(sql`set_id = ${set}`)
       if (grader !== null) c.push(sql`grader = ${grader}`)
       if (p.graders.length > 0) c.push(sql`grader IN ${sql.in(p.graders)}`)
@@ -243,14 +257,25 @@ export const SearchServicePg = Layer.effect(
                   SELECT count(*)::int AS n FROM (
                     SELECT 1 FROM listing_search WHERE ${sql.and(where(r, query.grader, knownSet))} LIMIT ${COUNT_LIMIT}
                   ) AS m`)[0]?.n ?? 0)
+        const filters = sql.and(where(r, query.grader, knownSet))
+        // A search counted in full has at most COUNT_LIMIT matches: fetch them all and sort, which costs at most that many rows.
+        // Walking a sort index instead pays for every row it skips, and the planner guesses how many that is from
+        // per-word statistics. "glowing sea creature holo" (1,492 matches) skipped 60,000 rows that way: 165 ms instead of 20.
+        // Past the cap, matches are common enough that walking the index finds a page quickly.
         const page =
           total === 0
             ? []
-            : yield* sql<{ readonly listingId: string }>`
-                SELECT listing_id FROM listing_search
-                WHERE ${sql.and(where(r, query.grader, knownSet))}
-                ORDER BY ${orderBy(sql, query.sort)}
-                LIMIT ${query.limit} OFFSET ${query.offset}`
+            : !unfiltered && exact
+              ? yield* sql<{ readonly listingId: string }>`
+                  WITH m AS MATERIALIZED (
+                    SELECT listing_id, listed_at, usd_cents, grade FROM listing_search WHERE ${filters}
+                  )
+                  SELECT listing_id FROM m ORDER BY ${orderBy(sql, query.sort)}
+                  LIMIT ${query.limit} OFFSET ${query.offset}`
+              : yield* sql<{ readonly listingId: string }>`
+                  SELECT listing_id FROM listing_search WHERE ${filters}
+                  ORDER BY ${orderBy(sql, query.sort)}
+                  LIMIT ${query.limit} OFFSET ${query.offset}`
         const sets = tabs(exact ? counts : {})
         return {
           ...base,

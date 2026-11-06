@@ -1,6 +1,7 @@
 /**
  * The backend process: runs migrations, serves HTTP, and keeps new listings
- * arriving, serves the MCP endpoint, and runs the watcher that starts agent runs.
+ * arriving, serves the MCP endpoint, runs the watcher that starts agent runs,
+ * and keeps card tags current.
  */
 import { createServer } from "node:http"
 import { NodeHttpServer, NodeRuntime } from "@effect/platform-node"
@@ -9,6 +10,7 @@ import { HttpRouter, HttpServerResponse } from "effect/http"
 import { SqlClient } from "effect/sql/SqlClient"
 import { migrate } from "./db/Database.ts"
 import { GeneratorLive } from "./jobs/generator.ts"
+import { TaggerLive } from "./jobs/tagger.ts"
 import { WatcherLive } from "./jobs/watcher.ts"
 import { AppConfigLive } from "./config.ts"
 import { AppLive } from "./layers.ts"
@@ -89,7 +91,7 @@ const DevnetSetup = Layer.effectDiscard(
 
 const Routes = Layer.mergeAll(Health, McpRoute, WebApiRoutes).pipe(Layer.provide(Cors))
 
-const Main = Layer.mergeAll(HttpRouter.serve(Routes), GeneratorLive, WatcherLive, DevnetSetup).pipe(
+const Main = Layer.mergeAll(HttpRouter.serve(Routes), GeneratorLive, WatcherLive, TaggerLive, DevnetSetup).pipe(
   Layer.provide(Migrated),
   Layer.provide(ServerLive),
   Layer.provideMerge(AppLive),

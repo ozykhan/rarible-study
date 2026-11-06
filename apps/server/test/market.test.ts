@@ -1,6 +1,7 @@
 import { generateLargeCatalog, handWritten } from "@slabwatch/seed"
 import { describe, expect, it } from "@effect/vitest"
-import { describeSearch, emptySearch, isEmptySearch, parseSearch, searchWords } from "../src/search/query.ts"
+import { describeSearch, emptySearch, isEmptySearch, parseSearch, searchWords, type ParsedSearch } from "../src/search/query.ts"
+import { TAGS } from "../src/tags/vocabulary.ts"
 import { parseMarketQuery } from "../src/web/market.ts"
 
 const q = (s: string) => parseMarketQuery(new URLSearchParams(s))
@@ -37,7 +38,7 @@ describe("reading the search box", () => {
   it("leaves card, kind and set words to the database", () => {
     expect(p("Ashen Wyrm")).toEqual({ ...emptySearch, words: ["ashen", "wyrm"] })
     expect(p("wyr")).toEqual({ ...emptySearch, words: ["wyr"] })
-    expect(p("dragon, emberfall")).toEqual({ ...emptySearch, words: ["dragon", "emberfall"] })
+    expect(p("wyrm, emberfall")).toEqual({ ...emptySearch, words: ["wyrm", "emberfall"] })
     expect(isEmptySearch(p("   "))).toBe(true)
   })
 
@@ -83,18 +84,61 @@ describe("reading the search box", () => {
     expect(p("cert NVG12345678")).toEqual({ ...emptySearch, cert: "NVG12345678" })
   })
 
+  it("reads described words as tags, keeping the words as another way to match", () => {
+    expect(p("sea animal with hologram")).toEqual({
+      ...emptySearch,
+      tags: [{ tag: "sea_creature", words: ["sea", "animal"] }],
+      finishes: ["holo"]
+    })
+    expect(p("Sea creatures").tags).toEqual([{ tag: "sea_creature", words: ["sea", "creatures"] }])
+    expect(p("sea").tags).toEqual([{ tag: "sea_creature", words: ["sea"] }])
+    // Longest phrase first: "fire breathing" is one tag, not fire plus a word.
+    expect(p("flying fire breathing dragons")).toEqual({
+      ...emptySearch,
+      tags: [
+        { tag: "flies", words: ["flying"] },
+        { tag: "breathes_fire", words: ["fire", "breathing"] },
+        { tag: "dragon", words: ["dragons"] }
+      ]
+    })
+    expect(p("big cat").tags).toEqual([{ tag: "cat", words: ["big", "cat"] }])
+    expect(p("big").tags).toEqual([{ tag: "giant", words: ["big"] }])
+    // One tag asked for twice counts once.
+    expect(p("ocean marine").tags).toEqual([{ tag: "sea_creature", words: ["ocean"] }])
+    expect(p("glowing moth NVG 10")).toMatchObject({ tags: [{ tag: "glows" }], words: ["moth"], graders: ["NVG"], grades: [10] })
+    expect(isEmptySearch(p("flying"))).toBe(false)
+  })
+
+  it("keeps tag words apart from words with a fixed meaning", () => {
+    const phrases = TAGS.flatMap((t) => t.words)
+    expect(new Set(phrases).size).toBe(phrases.length)
+    expect(new Set(TAGS.map((t) => t.id)).size).toBe(TAGS.length)
+    for (const t of TAGS) {
+      // Ids become "#id" lexemes in a tsquery: no quoting needed.
+      expect(t.id).toMatch(/^[a-z_]+$/)
+      for (const phrase of t.words) {
+        expect(phrase).toMatch(/^[a-z]+( [a-z]+)*$/)
+        // Read alone, each phrase is its own tag and nothing else: no grader, edition, finish or stopword inside.
+        expect(p(phrase), phrase).toEqual({ ...emptySearch, tags: [{ tag: t.id, words: phrase.split(" ") }] })
+      }
+    }
+  })
+
   it("never swallows a word the catalog uses", () => {
+    // A tag word still matches as a word too (see TagFilter), so it counts as kept.
+    const kept = (s: ParsedSearch) => [...s.words, ...s.tags.flatMap((t) => t.words)]
     for (const catalog of [handWritten, generateLargeCatalog()]) {
       for (const c of catalog.cards) {
         const set = catalog.setById(c.setId)
         for (const w of [...searchWords(c.name), ...c.kinds, ...searchWords(set.name)]) {
-          expect(p(w).words, `${w} (${c.id})`).toEqual([w])
+          expect(kept(p(w)), `${w} (${c.id})`).toEqual([w])
         }
       }
     }
   })
 
   it("labels what it understood", () => {
+    expect(describeSearch(p("glowing sea animal holo"))).toEqual(["glowing", "sea creatures", "holo"])
     expect(describeSearch(p("ashen wyrm NVG 10 1st edition holo under 900"), ["vaultkeeper"])).toEqual([
       "Northvale Grading",
       "grade 10",

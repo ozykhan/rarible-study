@@ -57,6 +57,8 @@ const oracle = (q: string, grader: string | null = null): Array<Row> => {
   return rows.filter(
     (r) =>
       words.every((w) => r.words.some((x) => x.startsWith(w))) &&
+      // No card is tagged in this file (tags.db.test.ts covers tags), so a tag word matches by its words alone.
+      p.tags.every((t) => t.words.every((w) => r.words.some((x) => x.startsWith(w)))) &&
       (grader === null || r.grader === grader) &&
       (p.graders.length === 0 || p.graders.includes(r.grader)) &&
       (p.editions.length === 0 || p.editions.includes(r.edition)) &&

@@ -44,6 +44,7 @@ export const scriptedLlm = (steps: ReadonlyArray<Step>) => {
   const llm = Llm.of({
     model: "scripted",
     structured: () => Effect.die("the scripted model only converses"),
+    structuredBatch: () => Effect.die("the scripted model only converses"),
     converse: (req) =>
       Effect.sync(() => {
         requests.push({ ...req, messages: [...req.messages] })

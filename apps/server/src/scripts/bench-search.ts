@@ -29,6 +29,10 @@ const searches: ReadonlyArray<readonly [string, Partial<MarketQuery>]> = [
   ["word, cheapest first", { q: "tide", sort: "price_asc" }],
   ["seller", { q: "@vaultkeeper" }],
   ["typo (did you mean)", { q: "ashen wyrn" }],
+  ["described: tag", { q: "sea animal" }],
+  ["described: two tags and a finish", { q: "glowing sea creature holo" }],
+  ["described: tags, grade, price", { q: "flying fire 9+ under 300" }],
+  ["described: tag and a name word", { q: "flying owl" }],
   ["deep page", { q: "holo", offset: 5000 }]
 ]
 

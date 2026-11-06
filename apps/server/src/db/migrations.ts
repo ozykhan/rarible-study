@@ -419,10 +419,81 @@ const search = Effect.gen(function* () {
     WHERE source = 'generator' AND status = 'active'`
 })
 
+/**
+ * Card tags, written by a model once per card (tags/CardTagger.ts) from the
+ * hand-written vocabulary in tags/vocabulary.ts. Tags join the card's search
+ * terms as "#id" lexemes, so the existing triggers carry them to every
+ * listing and one GIN index serves words and tags together. User words are
+ * letters and digits only, so they can never prefix-match a "#" lexeme, and
+ * tag lexemes stay out of the "did you mean" word list.
+ */
+const cardTags = Effect.gen(function* () {
+  const sql = yield* SqlClient
+  yield* sql`
+    ALTER TABLE cards
+      ADD COLUMN tags text[] NOT NULL DEFAULT '{}',
+      ADD COLUMN tagged_version int,
+      ADD COLUMN tagged_at timestamptz`
+  // The tagger's queue: cards never tagged, tagged under an older vocabulary, or whose text changed since.
+  yield* sql`CREATE INDEX cards_tag_queue_idx ON cards ((coalesce(tagged_version, 0)), id)`
+  yield* sql`CREATE INDEX cards_tags_idx ON cards USING gin (tags)`
+  // New text means the tags may no longer fit. The old ones stay searchable until the tagger catches up.
+  yield* sql`
+    CREATE FUNCTION card_text_changed() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN
+      IF NEW.catalog_text IS DISTINCT FROM OLD.catalog_text THEN
+        NEW.tagged_version := NULL;
+      END IF;
+      RETURN NEW;
+    END $$`
+  yield* sql`
+    CREATE TRIGGER cards_text_changed BEFORE UPDATE OF catalog_text ON cards
+    FOR EACH ROW EXECUTE FUNCTION card_text_changed()`
+
+  yield* sql`
+    CREATE OR REPLACE FUNCTION card_search_terms() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN
+      NEW.search_terms := array_to_tsvector(search_words(
+        NEW.name || ' ' || array_to_string(NEW.kinds, ' ') || ' ' ||
+        coalesce((SELECT s.name || ' ' || s.code FROM sets s WHERE s.id = NEW.set_id), '')
+      ) || array(SELECT '#' || t FROM unnest(NEW.tags) AS t));
+      RETURN NEW;
+    END $$`
+  yield* sql`DROP TRIGGER cards_search_terms ON cards`
+  yield* sql`
+    CREATE TRIGGER cards_search_terms BEFORE INSERT OR UPDATE OF name, kinds, set_id, tags ON cards
+    FOR EACH ROW EXECUTE FUNCTION card_search_terms()`
+
+  // Listings follow their card's terms, and only when the terms really changed: retagging a card with the same tags writes nothing.
+  yield* sql`
+    CREATE OR REPLACE FUNCTION card_terms_to_listings() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN
+      IF NEW.search_terms IS DISTINCT FROM OLD.search_terms THEN
+        UPDATE listing_search SET terms = NEW.search_terms WHERE card_id = NEW.id;
+      END IF;
+      RETURN NULL;
+    END $$`
+  yield* sql`DROP TRIGGER cards_terms_to_listings ON cards`
+  yield* sql`
+    CREATE TRIGGER cards_terms_to_listings AFTER UPDATE OF name, kinds, set_id, tags ON cards
+    FOR EACH ROW EXECUTE FUNCTION card_terms_to_listings()`
+
+  yield* sql`
+    CREATE OR REPLACE FUNCTION add_search_vocab() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN
+      INSERT INTO search_vocab (term)
+      SELECT DISTINCT t FROM written_cards, unnest(tsvector_to_array(search_terms)) AS t
+      WHERE left(t, 1) <> '#'
+      ON CONFLICT DO NOTHING;
+      RETURN NULL;
+    END $$`
+})
+
 export const migrations = {
   "0001_init": init,
   "0002_agent": agent,
   "0003_wallet": wallet,
   "0004_direct_buy": directBuy,
-  "0005_search": search
+  "0005_search": search,
+  "0006_card_tags": cardTags
 }
