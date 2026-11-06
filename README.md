@@ -186,9 +186,11 @@ Both runs use Claude Haiku 5.5 and bge-small embeddings on the same eval set. Ex
 
 `pnpm eval -- v1 --offline` checks the plumbing with no model calls, and CI runs it on every push.
 
-## Tracing
+## Tracing and logs
 
-Every step is an Effect span: rule parsing, each matcher stage, model calls with tokens and cost, each tool call (`tool.search_listings` and so on), purchase checks and agent runs. Set `OTLP_TRACES_URL` (and `OTLP_HEADERS` if the backend needs a key) to export them over OTLP/HTTP to Langfuse, Jaeger or any OpenTelemetry collector. Trace ids are stored on `llm_calls`, `agent_runs` and `purchases`, so a row in the database leads to its trace.
+Every step is an Effect span: each HTTP request, rule parsing, each matcher stage, model calls with tokens and cost, each tool call (`tool.search_listings` and so on), purchase checks, agent runs and SQL queries. The backend exports them over OTLP/HTTP when the standard OpenTelemetry variables name an endpoint (`OTEL_EXPORTER_OTLP_ENDPOINT`, plus `OTEL_EXPORTER_OTLP_HEADERS`, `OTEL_EXPORTER_OTLP_PROTOCOL` and `OTEL_SERVICE_NAME`). Railway sets them when tracing is on for the service, so the backend's spans appear in Railway's trace view under the edge's request span. Langfuse, Jaeger and any OpenTelemetry collector take the same variables. Trace ids are stored on `llm_calls`, `agent_runs` and `purchases`, so a row in the database leads to its trace.
+
+Outside a terminal the backend logs one JSON object per line, in the shape Railway parses: `message`, `level`, and fields such as `http.status` and `trace_id` that the log view can filter on (`@http.status:500`, `@trace_id:...`). In a terminal it keeps Effect's readable format.
 
 ## Guardrails
 

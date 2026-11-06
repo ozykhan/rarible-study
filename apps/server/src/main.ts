@@ -13,6 +13,7 @@ import { WatcherLive } from "./jobs/watcher.ts"
 import { AppConfigLive } from "./config.ts"
 import { AppLive } from "./layers.ts"
 import { McpRoute } from "./mcp/McpHttp.ts"
+import { LoggingLive } from "./logging.ts"
 import { Payments } from "./purchases/Payments.ts"
 import { Treasury } from "./solana/Treasury.ts"
 import { TracingLive } from "./tracing.ts"
@@ -95,4 +96,4 @@ const Main = Layer.mergeAll(HttpRouter.serve(Routes), GeneratorLive, WatcherLive
   Layer.provide(TracingLive.pipe(Layer.provide(AppConfigLive)))
 )
 
-Layer.launch(Main).pipe(NodeRuntime.runMain)
+Layer.launch(Main).pipe(Effect.provide(LoggingLive), NodeRuntime.runMain)
