@@ -179,3 +179,30 @@ The market search moved from code over every listing in memory to Postgres behin
 - The want parser's prompt lists every hand-written card, which does not scale to 20,040 cards. The query step planned for search by description replaces it.
 - `GET /api/catalog` and the home page's Browse by set still show the four hand-written sets.
 
+
+## Card tags
+
+Described search, first part: a model tags every card once from a fixed vocabulary, and search reads described words as those tags. Measured on the large market's 20,040 cards before writing this.
+
+### Decisions
+
+- **A hand-written, versioned vocabulary.** 53 tags in four groups (what it is, where it lives, its element, its traits). Free-form tags would never match what a shopper types, and a fixed list lets structured output reject anything else. Each tag has two texts: `means` tells the model when it applies, `words` are what a shopper types for it. Raising `TAG_VOCAB_VERSION` puts every card back in the queue.
+- **Tags live in the search index, not beside it.** Tags join the card's terms as `#sea_creature`, so one GIN index serves words and tags and the existing triggers copy them to every listing. A typed word is letters and digits only, so it can never reach a `#` word, and "did you mean" skips them.
+- **A tag word also matches as a word.** "sea animal" asks for `('#sea_creature' | 'sea':* & 'animal':*)`. Untagged cards are still found by name, a card named after a tag word is never hidden, and before any tags exist every search returns what it did before.
+- **Synonyms at query time, by hand.** The parser reads tag phrases longest first ("sea creature" before "sea"), with plurals. A test checks that no phrase belongs to two tags or collides with a word that has a fixed meaning (grader, grade, finish). "shore" was left out of coastal because a set is called the Shores.
+- **Thinking stays on, measured.** With thinking off a call cost half as much, but a lava eel became a sea creature, a lion lost "cat" and some cards got "giant" or "fierce" with nothing in the text to say so. On, at low effort, it stays cheap.
+- **The Message Batches API for backfills.** Half the price, and the 19,840 cards took 7 minutes. The background job uses ordinary calls: a few cards at a time, where waiting minutes for a batch buys little.
+- **Writes are checked against the text that was read.** Each queued card carries the md5 of its text, and the update matches it, so an edit made while the model was reading wins. A text change puts the card back in the queue with its old tags kept until the new ones arrive.
+- **Card vectors wait.** The design had card vectors in this PR, but the matcher scores wants against today's card embeddings, so changing the text they are built from would move its eval. They come with the query step, as their own column.
+- **A counted search fetches its matches, then sorts.** "glowing sea creature holo" has 1,492 matches, but Postgres guessed more and walked the newest-first index, skipping 60,000 rows to fill a page: about 120 ms in the benchmark. When the count is exact (at most 10,000 matches) the page now comes from the matches themselves: 29 ms. Broader searches still walk the index, which finds a page quickly when matches are common.
+
+### Things the tests caught
+
+- The SQL-versus-TypeScript search test failed on "dragon" and "water holo", which are tag words now. SQL was right (with no tags, the words alone matched the same listings); the TypeScript copy of the rules had not learned the fallback. It has now.
+- The fake model in the tagger test first called a card a sea creature when its text said "water". Lava Eel "swims through rivers of lava, not water." Keyword matching makes the mistake the model is there to avoid; the fake now reads the card's kinds.
+
+### Open
+
+- Typos in tag words go to "did you mean", which only knows catalog words, so "sea animl" finds nothing. The query step will cover it.
+- Tag chips with counts ("sea creatures 1,492") belong with the query step's removable chips.
+- Retagging a card rewrites the search row of every listing of it. Tagging the large market rewrote all million rows (250 MB after vacuum). A new vocabulary version on a live market should go through in batches with a vacuum between them.

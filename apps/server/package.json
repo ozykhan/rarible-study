@@ -10,6 +10,7 @@
     "db:migrate": "tsx --env-file-if-exists=../../.env src/scripts/migrate.ts",
     "db:seed": "tsx --env-file-if-exists=../../.env src/scripts/seed.ts",
     "db:seed:large": "tsx --env-file-if-exists=../../.env src/scripts/seed-large.ts",
+    "tags:run": "tsx --env-file-if-exists=../../.env src/scripts/tag-cards.ts",
     "bench:search": "tsx --env-file-if-exists=../../.env src/scripts/bench-search.ts",
     "generate": "tsx --env-file-if-exists=../../.env src/scripts/generate.ts",
     "start": "tsx src/main.ts",

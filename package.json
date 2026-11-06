@@ -14,6 +14,7 @@
     "db:migrate": "pnpm --filter @slabwatch/server db:migrate",
     "db:seed": "pnpm --filter @slabwatch/server db:seed",
     "db:seed:large": "pnpm --filter @slabwatch/server db:seed:large",
+    "tags:run": "pnpm --filter @slabwatch/server tags:run",
     "bench:search": "pnpm --filter @slabwatch/server bench:search",
     "eval": "pnpm --filter @slabwatch/evals eval",
     "typecheck": "pnpm -r typecheck",

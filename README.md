@@ -113,31 +113,40 @@ The payment code runs for real in tests on [litesvm](https://github.com/LiteSVM/
 The market's search box, set tabs and counts run in Postgres behind one service, [`SearchService`](apps/server/src/search/SearchService.ts). It is built for a marketplace's size, not the demo's 200 listings, and a search engine can implement the same interface later.
 
 1. **Code reads the words that have one meaning.** [`search/query.ts`](apps/server/src/search/query.ts) turns graders ("NVG", "Northvale"), grades ("10", "9.5", "9+", "at least 9"), editions, finishes ("holo" is neither "reverse holo" nor "non-holo"), card numbers ("#010"), cert numbers, sellers ("@handle", or a full handle with an underscore) and price limits ("under 100") into exact filters. Words that only appear in grader names ("card", "slab", "grading") are dropped. A test checks that no word of any card, kind or set is taken this way.
-2. **The database matches the rest.** Every other word must start a word of the card's name, its kinds, or its set's name or code: "wyr" finds Ashen Wyrm, "dragon" finds every dragon. The seller's own title and description are never searched, since they can claim a grade the slab does not have.
-3. **One narrow table to search.** `listing_search` has one row per active listing with what search filters and sorts on, copied from the listing, its vault item and its card, and the card's words as a `tsvector` with a GIN index. Triggers keep it in step: a statement trigger on `listings` adds, refreshes and drops rows, so a bulk insert of 5,000 listings is one insert there, and a sold listing leaves search in the same transaction. Each sort has an index that produces it.
-4. **Counts stop at 10,000.** Matches per set (the tabs) are counted exactly up to 10,000; past that the page says "10,000+", as search engines do by default, and paging stops at the same depth. The whole market's numbers (listings, sets, lowest price) are cached for 10 seconds.
-5. **Did you mean.** A word that starts no catalog word gets the closest one by trigram similarity (`pg_trgm`), offered only if the corrected search finds listings: "ashen wyrn" suggests "ashen wyrm".
+2. **Described words become tags.** Words that describe a card ("sea animal", "flying", "glowing", "ocean") stand for tags a model gave each card once, ahead of time (see Card tags below). A card matches the tag or the words themselves, so a card without tags is still found by its name, and "flying owl" finds owls tagged as fliers.
+3. **The database matches the rest.** Every other word must start a word of the card's name, its kinds, or its set's name or code: "wyr" finds Ashen Wyrm, "dragon" finds every dragon. The seller's own title and description are never searched, since they can claim a grade the slab does not have.
+4. **One narrow table to search.** `listing_search` has one row per active listing with what search filters and sorts on, copied from the listing, its vault item and its card, and the card's words and tags as a `tsvector` with a GIN index. Triggers keep it in step: a statement trigger on `listings` adds, refreshes and drops rows, so a bulk insert of 5,000 listings is one insert there, and a sold listing leaves search in the same transaction. Each sort has an index that produces it.
+5. **Counts stop at 10,000.** Matches per set (the tabs) are counted exactly up to 10,000; past that the page says "10,000+", as search engines do by default, and paging stops at the same depth. The whole market's numbers (listings, sets, lowest price) are cached for 10 seconds.
+6. **Did you mean.** A word that starts no catalog word gets the closest one by trigram similarity (`pg_trgm`), offered only if the corrected search finds listings: "ashen wyrn" suggests "ashen wyrm".
 
-The response also says what the box was read as ("Northvale Grading, grade 10"), and the page shows it under the tabs. A test runs 42 searches against the seed both in SQL and in a plain TypeScript copy of the rules and expects the same listings, counts and order.
+The response also says what the box was read as ("Northvale Grading, grade 10", or "sea creatures · holo"), and the page shows it under the tabs. A test runs 42 searches against the seed both in SQL and in a plain TypeScript copy of the rules and expects the same listings, counts and order.
 
-**At scale.** `pnpm db:seed:large` adds a fictional catalog of 20,040 cards in 204 sets, 2,012 sellers and a million active listings; it took 138 seconds here. `pnpm bench:search` times searches through the same service. On a 4-core container with Postgres 16 at default settings, with 1,000,199 active listings:
+**Card tags.** A model reads each card's catalog text (name, set, kinds and lore) once and picks tags from a hand-written vocabulary of 53 in [`tags/vocabulary.ts`](apps/server/src/tags/vocabulary.ts): what the creature is, where it lives, its element and its traits. Structured output limits the answer to those ids. The tags are stored on the card and join its search words as `#sea_creature`, and the triggers copy them to every listing of the card, so a described search is an index lookup and never a model call. A typed word cannot reach a `#` word, and tags stay out of "did you mean". Each tag lists the words that mean it, which is how "sea animal", "marine" and "underwater" all find sea creatures. A card whose text changes goes back in the queue and keeps its old tags until new ones arrive, and tags are written only if the text is still the one the model read.
+
+The running server tags waiting cards in the background, up to 400 every 10 minutes, and stays off without a model key; the live demo's 40 cards take one call, under a cent. `pnpm tags:run` tags a whole catalog through the Message Batches API at half the price. All 20,040 cards of the large market cost $0.71: a sample of 200, then the other 19,840 in 7 minutes, 496 calls of 40 cards, about 3.5 cents per 1,000 cards. The generator knows what each generated creature is, so the run checks the tags against it: 98.4% of the 20,000 generated cards got the tag for their kind, every kind at 100% but sea creatures, where the misses are otters, turtles and eels the generator put in forests and marshes. Turning the model's thinking off halved the price but tagged a lava eel as a sea creature and missed that a lion is a cat, so thinking stays on at low effort.
+
+**At scale.** `pnpm db:seed:large` adds a fictional catalog of 20,040 cards in 204 sets, 2,012 sellers and a million active listings; it took 138 seconds here. `pnpm bench:search` times searches through the same service. On a 4-core container with Postgres 16 at default settings, with 1,000,199 active listings and every card tagged:
 
 | Search | Matches | p50 ms | p95 ms |
 | --- | ---: | ---: | ---: |
-| home page (newest) | 1,000,199 | 1.1 | 4.6 |
-| cheapest first | 1,000,199 | 1.1 | 1.6 |
-| one set | 4,949 | 1.2 | 2.7 |
-| card name ("ashen wyrm") | 38 | 12.5 | 29.2 |
-| half a word ("wyr") | 10,000+ | 24.9 | 38.2 |
-| kind ("dragon") | 10,000+ | 31.2 | 44.7 |
-| finish ("holo") | 10,000+ | 6.7 | 38.6 |
-| grader and grade ("NVG 10") | 10,000+ | 64.2 | 88.6 |
-| kind, finish, price ("dragon holo under 200") | 10,000+ | 51.8 | 54.6 |
-| set name and min grade ("emberfall 9+") | 235 | 3.3 | 5.2 |
-| seller ("@vaultkeeper") | 483 | 2.9 | 4.4 |
-| typo ("ashen wyrn") | 0, with a suggestion | 12.7 | 16.2 |
+| home page (newest) | 1,000,199 | 1.1 | 5.4 |
+| cheapest first | 1,000,199 | 0.9 | 1.3 |
+| one set | 4,949 | 1.0 | 1.4 |
+| card name ("ashen wyrm") | 38 | 9.7 | 11.9 |
+| half a word ("wyr") | 10,000+ | 24.1 | 29.9 |
+| kind ("dragon") | 10,000+ | 33.8 | 49.1 |
+| finish ("holo") | 10,000+ | 6.6 | 7.6 |
+| grader and grade ("NVG 10") | 10,000+ | 73.5 | 82.7 |
+| kind, finish, price ("dragon holo under 200") | 10,000+ | 54.9 | 87.3 |
+| set name and min grade ("emberfall 9+") | 235 | 2.8 | 3.9 |
+| seller ("@vaultkeeper") | 483 | 3.4 | 4.1 |
+| typo ("ashen wyrn") | 0, with a suggestion | 11.0 | 24.2 |
+| described: a tag ("sea animal") | 10,000+ | 27.0 | 35.0 |
+| described: two tags and a finish ("glowing sea creature holo") | 1,492 | 29.0 | 39.4 |
+| described: tags, grade, price ("flying fire 9+ under 300") | 10,000+ | 61.1 | 79.5 |
+| described: a tag and a name word ("flying owl") | 10,000+ | 24.9 | 39.6 |
 
-Fifty searches at once ran at about 180 a second on the pool of 10 connections. Recomputing the whole market's numbers takes about 94 ms, once every 10 seconds. Before the 10,000 cap, broad searches took 100 to 200 ms, nearly all of it counting matches per set, and 50 at once ran at about 60 a second.
+Fifty searches at once ran at about 135 a second on the pool of 10 connections, down from about 180 before card tags. Recomputing the whole market's numbers takes about 94 ms, once every 10 seconds. Before the 10,000 cap, broad searches took 100 to 200 ms, nearly all of it counting matches per set, and 50 at once ran at about 60 a second.
 
 Bulk listings carry no listing vectors (embedding a million seller texts locally takes hours), so the agent's search by meaning covers the seed and generated listings only.
 
@@ -255,9 +264,10 @@ pnpm test
 pnpm eval                   # v1 eval, needs the API key
 pnpm db:seed:large          # optional: 20,040 cards and a million listings, for search at scale
 pnpm bench:search           # times market searches against the database
+pnpm tags:run               # tags every card that needs it, through the Message Batches API (needs the API key)
 ```
 
-The large seed is for local databases only and refuses to run on Railway. `BULK_LISTINGS=100000` loads fewer listings, and an interrupted load picks up where it stopped. To keep it apart from the demo data, run both seeds and the server with `DB_SCHEMA=large` (any name), which puts every table in that schema.
+The large seed is for local databases only and refuses to run on Railway. Its cards have no tags until `pnpm tags:run` (about $0.71 for all of them); `TAG_NOW=1 TAG_LIMIT=200 pnpm tags:run` tags a sample with ordinary calls first, to check tags and cost. `BULK_LISTINGS=100000` loads fewer listings, and an interrupted load picks up where it stopped. To keep it apart from the demo data, run both seeds and the server with `DB_SCHEMA=large` (any name), which puts every table in that schema.
 
 Payments are simulated unless you set `PAYMENTS=devnet` and a `DEVNET_SEED` (`openssl rand -hex 32`). With `SOLANA_RPC_URL=memory` the devnet code runs on an in-process VM; with the default devnet RPC the server creates the dUSD mint and the escrow account on its first boot and asks the devnet faucet for SOL for fees. If the faucet refuses (it is rate limited), the log prints the treasury address to fund at faucet.solana.com.
 
@@ -295,7 +305,7 @@ To turn the public demo read-only, set `DEMO_READ_ONLY=true` on the backend.
 packages/domain   Effect Schema types: money, catalog, watch rules, match decisions, hard checks
 packages/seed     the fictional catalog, prices, sales history, the listing generator and the large test market
 apps/server       Effect backend: Postgres and pgvector, embeddings, model calls, rule parser, matcher,
-                  market search, purchase policy, agent loop and tools, MCP endpoint, watcher,
+                  market search, card tags, purchase policy, agent loop and tools, MCP endpoint, watcher,
                   tracing, wallet signatures, devnet payments, the web API and its rate limits
 apps/web          Next.js marketplace: home, market, listing pages, checkout and the agent page
 evals             labelled eval set, metrics, the matcher eval and the agent injection eval
@@ -307,7 +317,7 @@ I built this with Claude Code as a coding agent. I set the scope, the plan and t
 
 ## What's next
 
-- Search by description ("sea animal with hologram"): tags written once per card by a model, a query step that maps a described search onto those tags with a cache and removable chips, and reranking with its own eval. Then the same `SearchService` on OpenSearch, run locally and fed from Postgres, to compare the two.
+- The rest of search by description: a query step for described searches the tag words miss, with a cache and removable chips; card vectors for what no tag covers; and reranking with its own eval. Then the same `SearchService` on OpenSearch, run locally and fed from Postgres, to compare the two.
 
 - A binder view of what a wallet has bought was cut for time. `GET /api/me/purchases` already lists it.
 - Direct buys and confirm mode sign a text and the delegate pays. Having the wallet sign the transfer itself would show the payment in the wallet's own approval screen.

@@ -1,11 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk"
-import { Context, Effect, Layer, Redacted, Schema } from "effect"
+import { Context, Duration, Effect, Layer, Redacted, Schema } from "effect"
 import { toCodecAnthropic } from "effect/ai/AnthropicStructuredOutput"
 import { SqlClient } from "effect/sql/SqlClient"
 import { AppConfig } from "../config.ts"
 import { currentTraceId } from "../tracing.ts"
 
-export type LlmPurpose = "parse_want" | "judge" | "agent"
+export type LlmPurpose = "parse_want" | "judge" | "agent" | "tag_cards"
 
 export class LlmError extends Schema.TaggedError<LlmError>()("LlmError", {
   message: Schema.String
@@ -25,6 +25,31 @@ export interface StructuredRequest<A> {
   readonly user: string
   readonly schema: Schema.Codec<A, any>
   readonly maxTokens?: number
+}
+
+/**
+ * Many structured requests that share a system prompt and schema, sent
+ * through the Message Batches API: half the price of the same calls made one
+ * by one, with answers in minutes (at most a day) instead of seconds. For
+ * backfills, never for anything a person is waiting on.
+ */
+export interface BatchRequest<A> {
+  readonly purpose: LlmPurpose
+  readonly system: string
+  readonly schema: Schema.Codec<A, any>
+  readonly maxTokens?: number
+  /** One per call. Ids are letters, digits, "-" and "_", at most 64, unique in the batch. */
+  readonly items: ReadonlyArray<{ readonly id: string; readonly user: string }>
+  /** How often to ask whether the batch has ended. */
+  readonly pollEvery?: Duration.Input
+}
+
+/** One call's answer: the decoded value, or why there is none. Failed calls cost nothing unless the model answered. */
+export interface BatchAnswer<A> {
+  readonly id: string
+  readonly value: A | null
+  readonly error: string | null
+  readonly usage: Usage
 }
 
 /** One turn of a tool-using conversation. History is append-only and passed back unchanged. */
@@ -66,6 +91,9 @@ export class Llm extends Context.Service<
       req: StructuredRequest<A>
     ) => Effect.Effect<{ readonly value: A; readonly usage: Usage }, LlmError | SpendCapReached | LlmNotConfigured>
     readonly converse: (req: ConverseRequest) => Effect.Effect<ConverseResponse, LlmError | SpendCapReached | LlmNotConfigured>
+    readonly structuredBatch: <A>(
+      req: BatchRequest<A>
+    ) => Effect.Effect<ReadonlyArray<BatchAnswer<A>>, LlmError | SpendCapReached | LlmNotConfigured>
   }
 >()("slabwatch/Llm") {}
 
@@ -105,10 +133,11 @@ export const LlmLive = Layer.effect(
       }
     })
 
-    const usageOf = (u: Anthropic.Usage, started: number): Usage => ({
+    /** `share` is the part of the list price paid: 0.5 for the Batches API. */
+    const usageOf = (u: Anthropic.Usage, started: number, share = 1): Usage => ({
       inputTokens: u.input_tokens,
       outputTokens: u.output_tokens,
-      costUsdMicros: Math.round(u.input_tokens * config.llmPriceInputPerMTok + u.output_tokens * config.llmPriceOutputPerMTok),
+      costUsdMicros: Math.round(share * (u.input_tokens * config.llmPriceInputPerMTok + u.output_tokens * config.llmPriceOutputPerMTok)),
       latencyMs: Date.now() - started
     })
 
@@ -166,6 +195,77 @@ export const LlmLive = Layer.effect(
       return { value: value as A, usage }
     })
 
+    const structuredBatch = Effect.fn("Llm.structuredBatch")(function* <A>(req: BatchRequest<A>) {
+      if (client === null) return yield* new LlmNotConfigured()
+      yield* Effect.annotateCurrentSpan({ "llm.purpose": req.purpose, "llm.model": config.llmModel, "llm.batch_size": req.items.length })
+      if (req.items.length === 0) return []
+      // Checked once, before sending: the caller keeps batches small enough that one cannot run far past the cap.
+      yield* checkCap
+      const { codec, jsonSchema } = toCodecAnthropic(req.schema)
+      const started = Date.now()
+      const fail = (e: unknown) => new LlmError({ message: e instanceof Error ? e.message : String(e) })
+      const created = yield* Effect.tryPromise({
+        try: () =>
+          client.messages.batches.create({
+            requests: req.items.map((item) => ({
+              custom_id: item.id,
+              params: {
+                model: config.llmModel,
+                max_tokens: req.maxTokens ?? 2048,
+                system: req.system,
+                messages: [{ role: "user" as const, content: item.user }],
+                output_config: {
+                  effort: "low" as const,
+                  format: { type: "json_schema" as const, schema: jsonSchema as Record<string, unknown> }
+                }
+              }
+            }))
+          }),
+        catch: fail
+      })
+      yield* Effect.annotateCurrentSpan({ "llm.batch_id": created.id })
+      const poll = Duration.fromInputUnsafe(req.pollEvery ?? "15 seconds")
+      let status = created.processing_status
+      while (status !== "ended") {
+        yield* Effect.sleep(poll)
+        status = (yield* Effect.tryPromise({ try: () => client.messages.batches.retrieve(created.id), catch: fail })).processing_status
+      }
+      const results = yield* Effect.tryPromise({
+        try: async () => {
+          const out: Array<Anthropic.Messages.MessageBatchIndividualResponse> = []
+          for await (const r of await client.messages.batches.results(created.id)) out.push(r)
+          return out
+        },
+        catch: fail
+      })
+      const answers: Array<BatchAnswer<A>> = []
+      for (const r of results) {
+        if (r.result.type !== "succeeded") {
+          const why = r.result.type === "errored" ? `errored: ${JSON.stringify(r.result.error)}` : r.result.type
+          answers.push({ id: r.custom_id, value: null, error: why, usage: { inputTokens: 0, outputTokens: 0, costUsdMicros: 0, latencyMs: Date.now() - started } })
+          continue
+        }
+        const message = r.result.message
+        const usage = usageOf(message.usage, started, 0.5)
+        const text = message.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("")
+        const decoded =
+          message.stop_reason === "refusal" || message.stop_reason === "max_tokens"
+            ? { ok: false as const, error: `model stopped with ${message.stop_reason}` }
+            : yield* Effect.try({ try: () => JSON.parse(text) as unknown, catch: () => "model returned text that is not JSON" }).pipe(
+                Effect.flatMap((json) => Schema.decodeUnknownEffect(codec)(json)),
+                Effect.map((value) => ({ ok: true as const, value: value as A })),
+                Effect.catch((e) => Effect.succeed({ ok: false as const, error: typeof e === "string" ? e : `bad output: ${String(e)}` }))
+              )
+        yield* record(req.purpose, usage, decoded.ok)
+        answers.push(
+          decoded.ok
+            ? { id: r.custom_id, value: decoded.value, error: null, usage }
+            : { id: r.custom_id, value: null, error: decoded.error, usage }
+        )
+      }
+      return answers
+    })
+
     /**
      * One model turn with tools. Thinking stays on (the model default) at low
      * effort, tool_choice stays auto, and the caller keeps the loop: it reads
@@ -201,6 +301,6 @@ export const LlmLive = Layer.effect(
       return { content: response.content, stopReason: response.stop_reason, usage } satisfies ConverseResponse
     })
 
-    return Llm.of({ model: config.llmModel, structured, converse })
+    return Llm.of({ model: config.llmModel, structured, converse, structuredBatch })
   })
 )

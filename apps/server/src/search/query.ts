@@ -1,11 +1,13 @@
 import { graderNames, type Edition, type Finish, type Grader } from "@slabwatch/domain"
+import { TAGS, tagById } from "../tags/vocabulary.ts"
 
 /**
  * Reading a market search box the way a collector means it. Words with a
  * fixed meaning in this market (graders, grades, editions, finishes, card
  * numbers, certs, sellers, a price limit) become exact filters here, in code.
- * Every other word is left for the database to prefix-match against card,
- * kind and set words.
+ * Words that describe a card ("sea animal", "flying", "glowing") become tag
+ * filters, from the tag vocabulary in tags/vocabulary.ts. Every other word is
+ * left for the database to prefix-match against card, kind and set words.
  *
  * This is the cheap, predictable first layer of search: no model call, the
  * same answer every time, and a filter only when the word is unambiguous.
@@ -23,9 +25,23 @@ export interface MarketQuery {
   readonly limit: number
 }
 
+/**
+ * A tag the search asked for, and the words that asked for it. A card matches
+ * when it has the tag, or when its own words start with those words: a tag
+ * word never hides a card the word alone would have found ("fire" still finds
+ * a card named Firefly), and cards that are not tagged yet are still found by
+ * name.
+ */
+export interface TagFilter {
+  readonly tag: string
+  readonly words: ReadonlyArray<string>
+}
+
 export interface ParsedSearch {
   /** Lowercase letters and digits, each matched as the start of a card, kind or set word. */
   readonly words: ReadonlyArray<string>
+  /** Described searches: every one must match. */
+  readonly tags: ReadonlyArray<TagFilter>
   /**
    * Seller handles to look up. "@name" must be a seller; a bare
    * "name_with_underscores" is a seller if one has that handle, and otherwise
@@ -51,6 +67,7 @@ export interface ParsedSearch {
 
 export const emptySearch: ParsedSearch = {
   words: [],
+  tags: [],
   handles: [],
   graders: [],
   editions: [],
@@ -66,6 +83,7 @@ export const emptySearch: ParsedSearch = {
 /** True when the search asks for nothing: no words and no filters. */
 export const isEmptySearch = (p: ParsedSearch) =>
   p.words.length === 0 &&
+  p.tags.length === 0 &&
   p.handles.length === 0 &&
   p.graders.length === 0 &&
   p.editions.length === 0 &&
@@ -115,6 +133,14 @@ const BARE_HANDLE = /^[\p{L}\p{N}]+(?:_[\p{L}\p{N}]+)+$/u
 const CARD_NUMBER = /^#(\d{1,3})$/
 const THREE_DIGITS = /^\d{3}$/
 
+/** Every way to type a tag, longest first, so "sea creature" wins over "sea". */
+const TAG_PHRASES: ReadonlyArray<{ readonly tag: string; readonly words: ReadonlyArray<string> }> = TAGS.flatMap((t) =>
+  t.words.map((w) => ({ tag: t.id, words: w.split(" ") }))
+).sort((a, b) => b.words.length - a.words.length)
+
+/** A typed word matches a tag word as is or with a plural ending. */
+const sameWord = (typed: string, word: string) => typed === word || typed === `${word}s` || typed === `${word}es`
+
 const money = (digits: string, k: string | undefined) => Math.round(Number(digits) * (k ? 1000 : 1) * 100)
 
 /** One piece of the query: a token kept whole because its punctuation means something, or a plain word. */
@@ -139,6 +165,7 @@ export const parseSearch = (q: string): ParsedSearch => {
   const a = atoms(q.slice(0, 200))
   const out = {
     words: [] as Array<string>,
+    tags: [] as Array<TagFilter>,
     handles: [] as Array<{ handle: string; orWords: Array<string> }>,
     graders: [] as Array<Grader>,
     editions: [] as Array<Edition>,
@@ -207,6 +234,13 @@ export const parseSearch = (q: string): ParsedSearch => {
       i += 2
       continue
     }
+    const described = TAG_PHRASES.find((ph) => ph.words.every((w, j) => sameWord(at(i + j), w)))
+    if (described !== undefined) {
+      const typed = a.slice(i, i + described.words.length)
+      if (!out.tags.some((x) => x.tag === described.tag)) out.tags.push({ tag: described.tag, words: typed })
+      i += described.words.length - 1
+      continue
+    }
 
     // Single tokens.
     let m: RegExpExecArray | null
@@ -252,6 +286,7 @@ const dollars = (cents: number) => (cents % 100 === 0 ? String(cents / 100) : (c
  * show and for anyone reading the API. Sellers are labelled after the lookup.
  */
 export const describeSearch = (p: ParsedSearch, sellers: ReadonlyArray<string> = []): Array<string> => [
+  ...p.tags.map((t) => tagById(t.tag)?.label ?? t.tag),
   ...p.graders.map((g) => graderNames[g]),
   ...p.grades.map((g) => `grade ${g}`),
   ...(p.minGrade === null ? [] : [`grade ${p.minGrade} or higher`]),
