@@ -19,6 +19,7 @@ import { RuleRepo } from "../rules/RuleRepo.ts"
 import { Treasury } from "../solana/Treasury.ts"
 import { WalletAuth } from "../wallet/WalletAuth.ts"
 import { SearchService } from "../search/SearchService.ts"
+import { SearchUnderstanding } from "../search/SearchUnderstanding.ts"
 import { parseMarketQuery } from "./market.ts"
 import { RateLimits } from "./RateLimits.ts"
 
@@ -154,6 +155,7 @@ export const WebApiRoutes = HttpRouter.addAll(
     const payments = yield* Payments
     const catalog = yield* CatalogRepo
     const search = yield* SearchService
+    const understanding = yield* SearchUnderstanding
     const rules = yield* RuleRepo
     const parser = yield* RuleParser
     const matcher = yield* Matcher
@@ -278,6 +280,22 @@ export const WebApiRoutes = HttpRouter.addAll(
         const found = yield* search.search(query)
         const { ids, ...rest } = found
         return { listings: yield* forSale(yield* catalog.getListings(ids)), ...rest }
+      })
+    )
+
+    /**
+     * Reads a submitted market search with the model when code cannot: the
+     * page calls it on Enter, when a search still has words nothing matches.
+     * A cached reading is free; a new one counts against the costly limit.
+     */
+    const understand = route(
+      "GET",
+      "/search/understand",
+      Effect.gen(function* () {
+        const request = yield* HttpServerRequest.HttpServerRequest
+        const q = new URL(request.originalUrl, "http://localhost").searchParams.get("q") ?? ""
+        if (q.length > 200) return yield* new ApiError({ message: "a search is at most 200 characters", status: 400 })
+        return yield* understanding.understand(q, limited("costly", null))
       })
     )
 
@@ -638,6 +656,7 @@ export const WebApiRoutes = HttpRouter.addAll(
     return [
       status,
       listings,
+      understand,
       listing,
       catalogRoute,
       authStart,

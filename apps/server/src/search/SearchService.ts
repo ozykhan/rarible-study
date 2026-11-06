@@ -4,7 +4,17 @@ import type { SqlError } from "effect/sql/SqlError"
 import { SqlClient } from "effect/sql/SqlClient"
 import type { Fragment } from "effect/sql/Statement"
 import { toTextArray } from "../db/Database.ts"
-import { describeSearch, isEmptySearch, parseSearch, type MarketQuery, type MarketSort, type ParsedSearch, type TagFilter } from "./query.ts"
+import {
+  describeSearch,
+  isEmptySearch,
+  parseSearch,
+  searchChips,
+  type MarketQuery,
+  type MarketSort,
+  type ParsedSearch,
+  type SearchChip,
+  type TagFilter
+} from "./query.ts"
 
 /**
  * Market search as a service: a query in, listing ids and counts out. The web
@@ -46,6 +56,13 @@ export interface MarketSearchResult {
   readonly stats: MarketStats
   /** What the search box was read as, one label per filter. */
   readonly understood: ReadonlyArray<string>
+  /** The same filters as chips, each with the search text that drops it. */
+  readonly chips: ReadonlyArray<SearchChip>
+  /**
+   * Words no card, kind or set word starts with. While there are any nothing
+   * matches; they are what a model can read when the search is submitted.
+   */
+  readonly unknown: ReadonlyArray<string>
   /** A corrected search that has results, when this one has none because of a word we do not know. */
   readonly suggestion: string | null
 }
@@ -55,6 +72,17 @@ export class SearchService extends Context.Service<
   {
     readonly search: (query: MarketQuery) => Effect.Effect<MarketSearchResult, SqlError>
     readonly stats: Effect.Effect<MarketStats, SqlError>
+    /** The words that start some card, kind or set word, in the order given. */
+    readonly knownWords: (words: ReadonlyArray<string>) => Effect.Effect<ReadonlyArray<string>, SqlError>
+    /**
+     * For each word, the catalog words spelled most like it (trigram
+     * similarity at least `threshold`, Postgres's 0.3 by default), closest first.
+     */
+    readonly closeWords: (
+      words: ReadonlyArray<string>,
+      limit: number,
+      threshold?: number
+    ) => Effect.Effect<Readonly<Record<string, ReadonlyArray<string>>>, SqlError>
   }
 >()("slabwatch/SearchService") {}
 
@@ -136,7 +164,38 @@ export const SearchServicePg = Layer.effect(
       "1 minute"
     )
 
-    /** One round trip: which words we know (as the start of a catalog word) and which handles are sellers. */
+    const knownWords = Effect.fn("SearchService.knownWords")(function* (words: ReadonlyArray<string>) {
+      if (words.length === 0) return []
+      // text_pattern_ops compares bytes: every word that starts with w sorts in [w, w || '{'), since '{' follows 'z'.
+      const rows = yield* sql<{ readonly word: string; readonly known: boolean }>`
+        SELECT w AS word,
+               EXISTS (SELECT 1 FROM search_vocab v WHERE v.term ~>=~ w AND v.term ~<~ (w || '{')) AS known
+        FROM unnest(${toTextArray(words)}::text[]) AS w`
+      return rows.filter((r) => r.known).map((r) => r.word)
+    })
+
+    const closeWords = Effect.fn("SearchService.closeWords")(function* (
+      words: ReadonlyArray<string>,
+      limit: number,
+      threshold?: number
+    ) {
+      if (words.length === 0) return {}
+      const query = sql<{ readonly word: string; readonly terms: ReadonlyArray<string> }>`
+        SELECT w AS word,
+               array(SELECT v.term FROM search_vocab v WHERE v.term % w
+                     ORDER BY similarity(v.term, w) DESC, v.term LIMIT ${limit}) AS terms
+        FROM unnest(${toTextArray(words)}::text[]) AS w`
+      // % keeps the trigram index; its cutoff is a setting, changed for this transaction only.
+      const rows =
+        threshold === undefined
+          ? yield* query
+          : yield* sql.withTransaction(
+              Effect.andThen(sql`SELECT set_config('pg_trgm.similarity_threshold', ${String(threshold)}, true)`, query)
+            )
+      return Object.fromEntries(rows.map((r) => [r.word, r.terms]))
+    })
+
+    /** Which words we know (as the start of a catalog word) and which handles are sellers. */
     const resolve = Effect.fn("SearchService.resolve")(function* (parsed: ParsedSearch) {
       const handles = parsed.handles.map((h) => h.handle)
       const sellers =
@@ -149,21 +208,14 @@ export const SearchServicePg = Layer.effect(
       for (const h of parsed.handles) {
         if (!found.has(h.handle)) for (const w of h.orWords) if (!words.includes(w)) words.push(w)
       }
-      // text_pattern_ops compares bytes: every word that starts with w sorts in [w, w || '{'), since '{' follows 'z'.
-      const known =
-        words.length === 0
-          ? []
-          : yield* sql<{ readonly word: string; readonly known: boolean }>`
-              SELECT w AS word,
-                     EXISTS (SELECT 1 FROM search_vocab v WHERE v.term ~>=~ w AND v.term ~<~ (w || '{')) AS known
-              FROM unnest(${toTextArray(words)}::text[]) AS w`
+      const known = yield* knownWords(words)
       return {
         parsed,
         words,
         sellerIds: [...found.values()],
         sellerHandles: [...found.keys()],
         missingSeller: parsed.handles.some((h) => h.orWords.length === 0 && !found.has(h.handle)),
-        unknown: known.filter((k) => !k.known).map((k) => k.word)
+        unknown: words.filter((w) => !known.includes(w))
       } satisfies Resolved
     })
 
@@ -189,11 +241,8 @@ export const SearchServicePg = Layer.effect(
 
     /** The search with each unknown word swapped for the closest catalog word, if every one has a close match. */
     const correct = Effect.fn("SearchService.correct")(function* (q: string, unknown: ReadonlyArray<string>) {
-      const rows = yield* sql<{ readonly word: string; readonly term: string | null }>`
-        SELECT w AS word,
-               (SELECT v.term FROM search_vocab v WHERE v.term % w
-                ORDER BY similarity(v.term, w) DESC, v.term LIMIT 1) AS term
-        FROM unnest(${toTextArray(unknown)}::text[]) AS w`
+      const close = yield* closeWords(unknown, 1)
+      const rows = unknown.map((word) => ({ word, term: close[word]?.[0] ?? null }))
       if (rows.some((r) => r.term === null)) return null
       let fixed = q
       for (const r of rows) {
@@ -210,7 +259,12 @@ export const SearchServicePg = Layer.effect(
         const r = yield* resolve(parsed)
         const tabs = (counts: Readonly<Record<string, number>>) =>
           catalogSets.filter((s) => (market.sets[s.id]?.count ?? 0) > 0 || (counts[s.id] ?? 0) > 0)
-        const base = { stats: market, understood: describeSearch(parsed, r.sellerHandles) }
+        const base = {
+          stats: market,
+          understood: describeSearch(parsed, r.sellerHandles),
+          chips: searchChips(parsed, r.sellerHandles),
+          unknown: r.unknown
+        }
 
         // A word nothing starts with, or a seller nobody is: no listing can match. Offer a fix instead of querying.
         if (r.unknown.length > 0 || r.missingSeller) {
@@ -290,7 +344,9 @@ export const SearchServicePg = Layer.effect(
 
     return SearchService.of({
       search: (query) => run(query, true).pipe(Effect.withSpan("SearchService.search", { attributes: { "search.q": query.q } })),
-      stats
+      stats,
+      knownWords,
+      closeWords
     })
   })
 )

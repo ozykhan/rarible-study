@@ -5,7 +5,7 @@ import { SqlClient } from "effect/sql/SqlClient"
 import { AppConfig } from "../config.ts"
 import { currentTraceId } from "../tracing.ts"
 
-export type LlmPurpose = "parse_want" | "judge" | "agent" | "tag_cards"
+export type LlmPurpose = "parse_want" | "judge" | "agent" | "tag_cards" | "understand_search"
 
 export class LlmError extends Schema.TaggedError<LlmError>()("LlmError", {
   message: Schema.String
@@ -25,6 +25,17 @@ export interface StructuredRequest<A> {
   readonly user: string
   readonly schema: Schema.Codec<A, any>
   readonly maxTokens?: number
+  /**
+   * "off" for a short reading on a user's critical path, where thinking adds
+   * seconds. Default: the model's own adaptive thinking at low effort.
+   */
+  readonly thinking?: "off"
+  /**
+   * Caches the system prompt for 5 minutes, for a prompt that is the same on
+   * every call and called often: reads cost a tenth of the input price,
+   * writes a quarter more.
+   */
+  readonly cacheSystem?: boolean
 }
 
 /**
@@ -71,7 +82,10 @@ export interface ConverseResponse {
 }
 
 export interface Usage {
+  /** All input tokens, read from the prompt cache or not. */
   readonly inputTokens: number
+  /** Of those, the ones read from the prompt cache, at a tenth of the price. */
+  readonly cacheReadTokens?: number
   readonly outputTokens: number
   readonly costUsdMicros: number
   readonly latencyMs: number
@@ -119,8 +133,8 @@ export const LlmLive = Layer.effect(
       Effect.gen(function* () {
         const traceId = yield* currentTraceId
         yield* sql`
-          INSERT INTO llm_calls (purpose, model, input_tokens, output_tokens, cost_usd_micros, latency_ms, ok, trace_id, run_id)
-          VALUES (${purpose}, ${config.llmModel}, ${usage.inputTokens}, ${usage.outputTokens},
+          INSERT INTO llm_calls (purpose, model, input_tokens, cache_read_tokens, output_tokens, cost_usd_micros, latency_ms, ok, trace_id, run_id)
+          VALUES (${purpose}, ${config.llmModel}, ${usage.inputTokens}, ${usage.cacheReadTokens ?? 0}, ${usage.outputTokens},
                   ${usage.costUsdMicros}, ${usage.latencyMs}, ${ok}, ${traceId}, ${runId})`
       }).pipe(Effect.orDie)
 
@@ -133,13 +147,22 @@ export const LlmLive = Layer.effect(
       }
     })
 
-    /** `share` is the part of the list price paid: 0.5 for the Batches API. */
-    const usageOf = (u: Anthropic.Usage, started: number, share = 1): Usage => ({
-      inputTokens: u.input_tokens,
-      outputTokens: u.output_tokens,
-      costUsdMicros: Math.round(share * (u.input_tokens * config.llmPriceInputPerMTok + u.output_tokens * config.llmPriceOutputPerMTok)),
-      latencyMs: Date.now() - started
-    })
+    /**
+     * `share` is the part of the list price paid: 0.5 for the Batches API.
+     * Prompt cache writes cost 1.25 times the input price and reads 0.1 times.
+     */
+    const usageOf = (u: Anthropic.Usage, started: number, share = 1): Usage => {
+      const written = u.cache_creation_input_tokens ?? 0
+      const read = u.cache_read_input_tokens ?? 0
+      const input = u.input_tokens + 1.25 * written + 0.1 * read
+      return {
+        inputTokens: u.input_tokens + written + read,
+        cacheReadTokens: read,
+        outputTokens: u.output_tokens,
+        costUsdMicros: Math.round(share * (input * config.llmPriceInputPerMTok + u.output_tokens * config.llmPriceOutputPerMTok)),
+        latencyMs: Date.now() - started
+      }
+    }
 
     const annotateUsage = (usage: Usage) =>
       Effect.annotateCurrentSpan({
@@ -164,8 +187,9 @@ export const LlmLive = Layer.effect(
             {
               model: config.llmModel,
               max_tokens: req.maxTokens ?? 2048,
-              system: req.system,
+              system: req.cacheSystem === true ? [{ type: "text", text: req.system, cache_control: { type: "ephemeral" } }] : req.system,
               messages: [{ role: "user", content: req.user }],
+              ...(req.thinking === "off" ? { thinking: { type: "disabled" as const } } : {}),
               output_config: {
                 effort: "low",
                 format: { type: "json_schema", schema: jsonSchema as Record<string, unknown> }

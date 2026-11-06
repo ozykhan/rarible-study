@@ -7,12 +7,13 @@ import { Market } from "@/components/Market"
 import { AgentIcon } from "@/components/ui"
 import { useAccount } from "@/lib/account"
 import { watchWant } from "@/lib/format"
-import { readFilters, useMarket } from "@/lib/market"
+import { readFilters, useMarket, useUnderstanding } from "@/lib/market"
 
 /**
  * /market: every listing, filtered by set, grader and search, in the order
- * picked. The filters live in the URL (?set, ?grader, ?q, ?sort), so links
- * from the home page land filtered and a filtered view can be shared. Watch
+ * picked. The filters live in the URL (?set, ?grader, ?q, ?sort, and ?from
+ * when ?q is a described search read by the model), so links from the home
+ * page land filtered and a filtered view can be shared. Watch
  * on a tile and the agent line open the agent drawer here; buying never
  * needs it.
  */
@@ -25,21 +26,20 @@ export function MarketPage() {
   const market = useMarket(filters, owned)
   const [drawer, setDrawer] = useState<{ seed: string | null; n: number } | null>(null)
 
-  const go = (next: URLSearchParams) => {
+  /** Changes URL parameters, keeping the others; null removes one. */
+  const go = (changes: Readonly<Record<string, string | null>>) => {
+    const next = new URLSearchParams(params.toString())
+    for (const [k, v] of Object.entries(changes)) {
+      if (v === null) next.delete(k)
+      else next.set(k, v)
+    }
     const qs = next.toString()
     router.replace(qs === "" ? path : `${path}?${qs}`, { scroll: false })
   }
-  const onFilter = (key: "set" | "grader" | "sort", value: string) => {
-    const next = new URLSearchParams(params.toString())
-    if (value === (key === "sort" ? "recent" : "all")) next.delete(key)
-    else next.set(key, value)
-    go(next)
-  }
-  const onClear = () => {
-    const next = new URLSearchParams(params.toString())
-    for (const k of ["set", "grader", "q"]) next.delete(k)
-    go(next)
-  }
+  const note = useUnderstanding(filters, market, go)
+  const onFilter = (key: "set" | "grader" | "sort", value: string) =>
+    go({ [key]: value === (key === "sort" ? "recent" : "all") ? null : value })
+  const onClear = () => go({ set: null, grader: null, q: null, from: null, ask: null })
   const openAgent = (seed: string | null) => setDrawer({ seed, n: Date.now() })
 
   return (
@@ -49,6 +49,7 @@ export function MarketPage() {
         onFilter={onFilter}
         onClear={onClear}
         market={market}
+        note={note}
         owned={owned}
         watching={watching}
         onBuy={buy}

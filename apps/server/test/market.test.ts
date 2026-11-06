@@ -1,6 +1,15 @@
 import { generateLargeCatalog, handWritten } from "@slabwatch/seed"
 import { describe, expect, it } from "@effect/vitest"
-import { describeSearch, emptySearch, isEmptySearch, parseSearch, searchWords, type ParsedSearch } from "../src/search/query.ts"
+import {
+  describeSearch,
+  emptySearch,
+  isEmptySearch,
+  parseSearch,
+  searchChips,
+  searchText,
+  searchWords,
+  type ParsedSearch
+} from "../src/search/query.ts"
 import { TAGS } from "../src/tags/vocabulary.ts"
 import { parseMarketQuery } from "../src/web/market.ts"
 
@@ -139,7 +148,7 @@ describe("reading the search box", () => {
 
   it("labels what it understood", () => {
     expect(describeSearch(p("glowing sea animal holo"))).toEqual(["glowing", "sea creatures", "holo"])
-    expect(describeSearch(p("ashen wyrm NVG 10 1st edition holo under 900"), ["vaultkeeper"])).toEqual([
+    expect(describeSearch(p("ashen wyrm NVG 10 1st edition holo under 900 @vaultkeeper"), ["vaultkeeper"])).toEqual([
       "Northvale Grading",
       "grade 10",
       "1st edition",
@@ -147,6 +156,65 @@ describe("reading the search box", () => {
       "900 dUSD or less",
       "seller @vaultkeeper",
       '"ashen wyrm"'
+    ])
+  })
+})
+
+describe("writing a search back as text", () => {
+  const p = parseSearch
+  const back = (x: ParsedSearch) => parseSearch(searchText(x))
+  const noIgnored = (x: ParsedSearch) => ({ ...x, ignored: [] })
+
+  it("reads back as the same search", () => {
+    for (const q of [
+      "",
+      "ashen wyrm",
+      "sea animal with hologram",
+      "glowing sea creatures holo 9+",
+      "ashen wyrm NVG 10 1st edition holo under 900 @vaultkeeper",
+      "qsg lca 9.5 8 reverse holo unlimited #010 less than $50",
+      "non holo emberfall at least 8 cert nvg12345678",
+      "holo_harbor big cat outer space",
+      "breathes fire wyrm $100",
+      "fire, breathing"
+    ]) {
+      expect(noIgnored(back(p(q))), q).toEqual(noIgnored(p(q)))
+    }
+  })
+
+  it("keeps tags apart, whatever sits next to them", () => {
+    const first = TAGS.map((t) => ({ tag: t.id, words: t.words[0]!.split(" ") }))
+    // Words that finish a tag phrase: next to the wrong tag, they would read as another tag.
+    const tails = [...new Set(TAGS.flatMap((t) => t.words.flatMap((w) => w.split(" ").slice(1))))]
+    for (const a of first) {
+      for (const b of first) {
+        if (a.tag === b.tag) continue
+        const both: ParsedSearch = { ...emptySearch, tags: [a, b] }
+        expect(back(both), `${a.tag} ${b.tag}`).toEqual(both)
+      }
+      for (const w of tails) {
+        if (TAGS.some((t) => t.words.some((x) => x === w || x.split(" ")[0] === w))) continue
+        const mixed: ParsedSearch = { ...emptySearch, tags: [a], words: [w] }
+        expect(back(mixed), `${a.tag} ${w}`).toEqual(mixed)
+      }
+    }
+  })
+
+  it("treats a comma as the end of a phrase, and digits around one as a number", () => {
+    expect(p("fire breathing").tags.map((t) => t.tag)).toEqual(["breathes_fire"])
+    expect(p("fire, breathing")).toMatchObject({ tags: [{ tag: "fire", words: ["fire"] }], words: ["breathing"] })
+    expect(p("under $1,000").maxUsdCents).toBe(100_000)
+  })
+
+  it("gives every filter a chip that removes it", () => {
+    expect(searchChips(p("sea animal holo under 50"))).toEqual([
+      { label: "sea creatures", q: "holo, under 50" },
+      { label: "holo", q: "sea animal, under 50" },
+      { label: "50 dUSD or less", q: "sea animal, holo" }
+    ])
+    expect(searchChips(p("ashen wyrm @vaultkeeper"), ["vaultkeeper"])).toEqual([
+      { label: "seller @vaultkeeper", q: "ashen wyrm" },
+      { label: '"ashen wyrm"', q: "@vaultkeeper" }
     ])
   })
 })

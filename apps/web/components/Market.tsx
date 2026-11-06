@@ -5,12 +5,12 @@ import type { CSSProperties } from "react"
 import { cardId, GRADERS, SETS, UNKNOWN_TONE } from "@/lib/art"
 import { cx } from "@/lib/cx"
 import { count as fmt, dusd } from "@/lib/format"
-import { MARKET_SORTS, type MarketFilters, type useMarket } from "@/lib/market"
+import { MARKET_SORTS, type MarketFilters, type ReadNote, type useMarket } from "@/lib/market"
 import type { Listing, SetRef } from "@/lib/types"
 import { AgentStrip } from "./AgentStrip"
 import { ListingTile } from "./ListingTile"
 import { MarketSearch } from "./MarketSearch"
-import { Button } from "./ui"
+import { Button, CloseIcon } from "./ui"
 
 /** Up to this many sets, every set is a tab. Past it the tabs get their own row and show the biggest few; the rest go in a menu. */
 const MAX_TABS = 8
@@ -36,20 +36,65 @@ const splitSets = (sets: ReadonlyArray<SetRef>, rank: (id: string) => number, pi
   return { tabs: sets.filter((s) => top.has(s.id)), rest: sets.filter((s) => !top.has(s.id)) }
 }
 
-/** The market URL for a search, keeping the other filters. */
+/** The market URL for a search, keeping the other filters. It is searched as written: no reading, no ?from. */
 const searchHref = (f: MarketFilters, q: string) => {
   const p = new URLSearchParams()
   if (f.set !== "all") p.set("set", f.set)
   if (f.grader !== "all") p.set("grader", f.grader)
-  p.set("q", q)
+  if (q !== "") p.set("q", q)
   if (f.sort !== "recent") p.set("sort", f.sort)
-  return `/market?${p.toString()}`
+  const qs = p.toString()
+  return qs === "" ? "/market" : `/market?${qs}`
+}
+
+/** Why a described search was not read; the keyword results stay either way. */
+const UNAVAILABLE: Record<Extract<ReadNote, { kind: "unavailable" }>["reason"], string> = {
+  no_key: "Described searches are not read on this server, so only names, sets and the words cards are tagged with match.",
+  spend_cap: "Described searches are paused for today: the demo's daily model budget is used up. Names, sets and tag words still match.",
+  busy: "Too many described searches from here this hour. Names, sets and tag words still match.",
+  slow: "Reading that search took too long. Press Enter to try again.",
+  failed: "That search could not be read just now. Press Enter to try again."
+}
+
+const quoted = (words: ReadonlyArray<string>) => words.map((w) => `\u201c${w}\u201d`).join(", ")
+
+/**
+ * What an empty market says, most specific first: the model is reading the
+ * search, read nothing in it, or could not be asked; a likely typo; words
+ * nothing matches that Enter would have read; or simply nothing listed.
+ */
+function EmptyMessage(props: {
+  q: string
+  note: ReadNote | null
+  unread: boolean
+  suggestion: string | null
+  href: (q: string) => string
+}) {
+  const { q, note, suggestion } = props
+  if (note?.kind === "reading") return <>Reading &ldquo;{q}&rdquo; as a description…</>
+  if (note?.kind === "nothing")
+    return <>Nothing in &ldquo;{q}&rdquo; could be read as something to search for. Try a card name, a set, a kind of creature or a finish.</>
+  const why = note?.kind === "unavailable" ? `${UNAVAILABLE[note.reason]} ` : ""
+  if (suggestion !== null)
+    return (
+      <>
+        {why}Nothing matches &ldquo;{q}&rdquo;. Did you mean{" "}
+        <Link href={props.href(suggestion)} scroll={false}>
+          {suggestion}
+        </Link>
+        ?{props.unread && " Or press Enter to have it read as a description."}
+      </>
+    )
+  if (note?.kind === "unavailable") return <>{UNAVAILABLE[note.reason]}</>
+  if (props.unread) return <>Nothing matches &ldquo;{q}&rdquo;. Press Enter to have it read as a description.</>
+  return <>Nothing matches right now. New listings arrive about once a minute.</>
 }
 
 /**
  * The whole market: a head with two live numbers, set tabs with counts (from
  * the server, so a catalog of hundreds of sets works), the grader and sort
- * selects, what the search was read as, the grid of ListingTiles with Show
+ * selects, what the search was read as (a removable chip per filter, and the
+ * typed words when the model rewrote them), the grid of ListingTiles with Show
  * more, and the optional agent's line under it. Filtering, search, sort and
  * paging happen on the server, over every active listing. Seller text is not shown here;
  * where it is shown (the listing, a watch's matches), it is plain text,
@@ -60,6 +105,8 @@ export function Market(props: {
   onFilter: (key: "set" | "grader" | "sort", value: string) => void
   onClear: () => void
   market: ReturnType<typeof useMarket>
+  /** What the model made of the search, when it was asked. */
+  note: ReadNote | null
   /** Listing ids the collector bought, and card ids an active watch targets. */
   owned: ReadonlySet<string>
   watching: ReadonlySet<string>
@@ -68,8 +115,11 @@ export function Market(props: {
   /** Opens the agent drawer. */
   onAgent: () => void
 }) {
-  const { filters: f, market: m } = props
-  const filtered = f.set !== "all" || f.grader !== "all" || f.q.trim() !== ""
+  const { filters: f, market: m, note } = props
+  const q = f.q.trim()
+  const filtered = f.set !== "all" || f.grader !== "all" || q !== ""
+  // Words nothing matches, in a search the model has not been asked about.
+  const unread = q !== "" && m.unknown.length > 0 && note === null && f.from === ""
   // Past 10,000 matches the server stops counting: "10,000+" overall and no number per set.
   const capped = !m.exact && m.total >= 10_000
   const count = (id: string) =>
@@ -154,8 +204,22 @@ export function Market(props: {
           </div>
         </div>
 
-        {m.listings !== null && f.q.trim() !== "" && m.understood.length > 0 && (
-          <p className="market-understood">Searching for {m.understood.join(" · ")}</p>
+        {m.listings !== null && q !== "" && m.chips.length > 0 && (
+          <div className="market-read">
+            <span>Searching for</span>
+            {m.chips.map((c) => (
+              <Link key={c.label} className="read-chip" href={searchHref(f, c.q)} scroll={false} aria-label={`Remove ${c.label}`}>
+                {c.label}
+                <CloseIcon />
+              </Link>
+            ))}
+          </div>
+        )}
+        {m.listings !== null && f.from !== "" && (
+          <p className="market-from">
+            Read from &ldquo;{f.from}&rdquo;.
+            {note?.kind === "read" && note.notUnderstood.length > 0 && <> No filter for {quoted(note.notUnderstood)}.</>}
+          </p>
         )}
         {m.listings !== null && m.total > 0 && (
           <p className="market-count">
@@ -181,19 +245,10 @@ export function Market(props: {
           </div>
         )}
         {m.listings === null && m.failed && <p className="empty">Listings are not reachable right now.</p>}
-        {m.listings !== null && m.listings.length === 0 && m.suggestion !== null && (
+        {m.listings !== null && m.listings.length === 0 && (
           <p className="empty">
-            Nothing matches &ldquo;{f.q.trim()}&rdquo;. Did you mean{" "}
-            <Link href={searchHref(f, m.suggestion)} scroll={false}>
-              {m.suggestion}
-            </Link>
-            ?
-          </p>
-        )}
-        {m.listings !== null && m.listings.length === 0 && m.suggestion === null && (
-          <p className="empty">
-            Nothing matches right now. New listings arrive about once a minute.{" "}
-            {filtered && (
+            <EmptyMessage q={q} note={note} unread={unread} suggestion={m.suggestion} href={(to) => searchHref(f, to)} />{" "}
+            {filtered && note?.kind !== "reading" && (
               <Button variant="link" size="inline" onClick={props.onClear}>
                 Clear the filters
               </Button>

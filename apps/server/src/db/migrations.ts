@@ -489,11 +489,34 @@ const cardTags = Effect.gen(function* () {
     END $$`
 })
 
+/**
+ * Described searches a model has read, so the same search is read once. The
+ * key is the search normalized (case, punctuation, word order); `version`
+ * names the tag vocabulary and prompt it was read with, and a row from
+ * another version is a miss. `result` is the checked reading: the search
+ * text code reads it as, or that nothing usable was found.
+ */
+const searchUnderstandings = Effect.gen(function* () {
+  const sql = yield* SqlClient
+  yield* sql`
+    CREATE TABLE search_understandings (
+      key text PRIMARY KEY,
+      version text NOT NULL,
+      query text NOT NULL,
+      result jsonb NOT NULL,
+      cost_usd_micros int NOT NULL DEFAULT 0,
+      hits int NOT NULL DEFAULT 0,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      last_hit_at timestamptz
+    )`
+})
+
 export const migrations = {
   "0001_init": init,
   "0002_agent": agent,
   "0003_wallet": wallet,
   "0004_direct_buy": directBuy,
   "0005_search": search,
-  "0006_card_tags": cardTags
+  "0006_card_tags": cardTags,
+  "0007_search_understandings": searchUnderstandings
 }

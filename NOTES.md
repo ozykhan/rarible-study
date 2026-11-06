@@ -206,3 +206,36 @@ Described search, first part: a model tags every card once from a fixed vocabula
 - Typos in tag words go to "did you mean", which only knows catalog words, so "sea animl" finds nothing. The query step will cover it.
 - Tag chips with counts ("sea creatures 1,492") belong with the query step's removable chips.
 - Retagging a card rewrites the search row of every listing of it. Tagging the large market rewrote all million rows (250 MB after vacuum). A new vocabulary version on a live market should go through in batches with a vacuum between them.
+
+## Described searches
+
+Described search, second part: when a submitted search has words code cannot read, a model reads it once into the same filters code uses, and the market shows what it was read as. Measured with `pnpm eval:search` before writing this.
+
+### Decisions
+
+- **The model sees words, not the catalog.** Code tells it which of the shopper's words start a catalog word and, for the others, the three catalog words spelled most like them. That is all the catalog it sees, so the prompt is the same 3,000 tokens for any catalog size, and a misspelled name is fixed from real card words.
+- **The reading is search text.** The answer is checked, then written back as text the parser reads alone (`ocean, holo, wyrm`). Search runs exactly as for a typed search, the URL carries it, and paging, sorting, reloads and shared links never call the model. `?from=` keeps what was typed, for the page to show. A comma is a phrase boundary, so a reading can never glue two tags into a different phrase ("fire, breathing" is not "fire breathing"); "1,000" still reads as a number. A test round-trips every pair of tags and every tag beside a free word.
+- **Only on submit, only for unknown words.** The page searches while the shopper types and calls the model only when Enter is pressed (or the home page's Search) and some word starts no catalog word. Searches code reads alone, including every popular search on the home page, never reach it.
+- **Code keeps the model honest.** Tags are enum ids; a name must start a catalog word; grades are 1 to 10 in halves, prices positive and below ten million; what it could not use must be phrases the shopper typed. When the search names a card, tags its own words do not spell are dropped: in trials the model turned "wyrm" into dragon and serpent, and "owl" into bird, which hid nothing here but would at scale.
+- **Thinking off, prompt cached.** This is classification against a list, and a shopper is waiting: with thinking off a reading takes about a second. The system prompt is cached, so a reading reads 3,000 tokens from the cache and costs about $0.00008.
+- **One cache row per set of words.** The key is the search's words lowercased, deduplicated and sorted, so "WYRM shiny" and "shiny wyrm" share a row. The row records the tag vocabulary and prompt versions, and a row from another version is a miss. "Nothing to search for" is cached; failures are not, so a timeout is retried on the next Enter. Hits are counted, for a later look at what shoppers describe.
+- **The model-call limit is spent only on a miss.** The per-IP limit for costly endpoints is checked after the cache lookup, so a popular described search costs one call in total, and a cached one is never refused.
+- **Fail soft, and say why.** No key, the daily cap, the per-IP limit, a 3-second timeout and an error each leave the keyword results in place with a line saying which.
+- **Removable chips.** Each filter the search was read as is a chip that links to the search without it, so a wrong guess costs one click. The chips come from the same parts as the search text, so removing one always yields a search code reads alone.
+- **Typo hints are looser for the model than for did you mean.** A swapped pair in a short word ("moht") scores 0.25 against "moth", under Postgres's 0.3 default. The model's hints use 0.2, set for that transaction only so the trigram index still serves the lookup; did you mean, which acts without a model, keeps 0.3.
+- **Card vectors move to the rerank PR.** Nothing in this step would read them: a reading becomes tags and words. They matter when results are ranked by meaning, which is the next PR.
+
+### Things the eval and tests caught
+
+- Four labelled "described" searches never reach the model: code reads "sea animal with hologram", "armored sea critters", "rocky beast" and "dragon hatchling" alone, through tag words and catalog words. The eval checks routing first for this reason.
+- "made of fire" and "made of sunlight" came back with golem: the model read "made of" as a construct. "from the ocean" added water and "lives in the ocean" added animal. A rule that each tag must stand for words in the search fixed three of the four.
+- A cost column was declared `bigint` and came back from the driver as a JavaScript BigInt, which broke the comparison in the cache test. It is `int` now; a reading costs at most a few hundred micro-dollars.
+- `understand` first took a fixed rate-limit effect, which could not need the HTTP request; it is generic now, so the route passes the real per-IP check and tests pass a stand-in.
+
+### Open
+
+- "shiny thing from the ocean" still adds water. Inferred tags could rank instead of filter once there is a reranker.
+- A typo in a tag word next to a card name loses the tag ("glowng moth" reads as moth), because tags the typed words do not spell are dropped when a name is present. "sea animl" reads as animal and sea creature, which drops the one sea creature not tagged animal.
+- A misspelled first word beside a correct name is sometimes dropped instead of corrected ("abysal leviathan" reads as leviathan). It still finds the card.
+- Old cache rows are never deleted, only ignored after 30 days or a version change. A nightly delete belongs with the other jobs once there are many.
+- Sorting by relevance: a described search is still sorted newest first.

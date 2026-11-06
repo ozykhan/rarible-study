@@ -17,6 +17,7 @@
     "tags:run": "pnpm --filter @slabwatch/server tags:run",
     "bench:search": "pnpm --filter @slabwatch/server bench:search",
     "eval": "pnpm --filter @slabwatch/evals eval",
+    "eval:search": "pnpm --filter @slabwatch/evals eval:search",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test"
   },
