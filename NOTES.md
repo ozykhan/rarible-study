@@ -270,7 +270,42 @@ Described search, third part: a described search is ordered by meaning, closest 
 
 ### Open
 
-- Places rank worse than habits: 0.51 against 0.86 at 20. "dragon from the glassy wastes" for "beyond the glass desert" is 0.10, no better than newest first. A larger embedding model, or the rerank, should be measured on these.
+- Places rank worse than habits: 0.51 against 0.86 at 20. "dragon from the glassy wastes" for "beyond the glass desert" is 0.10, no better than newest first. A larger embedding model, or the rerank, should be measured on these. (The rerank, below, takes the first 20 for places to 1.00, but only among the 50 cards Best match brings it.)
 - Ranking every matching card exactly grows with the cards a search matches: fine at 20,040, not at millions. That needs an approximate index with filtering.
 - The live demo has 40 cards, so Best match there orders a handful of cards at most; the large market is where it shows.
 - `pnpm eval:rank` labels cards by the generator. Hand-written cards, and what shoppers really type, are not measured.
+
+## Rerank and cut
+
+Described search, fourth part: what a search says about the creature that no filter holds becomes a description, and a model judges the first 50 cards Best match shows against it. `?fit=` then cuts the market to the cards judged to fit. Measured with `pnpm eval:fit` on the large market.
+
+### Decisions
+
+- **The model reads candidates, never the catalog.** Best match picks the 50 cards to judge, so a prompt is the same size for 40 cards or 20,000. The design doc's rerank step, with the cut it left open.
+- **On Enter, with the reading.** The understand route judges right after the reading, so the page that loads is already cut. Paging, sorting, reloads and shared links read stored verdicts and never call a model. A `?fit=` nobody judged (a hand-made link) only orders, uncut.
+- **A verdict needs the card's own words.** The model copies the words of the card's text that say it fits, and code checks every one is in the card's text, give or take an ending. This is what made the cut work: with numbers alone the model judged from what it knows about a kind (golems obey), echoed the description's words, and mixed up card numbers.
+- **"not fire" is judged by what rules a card out.** The model is better at finding fire than at being sure there is none, so for a description that rules something out it quotes what ties a card to it ("sneezes small flares"), code checks those words too, and every other card fits. A description that also asks for something ("guards treasure, not fire") needs both.
+- **Kinds and lore only.** Set names and card names are left out of what the judge reads: a lizard from Hidden Ruins was kept for "lurking in abandoned temples", and a Crystalborn Wyvern for "from the glassy wastes", each quoting its name. Names are a filter already, and seller text was never in.
+- **Ten cards a call, five calls side by side, each on its own clock.** Quoting makes answers longer: 25 cards a call, two side by side, took 2.4 seconds at the median and 3.7 at p95. Ten a call take about 1.9, and 2.8 at p95 when no call is slow. With one timeout for all five, one slow call left the whole search uncut; now it costs its own 10 cards, which the next submit asks about again.
+- **Stored per description, prompt version and card.** The description's words without filler, in order, so searches share verdicts whatever filter they came with, and a later search asks only about new cards. The cut applies once any card has a verdict for the description; cards Best match ranks past 50 are never shown under it. A card whose catalog text changes loses its verdicts (a trigger), and a verdict is stored only if the text is still the one judged.
+- **Fails soft, rate limit spent only on a call.** No key, the spend cap, the per-IP limit or no call in time leaves the search uncut, and the page says which.
+
+### Things the eval, tests and browser caught
+
+- The first judge, numbers only: precision 0.84 with a filter and the first 20 no better than Best match (0.81 to 0.82). Quoting brought it to 0.98, then names out, ten a call and quoted exclusions to 1.00.
+- One call echoed the description ("blooms only at midnight") for ten cards that say "opens only at midnight"; the prompt now says to copy the card's words, and endings are forgiven.
+- Offered "" as the words for a card that fits by what it lacks, the model used it for positive descriptions too, and for "not fire" kept a drakeling that sneezes flares. Hence quoting what rules a card out.
+- A description alone ranked the whole catalog through the exact path, which reads every listing: 3.2 seconds. The whole market is counted from stats, but it is not small, so it takes the past-cap path now: about 50 ms for the 50 cards.
+- Editing migration 0009 with a text replace also changed 0008's trigger, so a card's new tags no longer queued its vector. The ranking test caught it.
+- The reading eval slipped on typos with the description field ("kelpy foal" read as mythical); see the README.
+- In the browser, an old server process kept serving after a restart and made "not fire" look random. Worth checking the PID before blaming the model.
+
+### Open
+
+- Only the first 50 cards are judged. A broad description over a big catalog can have more fitting cards than that, and the cut shows only those among the 50. Judging the next 50 on demand ("show more that fit") would extend it.
+- The shopper waits for the reading and the judging together, about 3 seconds. Showing Best match at once and cutting when the verdicts arrive would hide most of it.
+- About 1% of calls pass 4 seconds, and their cards stay unjudged until the search is submitted again.
+- "not fire" and "no fire" are different descriptions, so they are judged separately.
+- The labels are exact phrases from the generator, so a fair paraphrase ("stays perfectly still for ages" for a dragon that sleeps for a century) counts as wrong, and the hand-written catalog was checked by hand only.
+- The reading eval does not label descriptions yet.
+
