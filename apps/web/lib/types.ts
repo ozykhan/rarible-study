@@ -197,6 +197,8 @@ export interface Purchase {
   readonly reason: string | null
   readonly refusals: ReadonlyArray<string>
   readonly txSignature: string | null
+  /** The listing it buys. GET /rules/:id sends it; Found for you draws a waiting purchase from it. */
+  readonly listing?: Listing | null
 }
 
 export interface AgentRun {

@@ -336,4 +336,39 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("web api"
         { id: "A-old", trigger: "new_match", question: null, finalText: "Proposed it.", listingId: listing.listingId }
       ])
     }))
+
+  it.effect("sends each purchase with its listing, even when its decision is past the 60 the watch shows", () =>
+    Effect.gen(function* () {
+      const call = yield* api
+      const sql = yield* SqlClient
+      const rules = yield* RuleRepo
+      const catalog = yield* CatalogRepo
+      const wallet = yield* Effect.promise(() => generateKeyPairSigner())
+      const token = yield* signIn(call, wallet, "192.0.2.55")
+      const usd = seed.listings.filter((l) => l.listing.id !== target.listing.id && l.listing.currency === "USD")
+      const waiting = (yield* catalog.getListing(usd.at(-1)!.listing.id))!
+      const newer = usd.slice(0, 61).map((l) => l.listing.id)
+      expect(newer).not.toContain(waiting.listingId)
+      const rule = ruleFor(waiting, { ownerWallet: wallet.address })
+      yield* rules.insert({ rule, softEmbedding: null })
+
+      // A busy watch: the match the agent proposed is older than 61 newer matches, so it is not among the 60 decisions sent.
+      const decide = (listingId: string, minutesAgo: number) => sql`
+        INSERT INTO match_decisions (rule_id, listing_id, pipeline_version, verdict, decided_at, field_checks, created_at)
+        VALUES (${rule.id}, ${listingId}, 'v2', 'match', 'judge', '[]'::jsonb, now() - make_interval(mins => ${minutesAgo}::int))`
+      yield* decide(waiting.listingId, 600)
+      for (const [i, id] of newer.entries()) yield* decide(id, i)
+      yield* sql`
+        INSERT INTO purchases (id, rule_id, buyer_wallet, listing_id, actor, price_minor, currency, price_usd_cents, status)
+        VALUES ('P-busy', ${rule.id}, ${wallet.address}, ${waiting.listingId}, 'agent:A-busy', ${waiting.price.amountMinor},
+                ${waiting.price.currency}, ${toUsdCents(waiting.price.amountMinor, waiting.price.currency)}, 'proposed')`
+
+      const detail = (yield* call(`/rules/${rule.id}`, { token, ip: "192.0.2.55" })).body
+      expect(detail["decisions"]).toHaveLength(60)
+      expect(detail["decisions"].map((d: any) => d.listingId)).not.toContain(waiting.listingId)
+      expect(detail["decisions"].every((d: any) => d.listing?.listingId === d.listingId)).toBe(true)
+      expect(detail["purchases"]).toMatchObject([
+        { id: "P-busy", status: "proposed", listing: { listingId: waiting.listingId, setId: waiting.setId, cardId: waiting.cardId } }
+      ])
+    }))
 })

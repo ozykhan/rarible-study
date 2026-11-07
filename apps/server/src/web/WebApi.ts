@@ -216,6 +216,10 @@ export const WebApiRoutes = HttpRouter.addAll(
       cardName: cardName(stored.rule.hard.cardId)
     })
 
+    /** Listings by id, in one query. */
+    const listingsById = (ids: ReadonlyArray<string>) =>
+      catalog.getListings([...new Set(ids)]).pipe(Effect.map((ls) => new Map(ls.map((l): [string, ListingView] => [l.listingId, l]))))
+
     const latestDecisions = (ruleId: string) =>
       Effect.gen(function* () {
         const rows = yield* sql<{
@@ -233,9 +237,20 @@ export const WebApiRoutes = HttpRouter.addAll(
           ORDER BY listing_id, created_at DESC`
         const order = { match: 0, needs_review: 1, reject: 2 } as const
         const sorted = [...rows].sort((a, b) => order[a.verdict] - order[b.verdict] || +b.createdAt - +a.createdAt).slice(0, 60)
-        const out: Array<(typeof sorted)[number] & { readonly listing: ListingView | null }> = []
-        for (const r of sorted) out.push({ ...r, listing: yield* catalog.getListing(r.listingId) })
-        return out
+        const listings = yield* listingsById(sorted.map((r) => r.listingId))
+        return sorted.map((r) => ({ ...r, listing: listings.get(r.listingId) ?? null }))
+      })
+
+    /**
+     * A watch's purchases, each with its listing. Found for you draws a
+     * purchase waiting for a signature from it: a busy watch has more
+     * purchases than the 60 decisions it sends, so the decision may be missing.
+     */
+    const purchasesWithListings = (ruleId: string) =>
+      Effect.gen(function* () {
+        const rows = yield* purchases.listForRule(ruleId)
+        const listings = yield* listingsById(rows.map((p) => p.listingId))
+        return rows.map((p) => ({ ...p, listing: listings.get(p.listingId) ?? null }))
       })
 
     const status = route(
@@ -455,7 +470,7 @@ export const WebApiRoutes = HttpRouter.addAll(
           rule: ruleSummary(stored),
           approvals,
           decisions: yield* latestDecisions(id),
-          purchases: yield* purchases.listForRule(id),
+          purchases: yield* purchasesWithListings(id),
           runs: runs.map(({ transcript, finalText, ...r }) => ({ ...r, finalText: finalText ?? lastAgentText(transcript) }))
         }
       })
