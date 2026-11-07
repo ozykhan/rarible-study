@@ -207,7 +207,7 @@ Graders, by code: ${Object.entries(graderNames).map(([code, name]) => `${code} (
 
 Rules for each field:
 - setName: the set the collector names, spelled as the search found it when the match is obvious, otherwise as they wrote it. null when they name no set ("from any set").
-- cardName: the one card the collector names, spelled as the search found it when the match is obvious, otherwise as they wrote it. null when they name no card. A kind of creature is not a card name, even when some card names contain the word: "horse cards", "a dragon card" and "any golem" name no card.
+- cardName: the one card the collector names, spelled as the search found it when the match is obvious, otherwise as they wrote it. null when they name no card. A kind of creature is not a card name, even when some card names contain the word: "horse cards", "a dragon card" and "any golem" name no card. A name the search did not find is still a card name: return it as written and code will ask the collector about it, never turn it into a description.
 - edition: "first" for 1st edition, "unlimited" when they say unlimited, otherwise "any".
 - finish: "holo", "non_holo", "reverse_holo", or "any" when they did not say.
 - graders: the grader codes they accept. An empty list means any grader.
