@@ -49,7 +49,6 @@ export const searchCases: ReadonlyArray<SearchCase> = [
   { q: "a cat made of sunlight", kind: "described", route: "model", tags: ["cat", "light"] },
   { q: "fish that lights up", kind: "described", route: "model", tags: ["fish", "glows"] },
   { q: "plant monster", kind: "described", route: "model", tags: ["plant"] },
-  { q: "creature with horns", kind: "described", route: "model", tags: ["horned"] },
   { q: "spooky ghost", kind: "described", route: "model", tags: ["spirit"], alsoOk: ["shadow"] },
   { q: "dragon that is not fire", kind: "described", route: "model", tags: ["dragon"] },
   // Written after run 1, before any run of prompt 2: wording the prompt's examples do not cover.
@@ -57,11 +56,9 @@ export const searchCases: ReadonlyArray<SearchCase> = [
   { q: "a bird made of lightning", kind: "described", route: "model", tags: ["bird", "storm"], alsoOk: ["flies"] },
   { q: "creatures that live in lakes", kind: "described", route: "model", tags: ["freshwater"] },
   { q: "something from outer space that shines", kind: "described", route: "model", tags: ["space", "glows"], alsoOk: ["light"] },
-  { q: "poisonous swamp thing", kind: "described", route: "model", tags: ["poison", "freshwater"] },
   // Mixed: a name and words code cannot read
   { q: "ashen wyrm cheapest", kind: "mixed", route: "model", names: ["ashen", "wyrm"] },
   { q: "frozen fox", kind: "mixed", route: "model", names: ["fox"], alsoOk: ["ice", "arctic"] },
-  { q: "glowing moth thing", kind: "mixed", route: "model", names: ["moth"], tags: ["glows"] },
   { q: "tidewyrm, best price", kind: "mixed", route: "model", names: ["tidewyrm"] },
   { q: "shiny unicorn", kind: "mixed", route: "model", names: ["unicorn"], finishes: ["holo"] },
   // Typos
@@ -97,5 +94,10 @@ export const searchCases: ReadonlyArray<SearchCase> = [
   { q: "armored sea critters", kind: "code", route: "code" },
   { q: "rocky beast", kind: "code", route: "code" },
   { q: "dragon hatchling", kind: "code", route: "code" },
-  { q: "furry critter from the snow", kind: "code", route: "code" }
+  { q: "furry critter from the snow", kind: "code", route: "code" },
+  // "creature", "thing" and "something" became filler words after run 5: code reads these alone now.
+  { q: "creature with horns", kind: "code", route: "code" },
+  { q: "poisonous swamp thing", kind: "code", route: "code" },
+  { q: "glowing moth thing", kind: "code", route: "code" },
+  { q: "flying creature", kind: "code", route: "code" }
 ]

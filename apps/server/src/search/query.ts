@@ -104,11 +104,15 @@ export const searchWords = (text: string): Array<string> =>
 /**
  * Words that carry no meaning here. Grader names are made of ordinary words
  * ("card", "grading", "slab"); left in, they would have to match a card.
+ * Every card is a creature card, so "creature" and "thing" narrow nothing
+ * either: "flying creature" is a search for flying. Tag phrases are read
+ * first, so "sea creature" still means sea creatures.
  */
 const STOPWORDS = new Set([
   "a", "an", "and", "the", "of", "in", "for", "with", "by", "from", "to",
   "card", "cards", "slab", "slabs", "graded", "grade", "grading", "authentication",
-  "edition", "ed", "cert", "certified", "listing", "listings"
+  "edition", "ed", "cert", "certified", "listing", "listings",
+  "creature", "creatures", "thing", "things", "something"
 ])
 
 /** A word that carries no meaning in a search ("the", "from", "graded"). */

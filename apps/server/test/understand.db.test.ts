@@ -119,7 +119,7 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("reading 
       // Typed as is, the search has unknown words and finds nothing; rewritten, it is the sea and holo search.
       expect(yield* search.search({ ...query, q: "something that lives in the ocean, shiny" })).toMatchObject({
         total: 0,
-        unknown: ["something", "that", "lives", "shiny"]
+        unknown: ["that", "lives", "shiny"]
       })
       const found = yield* search.search({ ...query, q })
       expect(found.understood).toEqual(["sea creatures", "holo"])

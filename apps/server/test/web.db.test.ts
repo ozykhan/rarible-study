@@ -98,16 +98,16 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("web api"
       const token = signedIn.body["token"] as string
 
       // A search with words nothing matches says which ones, and reading it needs a model this server lacks.
-      const vague = (yield* call("/listings?q=a%20thing%20from%20the%20ocean")).body
+      const vague = (yield* call("/listings?q=a%20wibbly%20thing%20from%20the%20ocean")).body
       expect(vague).toMatchObject({
         total: 0,
-        unknown: ["thing"],
+        unknown: ["wibbly"],
         chips: [
-          { label: "sea creatures", q: "thing" },
-          { label: '"thing"', q: "ocean" }
+          { label: "sea creatures", q: "wibbly" },
+          { label: '"wibbly"', q: "ocean" }
         ]
       })
-      expect((yield* call("/search/understand?q=a%20thing%20from%20the%20ocean")).body).toEqual({ status: "unavailable", reason: "no_key" })
+      expect((yield* call("/search/understand?q=a%20wibbly%20thing%20from%20the%20ocean")).body).toEqual({ status: "unavailable", reason: "no_key" })
       expect((yield* call("/search/understand?q=ashen%20wyrm")).body).toEqual({ status: "not_needed" })
 
       // No model key in tests: drafting says so, but a rule can still be made from fields.

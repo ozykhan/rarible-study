@@ -229,6 +229,7 @@ Described search, second part: when a submitted search has words code cannot rea
 ### Things the eval, tests and live site caught
 
 - Live, right after merging, "shiny thing from the ocean" read as sea creatures, water, glowing and holo, 5 listings instead of 17, and was cached for 30 days. No eval run had shown the glowing: the model varies between runs. That led to one typed word, one filter, and prompt version 4 retired the cached reading.
+- On the live site "flying creature" found nothing as typed: "creature" starts no catalog word, so only Enter reached the model. Every card is a creature card, so "creature", "creatures", "thing", "things" and "something" are filler words now, like "card" and "slab". Tag phrases are read before filler is dropped, so "sea creature" still means sea creatures, and the test that no catalog word is swallowed covers all 20,040 generated cards.
 - The first cut of those claims added code's own tag words to every reading, which put fire back into "dragon that is not fire". Readings take the model's tags again; code's reading only breaks ties.
 
 - Four labelled "described" searches never reach the model: code reads "sea animal with hologram", "armored sea critters", "rocky beast" and "dragon hatchling" alone, through tag words and catalog words. The eval checks routing first for this reason.
