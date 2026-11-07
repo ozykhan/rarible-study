@@ -1,10 +1,9 @@
 import { Context, Effect, Layer, Schema } from "effect"
 import { SqlClient } from "effect/sql/SqlClient"
-import type { SqlError } from "effect/sql/SqlError"
 import { toTextArray } from "../db/Database.ts"
 import { Llm } from "../llm/Llm.ts"
 import { FIT_VERSION, fitKey, type MarketQuery } from "./query.ts"
-import { SearchService, type FitCandidate } from "./SearchService.ts"
+import { SearchService, type FitCandidate, type SearchError } from "./SearchService.ts"
 import type { UnavailableReason } from "./SearchUnderstanding.ts"
 
 /**
@@ -157,7 +156,7 @@ export class CardFit extends Context.Service<
      * a model call is needed: a rate limit goes there, and its failure means
      * "busy".
      */
-    readonly check: <E, R>(query: MarketQuery, beforeModel: Effect.Effect<void, E, R>) => Effect.Effect<FitCheck, SqlError, R>
+    readonly check: <E, R>(query: MarketQuery, beforeModel: Effect.Effect<void, E, R>) => Effect.Effect<FitCheck, SearchError, R>
   }
 >()("slabwatch/CardFit") {}
 

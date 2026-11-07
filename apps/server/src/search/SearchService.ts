@@ -1,10 +1,11 @@
 import type { Grader } from "@slabwatch/domain"
-import { Cache, Context, Effect, Exit, Layer } from "effect"
+import { Cache, Context, Effect, Exit, Layer, Schema } from "effect"
 import type { SqlError } from "effect/sql/SqlError"
 import { SqlClient } from "effect/sql/SqlClient"
 import type { Fragment } from "effect/sql/Statement"
 import { toTextArray, toVector } from "../db/Database.ts"
 import { Embedder } from "../embeddings/Embedder.ts"
+import { searchVector } from "./CardVectors.ts"
 import {
   defaultSort,
   describedWords,
@@ -23,10 +24,19 @@ import {
 
 /**
  * Market search as a service: a query in, listing ids and counts out. The web
- * route turns the ids into full listings. This version runs on Postgres over
- * listing_search (see migration 0005_search); a search engine can implement
- * the same interface later without the route changing.
+ * route turns the ids into full listings. SearchServicePg below runs on
+ * Postgres over listing_search (see migration 0005_search);
+ * opensearch/SearchServiceOpenSearch.ts answers the same questions from a copy
+ * in OpenSearch, and the route cannot tell them apart.
  */
+
+/** The search engine could not answer: it is unreachable, or it refused the request. */
+export class SearchEngineError extends Schema.TaggedError<SearchEngineError>()("SearchEngineError", {
+  message: Schema.String
+}) {}
+
+/** What a search can fail with: Postgres, or the engine when one is used. */
+export type SearchError = SqlError | SearchEngineError
 
 export interface SetRef {
   readonly id: string
@@ -106,15 +116,15 @@ export const fitText = (catalogText: string, name: string): string => {
 export class SearchService extends Context.Service<
   SearchService,
   {
-    readonly search: (query: MarketQuery) => Effect.Effect<MarketSearchResult, SqlError>
+    readonly search: (query: MarketQuery) => Effect.Effect<MarketSearchResult, SearchError>
     /**
      * The first `limit` cards a search shows best match first, ignoring any
      * judgments for its ?fit: the cards CardFit asks a model about.
      */
-    readonly fitCandidates: (query: MarketQuery, limit: number) => Effect.Effect<ReadonlyArray<FitCandidate>, SqlError>
-    readonly stats: Effect.Effect<MarketStats, SqlError>
+    readonly fitCandidates: (query: MarketQuery, limit: number) => Effect.Effect<ReadonlyArray<FitCandidate>, SearchError>
+    readonly stats: Effect.Effect<MarketStats, SearchError>
     /** The words that start some card, kind or set word, in the order given. */
-    readonly knownWords: (words: ReadonlyArray<string>) => Effect.Effect<ReadonlyArray<string>, SqlError>
+    readonly knownWords: (words: ReadonlyArray<string>) => Effect.Effect<ReadonlyArray<string>, SearchError>
     /**
      * For each word, the catalog words spelled most like it (trigram
      * similarity at least `threshold`, Postgres's 0.3 by default), closest first.
@@ -123,7 +133,7 @@ export class SearchService extends Context.Service<
       words: ReadonlyArray<string>,
       limit: number,
       threshold?: number
-    ) => Effect.Effect<Readonly<Record<string, ReadonlyArray<string>>>, SqlError>
+    ) => Effect.Effect<Readonly<Record<string, ReadonlyArray<string>>>, SearchError>
   }
 >()("slabwatch/SearchService") {}
 
@@ -142,13 +152,15 @@ export const COUNT_LIMIT = 10_000
  * Best match, the "relevance" sort. Each card has a vector of its trusted text
  * and tags (CardVectors); the words a search describes a card with
  * (describedWords, from ?from when a model read the search) become a query
- * vector, and the cards the search matches are ordered by cosine distance to
- * it, each card's listings newest first. Filters still decide what matches;
+ * vector, and the cards the search matches are ordered by how close their
+ * vectors are to it, each card's listings newest first. Both vectors are
+ * whole numbers (searchVector) and closeness is their dot product, pgvector's
+ * <#> (the negative of it, so smaller is closer). Filters still decide what matches;
  * the order only decides what comes first, so words no filter can express
  * ("that guards treasure") still count. No model call: the query vector comes
  * from the local embedder and is cached.
  */
-const QUERY_VECTORS = { capacity: 2000, timeToLive: "1 hour" } as const
+export const QUERY_VECTORS = { capacity: 2000, timeToLive: "1 hour" } as const
 
 /** Search words become a prefix query: 'ashen':* & 'wyrm':*. Words are letters and digits only, so they need no escaping. */
 const prefixQuery = (words: ReadonlyArray<string>) => words.map((w) => `'${w}':*`).join(" & ")
@@ -223,7 +235,7 @@ export const SearchServicePg = Layer.effect(
     const queryVectors = yield* Cache.makeWith(
       (text: string) =>
         embedder.embed([text], "query").pipe(
-          Effect.map((vs) => toVector(vs[0] ?? [])),
+          Effect.map((vs) => toVector(searchVector(vs[0] ?? []))),
           Effect.withSpan("SearchService.queryVector")
         ),
       // A failure is tried again next time rather than remembered.
@@ -395,7 +407,8 @@ export const SearchServicePg = Layer.effect(
     }
 
     /**
-     * One page best match first. Matches are ordered by their card's distance to the query vector, in two rounds:
+     * One page best match first. Matches are ordered by their card's distance to the query vector (the negative dot
+     * product, a whole number, so cards that tie in one engine tie in every engine), in two rounds:
      * first the newest listing of each card, then every other listing, card by card. At marketplace size a card has
      * dozens of listings, and the first page should show the cards that fit best, not one card's whole stock.
      *
@@ -411,7 +424,7 @@ export const SearchServicePg = Layer.effect(
           WITH m AS MATERIALIZED (
             SELECT listing_id, listed_at, card_id FROM listing_search WHERE ${sql.and(where(o.r, o.grader, o.set))}
           ), r AS (
-            SELECT id, search_vector <=> ${o.vector}::vector AS d FROM cards WHERE id IN (SELECT card_id FROM m)
+            SELECT id, search_vector <#> ${o.vector}::vector AS d FROM cards WHERE id IN (SELECT card_id FROM m)
           )
           SELECT m.listing_id FROM m JOIN r ON r.id = m.card_id
           ORDER BY row_number() OVER (PARTITION BY m.card_id ORDER BY m.listed_at DESC, m.listing_id) > 1,
@@ -419,7 +432,7 @@ export const SearchServicePg = Layer.effect(
           LIMIT ${o.limit} OFFSET ${o.offset}`
         return rows.map((x) => x.listingId)
       }
-      const cards = sql`SELECT id, search_vector <=> ${o.vector}::vector AS d FROM cards WHERE ${sql.and(cardWhere(o.r, o.set))}`
+      const cards = sql`SELECT id, search_vector <#> ${o.vector}::vector AS d FROM cards WHERE ${sql.and(cardWhere(o.r, o.set))}`
       const listings = sql.and(listingWhere(o.r, o.grader))
       const end = o.offset + o.limit
       const firsts = (yield* sql<{ readonly listingId: string }>`

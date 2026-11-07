@@ -27,6 +27,25 @@ export const cardSearchText = (catalogText: string, tags: ReadonlyArray<string>)
   return labels.length === 0 ? catalogText : `${catalogText} Described as: ${labels.join(", ")}.`
 }
 
+/** The length a search vector is scaled to before its parts are rounded to whole numbers. */
+export const SEARCH_VECTOR_SCALE = 2048
+
+/**
+ * A search vector as it is stored and queried: the embedding scaled to length
+ * SEARCH_VECTOR_SCALE, each part rounded to a whole number. Best match orders
+ * cards by the dot product of their vector with the query's, and with whole
+ * numbers this small every sum along the way is exact in single precision
+ * (at most 2048 squared, far below 2^24). So Postgres and OpenSearch, on any
+ * CPU and in any summing order, compute the same number for each card, and
+ * cards that tie, tie in both. With fractions, two cards a hair apart could
+ * swap places from one engine or machine to the next. Rounding moves a card's
+ * similarity by about 0.0002 on a scale where 1 is a perfect match.
+ */
+export const searchVector = (embedding: ReadonlyArray<number>): ReadonlyArray<number> => {
+  const length = Math.sqrt(embedding.reduce((s, x) => s + x * x, 0))
+  return embedding.map((x) => (length === 0 ? 0 : Math.round((x / length) * SEARCH_VECTOR_SCALE)))
+}
+
 export interface VectorRun {
   /** Cards read from the queue. */
   readonly cards: number
@@ -75,7 +94,7 @@ export const CardVectorsLive = Layer.effect(
             ${toTextArray(rows.map((r) => r.id))}::text[],
             ${toTextArray(rows.map((r) => r.catalogText))}::text[],
             ${toTextArray(rows.map((r) => r.tags.join(",")))}::text[],
-            ${toTextArray(vectors.map(toVector))}::vector[]
+            ${toTextArray(vectors.map((v) => toVector(searchVector(v))))}::vector[]
           ) AS v(id, catalog_text, tags, vector)
           WHERE c.id = v.id AND c.catalog_text = v.catalog_text AND c.tags = string_to_array(v.tags, ',')
           RETURNING c.id`

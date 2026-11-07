@@ -1,8 +1,8 @@
-import { Layer } from "effect"
+import { Effect, Layer } from "effect"
 import { AgentLive } from "./agent/Agent.ts"
 import { AgentTokensLive } from "./agent/AgentTokens.ts"
 import { CatalogRepoLive } from "./catalog/CatalogRepo.ts"
-import { AppConfigLive } from "./config.ts"
+import { AppConfig, AppConfigLive } from "./config.ts"
 import { DatabaseLive } from "./db/Database.ts"
 import { EmbedderLive } from "./embeddings/Embedder.ts"
 import { LlmLive } from "./llm/Llm.ts"
@@ -12,6 +12,8 @@ import { RuleParserLive } from "./rules/RuleParser.ts"
 import { RuleRepoLive } from "./rules/RuleRepo.ts"
 import { CardFitLive } from "./search/CardFit.ts"
 import { CardVectorsLive } from "./search/CardVectors.ts"
+import { OpenSearchLive } from "./search/opensearch/OpenSearch.ts"
+import { SearchServiceOpenSearch } from "./search/opensearch/SearchServiceOpenSearch.ts"
 import { SearchServicePg } from "./search/SearchService.ts"
 import { SearchUnderstandingLive } from "./search/SearchUnderstanding.ts"
 import type { Chain } from "./solana/Chain.ts"
@@ -27,7 +29,18 @@ import { RateLimitsLive } from "./web/RateLimits.ts"
  */
 export const BaseLive = Layer.mergeAll(DatabaseLive, EmbedderLive).pipe(Layer.provideMerge(AppConfigLive))
 
-export const ReposLive = Layer.mergeAll(CatalogRepoLive, RuleRepoLive, SearchServicePg, LlmLive, AgentTokensLive, RateLimitsLive).pipe(
+/**
+ * Market search on Postgres, or on the copy in OpenSearch when SEARCH_ENGINE
+ * says so (for comparing the two locally; SearchSync keeps the copy current).
+ */
+export const SearchLive = Layer.unwrap(
+  Effect.gen(function* () {
+    const { searchEngine } = yield* AppConfig
+    return searchEngine === "opensearch" ? SearchServiceOpenSearch.pipe(Layer.provide(OpenSearchLive)) : SearchServicePg
+  })
+)
+
+export const ReposLive = Layer.mergeAll(CatalogRepoLive, RuleRepoLive, SearchLive, LlmLive, AgentTokensLive, RateLimitsLive).pipe(
   Layer.provideMerge(BaseLive)
 )
 

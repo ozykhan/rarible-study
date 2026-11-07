@@ -1,4 +1,6 @@
 # Local Postgres with pgvector, matching the Railway pgvector template.
+# OpenSearch is only for comparing search engines locally (see README), so it
+# starts only when asked: docker compose --profile opensearch up -d --wait
 services:
   db:
     image: pgvector/pgvector:pg17
@@ -16,5 +18,26 @@ services:
       timeout: 3s
       retries: 30
 
+  opensearch:
+    profiles: [opensearch]
+    image: opensearchproject/opensearch:3.9.0
+    environment:
+      discovery.type: single-node
+      # Local study node: no TLS or users, and no refusing new indexes when the disk is nearly full.
+      DISABLE_SECURITY_PLUGIN: "true"
+      DISABLE_INSTALL_DEMO_CONFIG: "true"
+      cluster.routing.allocation.disk.threshold_enabled: "false"
+      OPENSEARCH_JAVA_OPTS: -Xms2g -Xmx2g
+    ports:
+      - "9200:9200"
+    volumes:
+      - osdata:/usr/share/opensearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs localhost:9200/_cluster/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
 volumes:
   pgdata:
+  osdata:

@@ -576,6 +576,109 @@ const cardFits = Effect.gen(function* () {
     FOR EACH ROW EXECUTE FUNCTION card_fits_forget()`
 })
 
+/**
+ * What changed for a search engine's copy (search/opensearch). Postgres stays
+ * the source of truth; an engine keeps its own copy of the listings, cards
+ * and words, and this outbox says which ones to copy again. Each row names
+ * one listing, card or word; the copier reads its current state, writes it
+ * (or deletes it) in the engine, then deletes the row, so a change is never
+ * missed, only seen a moment late, and seeing it twice does no harm.
+ *
+ * Nothing is recorded until a copy is registered in search_copies: the live
+ * demo searches Postgres alone, so its outbox stays empty.
+ */
+const searchOutbox = Effect.gen(function* () {
+  const sql = yield* SqlClient
+  yield* sql`
+    CREATE TABLE search_outbox (
+      id bigserial PRIMARY KEY,
+      kind text NOT NULL CHECK (kind IN ('listing', 'card', 'word')),
+      key text NOT NULL,
+      created_at timestamptz NOT NULL DEFAULT now()
+    )`
+  yield* sql`
+    CREATE TABLE search_copies (
+      name text PRIMARY KEY,
+      started_at timestamptz NOT NULL DEFAULT now()
+    )`
+  // listing_search already follows every listing and card change (0005, 0006), so its rows are what changed.
+  yield* sql`
+    CREATE FUNCTION search_outbox_listings() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM search_copies) THEN
+        IF TG_OP = 'DELETE' THEN
+          INSERT INTO search_outbox (kind, key) SELECT 'listing', listing_id FROM old_rows;
+        ELSE
+          INSERT INTO search_outbox (kind, key) SELECT 'listing', listing_id FROM new_rows;
+        END IF;
+      END IF;
+      RETURN NULL;
+    END $$`
+  yield* sql`
+    CREATE TRIGGER listing_search_outbox_insert AFTER INSERT ON listing_search
+    REFERENCING NEW TABLE AS new_rows FOR EACH STATEMENT EXECUTE FUNCTION search_outbox_listings()`
+  yield* sql`
+    CREATE TRIGGER listing_search_outbox_update AFTER UPDATE ON listing_search
+    REFERENCING NEW TABLE AS new_rows FOR EACH STATEMENT EXECUTE FUNCTION search_outbox_listings()`
+  yield* sql`
+    CREATE TRIGGER listing_search_outbox_delete AFTER DELETE ON listing_search
+    REFERENCING OLD TABLE AS old_rows FOR EACH STATEMENT EXECUTE FUNCTION search_outbox_listings()`
+  // A card's copy holds what a search asks of the card itself: its words and tags, set, number and vector.
+  yield* sql`
+    CREATE FUNCTION search_outbox_cards() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM search_copies) THEN
+        IF TG_OP = 'UPDATE' THEN
+          INSERT INTO search_outbox (kind, key)
+          SELECT 'card', n.id FROM new_rows n JOIN old_rows o ON o.id = n.id
+          WHERE n.search_terms IS DISTINCT FROM o.search_terms OR n.search_vector IS DISTINCT FROM o.search_vector
+             OR n.set_id IS DISTINCT FROM o.set_id OR n.number IS DISTINCT FROM o.number;
+        ELSE
+          INSERT INTO search_outbox (kind, key) SELECT 'card', id FROM new_rows;
+        END IF;
+      END IF;
+      RETURN NULL;
+    END $$`
+  yield* sql`
+    CREATE TRIGGER cards_outbox_insert AFTER INSERT ON cards
+    REFERENCING NEW TABLE AS new_rows FOR EACH STATEMENT EXECUTE FUNCTION search_outbox_cards()`
+  yield* sql`
+    CREATE TRIGGER cards_outbox_update AFTER UPDATE ON cards
+    REFERENCING OLD TABLE AS old_rows NEW TABLE AS new_rows FOR EACH STATEMENT EXECUTE FUNCTION search_outbox_cards()`
+  yield* sql`
+    CREATE FUNCTION search_outbox_words() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN
+      IF EXISTS (SELECT 1 FROM search_copies) THEN
+        INSERT INTO search_outbox (kind, key) SELECT 'word', term FROM new_rows;
+      END IF;
+      RETURN NULL;
+    END $$`
+  yield* sql`
+    CREATE TRIGGER search_vocab_outbox AFTER INSERT ON search_vocab
+    REFERENCING NEW TABLE AS new_rows FOR EACH STATEMENT EXECUTE FUNCTION search_outbox_words()`
+})
+
+/**
+ * Card search vectors become whole numbers, as CardVectors.searchVector makes
+ * them from now on: each scaled to length 2048 and rounded. Best match then
+ * orders by their dot product with the query's, which Postgres and OpenSearch
+ * compute exactly, so a near tie cannot fall one way in one engine and the
+ * other way in the other. This converts the vectors already written.
+ */
+const wholeSearchVectors = Effect.gen(function* () {
+  const sql = yield* SqlClient
+  yield* sql`
+    WITH n AS (
+      SELECT id, sqrt((SELECT sum(x::float8 * x::float8) FROM unnest(search_vector::real[]) AS x)) AS length
+      FROM cards WHERE search_vector IS NOT NULL
+    )
+    UPDATE cards c SET search_vector = (
+      SELECT array_agg(round(u.x::float8 / n.length * 2048)::real ORDER BY u.i)::vector
+      FROM unnest(c.search_vector::real[]) WITH ORDINALITY AS u(x, i)
+    )
+    FROM n WHERE c.id = n.id AND n.length > 0`
+})
+
 export const migrations = {
   "0001_init": init,
   "0002_agent": agent,
@@ -585,5 +688,7 @@ export const migrations = {
   "0006_card_tags": cardTags,
   "0007_search_understandings": searchUnderstandings,
   "0008_card_search_vectors": cardSearchVectors,
-  "0009_card_fits": cardFits
+  "0009_card_fits": cardFits,
+  "0010_search_outbox": searchOutbox,
+  "0011_whole_search_vectors": wholeSearchVectors
 }

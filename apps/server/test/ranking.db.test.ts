@@ -3,7 +3,7 @@ import { Effect } from "effect"
 import { SqlClient } from "effect/sql/SqlClient"
 import { toVector } from "../src/db/Database.ts"
 import { Embedder } from "../src/embeddings/Embedder.ts"
-import { CardVectors, cardSearchText } from "../src/search/CardVectors.ts"
+import { CardVectors, cardSearchText, searchVector } from "../src/search/CardVectors.ts"
 import { describedWords, type MarketQuery } from "../src/search/query.ts"
 import { SearchService } from "../src/search/SearchService.ts"
 import { testLayer } from "./db.ts"
@@ -67,7 +67,7 @@ layer(TestLive, { timeout: "60 seconds" })("best match", (it) => {
         SELECT ls.listing_id, ls.card_id FROM listing_search ls JOIN cards c ON c.id = ls.card_id
         WHERE ls.terms @@ '(''#dragon'' | ''dragon'':*)'::tsquery
         ORDER BY row_number() OVER (PARTITION BY ls.card_id ORDER BY ls.listed_at DESC, ls.listing_id) > 1,
-                 c.search_vector <=> ${toVector(vector!)}::vector, ls.listed_at DESC, ls.listing_id`
+                 c.search_vector <#> ${toVector(searchVector(vector!))}::vector, ls.listed_at DESC, ls.listing_id`
       expect(found.ids).toEqual(definition.map((d) => d.listingId))
       const cards = new Set(definition.map((d) => d.cardId)).size
       expect(new Set(definition.slice(0, cards).map((d) => d.cardId)).size).toBe(cards)

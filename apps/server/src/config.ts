@@ -92,6 +92,14 @@ export class AppConfig extends Context.Service<
     readonly webOrigins: ReadonlyArray<string>
     /** Requests per hour per IP to the endpoints that cost a model call or a devnet transaction. */
     readonly costlyRequestsPerHour: number
+    /**
+     * Which engine answers market searches. Postgres is the source of truth and
+     * the default; "opensearch" searches a copy kept in OpenSearch (search/opensearch),
+     * for comparing the two locally. The live demo stays on Postgres.
+     */
+    readonly searchEngine: "postgres" | "opensearch"
+    /** The OpenSearch node, when one is used. */
+    readonly opensearchUrl: string
   }
 >()("slabwatch/AppConfig") {}
 
@@ -151,7 +159,9 @@ const config = Config.all({
     Config.withDefault("http://localhost:3000"),
     Config.map((s) => s.split(",").map((o) => o.trim()).filter((o) => o.length > 0))
   ),
-  costlyRequestsPerHour: Config.Number("COSTLY_REQUESTS_PER_HOUR").pipe(Config.withDefault(30))
+  costlyRequestsPerHour: Config.Number("COSTLY_REQUESTS_PER_HOUR").pipe(Config.withDefault(30)),
+  searchEngine: Config.Literals(["postgres", "opensearch"], "SEARCH_ENGINE").pipe(Config.withDefault("postgres" as const)),
+  opensearchUrl: Config.String("OPENSEARCH_URL").pipe(Config.withDefault("http://localhost:9200"))
 })
 
 export const AppConfigLive = Layer.effect(AppConfig, config)

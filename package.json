@@ -17,6 +17,8 @@
     "tags:run": "pnpm --filter @slabwatch/server tags:run",
     "vectors:run": "pnpm --filter @slabwatch/server vectors:run",
     "bench:search": "pnpm --filter @slabwatch/server bench:search",
+    "bench:engines": "pnpm --filter @slabwatch/server bench:engines",
+    "search:sync": "pnpm --filter @slabwatch/server search:sync",
     "eval": "pnpm --filter @slabwatch/evals eval",
     "eval:search": "pnpm --filter @slabwatch/evals eval:search",
     "eval:rank": "pnpm --filter @slabwatch/evals eval:rank",
