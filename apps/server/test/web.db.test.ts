@@ -116,23 +116,24 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("web api"
       expect((yield* call("/rules/draft", { token, body: { want: "a holo dragon, grade 9+" } })).status).toBe(503)
       const listing = (yield* CatalogRepo).getListing(target.listing.id)
       const view = (yield* listing)!
-      const created = yield* call("/rules", {
-        token,
-        body: {
-          rawWant: "this exact card",
-          hard: {
-            setId: view.setId,
-            cardId: view.cardId,
-            edition: view.edition,
-            finish: view.finish,
-            graders: [view.grader],
-            minGrade: view.grade,
-            maxPrice: view.price
-          },
-          softDescription: null,
-          budget: { amountMinor: view.price.amountMinor * 2, currency: view.price.currency }
-        }
-      })
+      const ruleBody = {
+        rawWant: "this exact card",
+        hard: {
+          setId: view.setId,
+          cardId: view.cardId,
+          edition: view.edition,
+          finish: view.finish,
+          graders: [view.grader],
+          minGrade: view.grade,
+          maxPrice: view.price
+        },
+        softDescription: null,
+        budget: { amountMinor: view.price.amountMinor * 2, currency: view.price.currency }
+      }
+      // Ids are checked against the catalog in the database.
+      expect((yield* call("/rules", { token, body: { ...ruleBody, hard: { ...ruleBody.hard, cardId: "OS-999" } } })).status).toBe(400)
+      expect((yield* call("/rules", { token, body: { ...ruleBody, hard: { ...ruleBody.hard, setId: "XX" } } })).status).toBe(400)
+      const created = yield* call("/rules", { token, body: ruleBody })
       expect(created.status).toBe(200)
       const ruleId = created.body["rule"]["id"] as string
       // Without the judge nothing becomes a match by itself; it waits for the collector.

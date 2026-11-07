@@ -83,7 +83,7 @@ const program = Effect.gen(function* () {
   // The want parser, checked against the rules we wrote by hand.
   const parse: Array<ParseCheck> = []
   for (const { rule } of offline ? [] : evalRules) {
-    const draft = yield* parser.parse(rule.rawWant)
+    const { draft } = yield* parser.parse(rule.rawWant)
     parse.push(checkParse(rule, draft))
   }
 
