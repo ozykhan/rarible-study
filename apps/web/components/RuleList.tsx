@@ -1,30 +1,43 @@
 import { cx } from "@/lib/cx"
 import { money } from "@/lib/format"
 import type { Rule } from "@/lib/types"
-import { Button, Led, Panel } from "./ui"
+import { Led, Panel } from "./ui"
 
 const STATUS_WORD: Record<Rule["status"], string> = { active: "watching", paused: "paused", exhausted: "budget used", draft: "draft" }
 
+/** A box with an arrow leaving it: the Manage link opens something over the page. */
+function OpenIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 /**
  * The collector's watches as a pickable list: a light that is on while the
- * watch is active, the want, and its top price and state. New watch and Sign
- * out sit under it. Styles: styles/desk.css (.rule-list, .rule-item).
+ * watch is active, the want, and its top price and state. Manage your
+ * watches, at the top right, opens ManageWatches, which also counts how many
+ * are on. On /agent the list is as tall as the watch beside it and scrolls
+ * inside the panel.
+ * Styles: styles/desk.css (.rules, .rule-list, .rule-item, .manage-link).
  */
 export function RuleList(props: {
   rules: ReadonlyArray<Rule>
   selected: string | null
   onSelect: (id: string) => void
-  onNew?: () => void
-  onSignOut: () => void
+  onManage?: () => void
 }) {
-  const on = props.rules.filter((r) => r.status === "active").length
   return (
     <Panel className="rules">
       <div className="panel-head">
         <h2>Your watches</h2>
-        <span className="mono muted small">
-          {on} of {props.rules.length} on
-        </span>
+        {props.onManage && (
+          <button type="button" className="manage-link" onClick={props.onManage} aria-haspopup="dialog">
+            <span>Manage your watches</span>
+            <OpenIcon />
+          </button>
+        )}
       </div>
       {props.rules.length === 0 && <p className="muted small">No watches yet.</p>}
       <ul className="rule-list">
@@ -47,16 +60,6 @@ export function RuleList(props: {
           </li>
         ))}
       </ul>
-      <div className="row">
-        {props.onNew && (
-          <Button variant="secondary" size="sm" onClick={props.onNew}>
-            New watch
-          </Button>
-        )}
-        <Button variant="link" onClick={props.onSignOut}>
-          Sign out
-        </Button>
-      </div>
     </Panel>
   )
 }

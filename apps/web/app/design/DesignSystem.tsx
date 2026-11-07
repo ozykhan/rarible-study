@@ -13,7 +13,8 @@ import { ListingTile } from "@/components/ListingTile"
 import { Logo } from "@/components/Logo"
 import { AgentLimits } from "@/components/AgentLimits"
 import { RuleList } from "@/components/RuleList"
-import { type ChatControls, DecisionRow, PurchaseRow, RuleChat, SkippedRow } from "@/components/RuleView"
+import { FoundCard, foundItems } from "@/components/FoundForYou"
+import { type ChatControls, PurchaseRow, RuleChat, SkippedRow } from "@/components/RuleView"
 import { Slab, type SlabCard } from "@/components/Slab"
 import { SetCard } from "@/components/Sets"
 import { StatusBar } from "@/components/StatusBar"
@@ -257,6 +258,23 @@ const DETAIL: RuleDetail = {
     }
   ]
 }
+
+/** Found for you's three kinds of card: a purchase waiting for a signature, a listing to review, and a match. */
+const FOUND = foundItems({
+  ...DETAIL,
+  purchases: [PURCHASES[0]!],
+  decisions: [
+    DECISION,
+    {
+      ...DECISION,
+      listingId: "SAMPLE-3",
+      verdict: "needs_review",
+      reasons: ["The seller's text speaks to automated buyers.", "Look at it before you sign."],
+      listing: LISTINGS[2]!
+    },
+    { ...DECISION, listingId: "SAMPLE-2", reasons: ["Every field passes and the judge agrees."], listing: LISTINGS[1]! }
+  ]
+})
 
 /** The chat box with nothing on its way, as the design page shows it. */
 const CHAT: ChatControls = { ask: async () => false, asked: null, error: null }
@@ -520,11 +538,12 @@ export function DesignSystem() {
         <Section
           eyebrow="Components"
           title="Panels on the agent page"
-          lede="The rail (RuleList, the wallet, AgentLimits), the selected watch's Found for you and Checked and skipped, and RuleChat."
+          lede="RuleList with Manage your watches, AgentLimits, the wallet with Sign out, Found for you as FoundCards, Checked and skipped, and RuleChat (a popup on the page)."
         >
           <div className="ds-two">
             <div>
-              <RuleList rules={RULES} selected="r1" onSelect={() => {}} onNew={() => {}} onSignOut={() => {}} />
+              <RuleList rules={RULES} selected="r1" onSelect={() => {}} onManage={() => {}} />
+              <AgentLimits status={STATUS} rules={RULES} />
               <Panel title="Wallet">
                 <dl className="facts">
                   <dt>dUSD balance</dt>
@@ -534,34 +553,34 @@ export function DesignSystem() {
                 </dl>
                 <div className="row">
                   <Button>Get 2,000 test dUSD</Button>
+                  <Button variant="link">Sign out</Button>
                 </div>
                 <p className="muted small">Slabwatch pays the network fee, so the wallet needs no SOL.</p>
               </Panel>
-              <AgentLimits status={STATUS} rules={RULES} />
             </div>
             <div>
-              <Panel className="rule-found">
+              <Panel className="found">
                 <div className="panel-head">
-                  <h2>Found for you</h2>
-                  <span className="muted small">Matches, and listings the agent wants you to look at</span>
+                  <div className="found-heading">
+                    <h2>Found for you</h2>
+                    <span className="mono muted small">3 to sign</span>
+                  </div>
+                  <span className="muted small">Matches, and listings the agent wants you to look at. You sign every buy.</span>
                 </div>
                 <p className="note">3 matches and 1 to review among the listings right now.</p>
-                <div className="pending">
-                  <h3>Waiting for your signature</h3>
-                  <PurchaseRow p={PURCHASES[0]!}>
-                    <Button>Sign and pay</Button>
-                  </PurchaseRow>
-                </div>
-                <DecisionRow d={DECISION}>
-                  <Button>Buy now</Button>
-                  <Button variant="secondary">Ask the agent</Button>
-                </DecisionRow>
-                <div className="block">
-                  <h3>Purchases</h3>
-                  {PURCHASES.slice(1).map((p) => (
-                    <PurchaseRow key={p.id} p={p} />
+                <div className="found-track">
+                  {FOUND.map((i) => (
+                    <FoundCard key={i.key} item={i} top={RULES[0]!.hard.maxPrice}>
+                      <Button>Sign and pay</Button>
+                      {i.waiting === null && <Button variant="link">Ask the agent</Button>}
+                    </FoundCard>
                   ))}
                 </div>
+              </Panel>
+              <Panel title="Purchases">
+                {PURCHASES.slice(1).map((p) => (
+                  <PurchaseRow key={p.id} p={p} />
+                ))}
               </Panel>
               <Panel className="rule-skipped">
                 <div className="panel-head">

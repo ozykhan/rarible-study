@@ -211,6 +211,7 @@
 
   --z-dialog: 60; /* checkout; the wallet picker (wallet adapter, 1040) opens over it */
   --z-drawer: 55; /* the agent drawer, over the header and under the checkout */
+  --z-chat: 52; /* Talk to the agent on /agent: over the page and the header, under the dialogs */
   --z-header: 50;
   --z-statusbar: 40;
 }

@@ -9,12 +9,13 @@ import { approveAllowance, getTestDusd } from "@/lib/wallet"
 import { Button, Panel } from "./ui"
 
 /**
- * The collector's dUSD, what Slabwatch may spend from it, and the address. The allowance is
- * an SPL token approval to Slabwatch's delegate, signed in the wallet; the
- * chain itself stops the delegate from spending more than that.
+ * The collector's dUSD, what Slabwatch may spend from it, the address, and
+ * Sign out. The allowance is an SPL token approval to Slabwatch's delegate,
+ * signed in the wallet; the chain itself stops the delegate from spending
+ * more than that.
  * Styles: styles/ui.css (.panel) and styles/desk.css (.facts, .row).
  */
-export function WalletPanel(props: { token: string; status: Status; funds: Funds | null; onChange: () => void }) {
+export function WalletPanel(props: { token: string; status: Status; funds: Funds | null; onChange: () => void; onSignOut: () => void }) {
   const { signTransaction } = useWallet()
   const { busy, error, run } = useAction()
   const [amount, setAmount] = useState("1000")
@@ -25,6 +26,11 @@ export function WalletPanel(props: { token: string; status: Status; funds: Funds
     return (
       <Panel title="Wallet">
         <p className="muted">This server pays through a simulated ledger, so there is nothing to fund.</p>
+        <div className="row">
+          <Button variant="link" onClick={props.onSignOut}>
+            Sign out
+          </Button>
+        </div>
       </Panel>
     )
   }
@@ -62,6 +68,9 @@ export function WalletPanel(props: { token: string; status: Status; funds: Funds
       <div className="row">
         <Button onClick={faucet} disabled={busy !== null || props.status.readOnly}>
           {busy === "faucet" ? "Minting…" : `Get ${props.status.faucetUsd.toLocaleString("en-US")} test dUSD`}
+        </Button>
+        <Button variant="link" onClick={props.onSignOut}>
+          Sign out
         </Button>
       </div>
       <div className="row">
