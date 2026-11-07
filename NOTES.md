@@ -309,3 +309,32 @@ Described search, fourth part: what a search says about the creature that no fil
 - The labels are exact phrases from the generator, so a fair paraphrase ("stays perfectly still for ages" for a dragon that sleeps for a century) counts as wrong, and the hand-written catalog was checked by hand only.
 - The reading eval does not label descriptions yet.
 
+## OpenSearch
+
+The same `SearchService` on OpenSearch 3.9, run locally from a copy of the search data, to compare a search engine with Postgres on the large market. The design doc's choice: Postgres first, then OpenSearch behind the same interface, with the live demo staying on Postgres. Measured with `pnpm bench:engines` and `SEARCH_ENGINE=opensearch pnpm eval:rank`.
+
+### Decisions
+
+- **Same answers first, then speed.** The comparison only means something if both engines answer the same question, so the engine reproduces Postgres's rules exactly: prefix matching on the card's words, the 10,000 count cap, the sort tie-breaks down to the listing id, Best match's one listing per card first, pg_trgm's similarity for "did you mean". A test and the bench check every answer field by field.
+- **Copy what search reads, not the tables.** Listings, cards and catalog words, shaped for search. Sets, sellers, the model's verdicts and card text stay in Postgres: they are small lookups, and copying them would mean more to keep in sync.
+- **An outbox, gated.** Triggers record what changed only while a copy is registered in `search_copies`, so production records nothing. The copier reads current state rather than replaying events, deletes the rows it applied in the same transaction as the engine write, and takes rows with `SKIP LOCKED`; a change seen twice is harmless and a failed write goes back on the queue. A full copy registers under SHARE locks first, so a write already under way cannot slip past both the copy and the outbox.
+- **Aliases for a full copy.** New indexes are loaded with refresh off, then one `_aliases` call points searches at them and drops the old ones.
+- **One request per sorted page.** Counts per set come from an aggregation over the whole search and the page from the same request, narrowed to the set by a post filter. Postgres needs two queries for the same.
+- **Exact vector scores.** Best match scores the cards that match with a script, like pgvector does without an index, so both orders are the same; no approximate graph is built (`knn: false`).
+- **CI runs a real node.** The parity test needs OpenSearch, so CI starts one as a service container; locally the test is skipped unless `OPENSEARCH_URL` is set.
+
+### Things the tests and bench caught
+
+- "highest grade first" came back with a different page on the engine: with the grade as a `scaled_float` and the first sort key, older grade 10 listings came before newer ones. Filtering to grade 10 sorted right. A `float` holds whole and half grades exactly and sorts right.
+- The node refused to create indexes: the container's disk was 91% used by the host's count, past OpenSearch's high watermark. The local node and CI turn the disk thresholds off.
+- `Layer.build` memoizes a layer it has built before, so the test's "fresh" engines kept their cached market numbers. `Layer.fresh` builds new ones.
+- Collapsing listings on the card to find each card's newest was slower than a terms aggregation with `top_hits` (210 against 148 ms on the deep Best match page), so the aggregation stayed.
+- The first bench timed a market-number refresh into some runs; both engines now read them before each search is timed.
+
+### Open
+
+- Best match past the first round reads every matching card's newest listing in one aggregation, twice as slow as Postgres's one card at a time on page 126.
+- Postgres answers index-ordered pages in about a millisecond; the engine's floor is about 6 ms, mostly the HTTP round trip and JSON, even with both on one machine and connections reused.
+- One node and one shard on the same 4 cores as Postgres. Shards, replicas and a second node, which are what an engine is for at 10 million listings, are not measured.
+- At a million cards, exact vector scoring gets slow on both engines; approximate nearest neighbours with filters is the next comparison.
+

@@ -16,7 +16,7 @@ This is a three-day study project, not a product. Nothing here is audited or pro
 | 2 | MCP server, agent loop with limits in code, injection tests, tracing | Built, tested, measured |
 | 3 | Wallet sign-in and signed approvals, SPL payments on devnet, Next.js wallet page, rate limits, deploy | Built, tested, deployed |
 | Redesign | Marketplace first: a home page, the market with server-side search, listing pages, direct buy with a checkout, and the agent on its own page | Built, tested |
-| Search | Search at a million listings, card tags, described searches read by a model once and cached, Best match ordering by meaning, and a model cutting a described search to the cards that fit | Built, tested, measured |
+| Search | Search at a million listings, card tags, described searches read by a model once and cached, Best match ordering by meaning, a model cutting a described search to the cards that fit, and the same search on OpenSearch, compared with Postgres | Built, tested, measured |
 
 ## Live demo
 
@@ -111,7 +111,7 @@ The payment code runs for real in tests on [litesvm](https://github.com/LiteSVM/
 
 ## How market search works
 
-The market's search box, set tabs and counts run in Postgres behind one service, [`SearchService`](apps/server/src/search/SearchService.ts). It is built for a marketplace's size, not the demo's 200 listings, and a search engine can implement the same interface later.
+The market's search box, set tabs and counts run in Postgres behind one service, [`SearchService`](apps/server/src/search/SearchService.ts). It is built for a marketplace's size, not the demo's 200 listings. The same interface also runs on OpenSearch, from a copy kept in step with Postgres; the two are compared [below](#postgres-and-opensearch).
 
 1. **Code reads the words that have one meaning.** [`search/query.ts`](apps/server/src/search/query.ts) turns graders ("NVG", "Northvale"), grades ("10", "9.5", "9+", "at least 9"), editions, finishes ("holo" is neither "reverse holo" nor "non-holo"), card numbers ("#010"), cert numbers, sellers ("@handle", or a full handle with an underscore) and price limits ("under 100") into exact filters. Words that only appear in grader names ("card", "slab", "grading") are dropped, and so are words every card is ("creature", "thing"), so "flying creature" is a search for flying. A test checks that no word of any card, kind or set is taken this way.
 2. **Described words become tags.** Words that describe a card ("sea animal", "flying", "glowing", "ocean") stand for tags a model gave each card once, ahead of time (see Card tags below). A card matches the tag or the words themselves, so a card without tags is still found by its name, and "flying owl" finds owls tagged as fliers.
@@ -194,6 +194,41 @@ The running server tags waiting cards in the background, up to 400 every 10 minu
 A page is 40 listings. The p95 column varies more between runs than p50: one slow run in 20 is enough to move it. Fifty searches at once, Best match among them, ran at about 105 a second on the pool of 10 connections; the mix without them ran at about 148 the same day, and at about 180 before card tags. Recomputing the whole market's numbers takes about 94 ms, once every 10 seconds. Before the 10,000 cap, broad searches took 100 to 200 ms, nearly all of it counting matches per set, and 50 at once ran at about 60 a second.
 
 Bulk listings carry no listing vectors (embedding a million seller texts locally takes hours), so the agent's search by meaning covers the seed and generated listings only. Best match uses card vectors, one per card, so it covers every listing.
+
+### Postgres and OpenSearch
+
+The same `SearchService` runs on OpenSearch 3.9 too, so the two can be compared on the large catalog with the same searches and the same evals. Postgres stays the source of truth, and the live demo stays on Postgres: OpenSearch is a local comparison, switched on with `SEARCH_ENGINE=opensearch`. The code is in [`search/opensearch`](apps/server/src/search/opensearch).
+
+- **What the engine holds.** Three indexes. One document per active listing, with the fields of `listing_search` and the card's words and tags as keywords; one per card, with its words, set, number and Best match vector; one per catalog word, with its trigrams. Each is read through an alias, so a full copy is built in new indexes and searches move to it in one step. The set list, sellers, the model's verdicts and card text stay in Postgres, since they are small lookups.
+- **How it stays current.** Migration 0010 adds an outbox table. Once a copy is registered, triggers record every listing, card and word that changes. [`SearchSync`](apps/server/src/search/opensearch/SearchSync.ts) takes the oldest rows, reads the current state of what they name, writes or deletes it in the engine and removes the rows, in one transaction, so a refused write is tried again and a change seen twice does no harm. A full copy registers first and waits for writes already under way, so a change made during the copy is not missed. A change is searchable 1 to 2 seconds after it commits: up to a second until the outbox is read, and up to a second until the engine refreshes. On the live demo no copy is registered, so nothing is recorded.
+- **The same answers.** One engine request returns a sorted page and its counts per set: an aggregation counts over the whole search while a post filter narrows the page to the set picked. Postgres needs a count and a page query. Best match scores the matching cards exactly against the query vector, a few hundred at a time, and one aggregation finds each card's newest matching listing, which gives Postgres's order of one listing per card first. "Did you mean" divides shared trigrams by all trigrams in the engine, which is pg_trgm's similarity, so the same words come back. [A test](apps/server/test/opensearch.db.test.ts) runs about 200 searches of every kind on both engines and expects identical answers: before and after cards have vectors, with a judged description, and after the outbox has carried a sale, a price change, a new listing and a renamed card. CI starts an OpenSearch node for it.
+
+`pnpm bench:engines` runs the benchmark searches on both, checks the answers match and times them. On the same 4-core container as above, OpenSearch with one node, one shard and a 3 GB heap, warm, in ms ([full table](evals/results/search-engines.md)):
+
+| Search | Matches | Same answer | Postgres p50 / p95 | OpenSearch p50 / p95 |
+| --- | ---: | --- | ---: | ---: |
+| home page (newest) | 1,000,199 | yes | 1.5 / 2.7 | 8.9 / 13 |
+| one set | 4,949 | yes | 0.9 / 2.8 | 13 / 15 |
+| card name ("ashen wyrm") | 38 | yes | 11 / 13 | 9.4 / 13 |
+| kind ("dragon") | 10,000+ | yes | 33 / 48 | 11 / 12 |
+| grader and grade ("NVG 10") | 10,000+ | yes | 76 / 102 | 9.2 / 14 |
+| kind, finish, price ("dragon holo under 200") | 10,000+ | yes | 47 / 83 | 8.5 / 14 |
+| described: tags, grade, price ("flying fire 9+ under 300") | 10,000+ | yes | 52 / 67 | 7.6 / 15 |
+| deep page ("holo", from listing 5,000) | 10,000+ | yes | 14 / 18 | 32 / 45 |
+| Best match: a tag, ranked by what was typed | 10,000+ | yes | 43 / 68 | 25 / 37 |
+| Best match: page 126 ("dragon", from listing 5,000) | 10,000+ | yes | 77 / 168 | 152 / 173 |
+
+**Reading it.** All 24 benchmark searches give the same answer on both engines, and so do the word lookups described search makes, for all 968 catalog words and 2,772 misspellings and beginnings of them. `pnpm eval:rank` on OpenSearch scores exactly what it scores on Postgres (precision at 20 of 0.81 against 0.19).
+
+- Postgres is faster where an index already holds the order: newest first, cheapest first, one set. About a millisecond, against 6 to 13 on the engine, most of which is the HTTP round trip and JSON.
+- OpenSearch is faster where many listings match several filters and are counted per set: 5 to 8 times faster for "NVG 10", "dragon holo under 200" and "flying fire 9+ under 300", 3 times for "dragon" and "sea animal". Postgres reads up to 10,001 matching rows to count them; the engine counts from column storage in the same request as the page.
+- Best match is faster on the engine for the first page and twice as slow for page 126: it collects every card's newest listing in one aggregation, where Postgres probes one card at a time and stops when the page is full.
+- 50 searches at once took 346 ms on the engine and 467 ms on Postgres. The listings index takes 215 MB; `listing_search` with its eight indexes takes 737 MB.
+- A full copy of 1,000,199 listings, 20,040 cards and 968 words takes about 55 seconds.
+
+What it costs: a second system to run (a JVM that wants a few GB of memory), a sync to watch, and results that trail writes by a second or two. One finding along the way: a grade stored as `scaled_float` sorted the wrong page for "highest grade first" when it was the first sort key, and the parity check caught it; a plain `float` sorts right.
+
+**How much to trust this.** One run on one machine, both engines warm on the same 4 cores, Postgres at default settings and one OpenSearch shard. At the design's target of 10 million listings, counting in Postgres grows with the matches while the engine would add shards and nodes, and Best match at a million cards needs approximate nearest neighbours with filters on both; neither is measured here.
 
 ## The web app
 
@@ -314,8 +349,9 @@ All nine use Claude Haiku 5.5. Rows with commit and time are in [`evals/results/
 | Run | Precision at 10 | Precision at 20 | MRR | Base rate | Cards in the first 20 | Best match, p50 / p95 | Newest first, p50 / p95 | No model calls |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | run1 | 0.81 / 0.19 | 0.81 / 0.19 | 0.90 / 0.40 | 0.19 | 20 / 20 | 38 / 59 ms | 29 / 46 ms | $0 |
+| opensearch1 | 0.81 / 0.19 | 0.81 / 0.19 | 0.90 / 0.40 | 0.19 | 20 / 20 | 24 / 33 ms | 8 / 12 ms | $0 |
 
-Pairs are Best match / newest first. The base rate is the share of the cards each search matches that fit, and newest first lands on it, as it should. Rows with commit and time are in [`evals/results/search-ranking.md`](evals/results/search-ranking.md), and every case is in the JSON beside it.
+Pairs are Best match / newest first. The base rate is the share of the cards each search matches that fit, and newest first lands on it, as it should. `opensearch1` is the same eval with `SEARCH_ENGINE=opensearch`: the same listings in the same order, faster because these searches filter by tags (see [Postgres and OpenSearch](#postgres-and-opensearch)). Rows with commit and time are in [`evals/results/search-ranking.md`](evals/results/search-ranking.md), and every case is in the JSON beside it.
 
 **Reading run 1.** Best match fills 81% of the first 20 places with cards that fit, against 19% newest first, and the first listing fits in 27 of 32 searches. Every one of the first 20 listings is a different card. 20 of the 28 habits score 0.85 or better; the weakest is "golem that obeys every command forever" for "never forgets an order", at 0.40. Places are harder: 0.51 on average, and "dragon from the glassy wastes" for "beyond the glass desert" scores 0.10, no better than newest first. The small embedding model does not bring those two phrases close, and the kind adds a second condition. A search costs 9 ms more than newest first at the median, and the first time a search is seen the query is embedded too: 59 ms at p50.
 
@@ -383,11 +419,16 @@ pnpm tags:run               # tags every card that needs it, through the Message
 pnpm vectors:run            # writes every card's Best match vector with the local model, no cost
 pnpm eval:rank              # Best match against newest first on the large catalog, no model calls
 pnpm eval:fit               # the model's cut on the large catalog, about 5 cents a run
+docker compose --profile opensearch up -d --wait   # optional: an OpenSearch node on :9200
+pnpm search:sync copy       # copies the search data into OpenSearch and starts recording changes
+pnpm bench:engines          # the benchmark searches on Postgres and OpenSearch, checked against each other
 ```
 
 The large seed is for local databases only and refuses to run on Railway. Its cards have no tags until `pnpm tags:run` (about $0.71 for all of them) and no Best match vectors until `pnpm vectors:run` (about 4 minutes for 20,040 cards); `pnpm eval:rank` and `pnpm eval:fit` need both, and read the schema `bench` unless `DB_SCHEMA` names another. `TAG_NOW=1 TAG_LIMIT=200 pnpm tags:run` tags a sample with ordinary calls first, to check tags and cost. `BULK_LISTINGS=100000` loads fewer listings, and an interrupted load picks up where it stopped. To keep it apart from the demo data, run both seeds and the server with `DB_SCHEMA=large` (any name), which puts every table in that schema.
 
 Payments are simulated unless you set `PAYMENTS=devnet` and a `DEVNET_SEED` (`openssl rand -hex 32`). With `SOLANA_RPC_URL=memory` the devnet code runs on an in-process VM; with the default devnet RPC the server creates the dUSD mint and the escrow account on its first boot and asks the devnet faucet for SOL for fees. If the faucet refuses (it is rate limited), the log prints the treasury address to fund at faucet.solana.com.
+
+For OpenSearch, run `pnpm search:sync copy` with the same `DB_SCHEMA` as the catalog (for example `DB_SCHEMA=bench`). `SEARCH_ENGINE=opensearch pnpm dev` then searches the copy, and the server applies recorded changes every second; `pnpm search:sync follow` does the same without the server, and `pnpm search:sync stop` stops recording. `pnpm test` runs the OpenSearch test when `OPENSEARCH_URL` is set, and skips it otherwise.
 
 `EMBEDDER=hash` in `.env` swaps the local embedding model for a deterministic hash embedder, which is useful offline and in tests but meaningless for similarity. `AGENT_ENABLED=true` lets the watcher wake the agent on new matches.
 
@@ -423,8 +464,9 @@ To turn the public demo read-only, set `DEMO_READ_ONLY=true` on the backend.
 packages/domain   Effect Schema types: money, catalog, watch rules, match decisions, hard checks
 packages/seed     the fictional catalog, prices, sales history, the listing generator and the large test market
 apps/server       Effect backend: Postgres and pgvector, embeddings, model calls, rule parser, matcher,
-                  market search, card tags, Best match, purchase policy, agent loop and tools, MCP endpoint, watcher,
-                  tracing, wallet signatures, devnet payments, the web API and its rate limits
+                  market search (Postgres, and OpenSearch for comparison), card tags, Best match, purchase policy,
+                  agent loop and tools, MCP endpoint, watcher, tracing, wallet signatures, devnet payments,
+                  the web API and its rate limits
 apps/web          Next.js marketplace: home, market, listing pages, checkout and the agent page
 evals             labelled eval set, metrics, the matcher eval, the agent injection eval and the search evals
 ```
@@ -435,7 +477,8 @@ I built this with Claude Code as a coding agent. I set the scope, the plan and t
 
 ## What's next
 
-- The same `SearchService` on OpenSearch, run locally and fed from Postgres, to compare the two.
+- Best match on OpenSearch past the first page: one card at a time, as Postgres does, instead of one aggregation over every card.
+- At a million cards, approximate nearest neighbours with filters for Best match, on either engine, measured against the exact order.
 - Show a described search at once in Best match order and cut it when the model answers, instead of waiting about 3 seconds for the reading and the judging together.
 
 - A binder view of what a wallet has bought was cut for time. `GET /api/me/purchases` already lists it.
