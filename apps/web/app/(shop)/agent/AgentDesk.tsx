@@ -20,12 +20,12 @@ import { useAction } from "@/lib/useAction"
  * watch is as tall as its text and the list scrolls inside that height.
  * Under them, the rail (AgentLimits, then WalletPanel with Sign out) beside
  * what the watch found, skipped and bought (RuleBody). Talk to the agent
- * (RuleChat) is a popup at the bottom right that stays over the page and
- * shrinks to a button. Manage your watches opens ManageWatches, which holds
- * the form for a new watch; a tile's Watch landing here with ?watch=<want>
- * opens it with the want filled in. Under 900px everything stacks: watches,
- * watch, found, then the rail. Signed out, the page offers the sign-in.
- * Styles: styles/desk.css.
+ * (RuleChat) starts as a button at the bottom right; it opens a popup that
+ * stays over the page and shrinks back to the button. Manage your watches
+ * opens ManageWatches, which holds the form for a new watch; a tile's Watch
+ * landing here with ?watch=<want> opens it with the want filled in. Under
+ * 900px everything stacks: watches, watch, found, then the rail. Signed out,
+ * the page offers the sign-in. Styles: styles/desk.css.
  */
 export function AgentDesk() {
   const { wallet, token, signIn, signOut, signText, status, statusLoaded, rules, funds, refresh } = useAccount()
@@ -33,7 +33,8 @@ export function AgentDesk() {
   const [note, setNote] = useState<string | null>(null)
   // Manage your watches is open, with the want to fill in its new watch form, if any.
   const [managing, setManaging] = useState<{ seed: string | null } | null>(null)
-  const [chatOpen, setChatOpen] = useState(true)
+  // The chat starts as its button, so it does not cover the watch; you open it when you want it.
+  const [chatOpen, setChatOpen] = useState(false)
   const { busy, error, run } = useAction()
   const { setVisible } = useWalletModal()
   const want = useSearchParams().get("watch")
@@ -50,11 +51,6 @@ export function AgentDesk() {
       setManaging(null)
     }
   }, [token])
-
-  // On a phone the chat starts as its button, so it does not cover the watch.
-  useEffect(() => {
-    if (window.matchMedia("(max-width: 700px)").matches) setChatOpen(false)
-  }, [])
 
   // A want from a tile opens the new watch form, filled in, once the wallet is signed in.
   useEffect(() => {
