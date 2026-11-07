@@ -11,14 +11,15 @@ import { SearchIcon } from "./ui"
  * URL when something else changes it (Clear the filters, a chip, a reading).
  * Enter writes the search at once with ?ask=1: a submitted search with words
  * nothing matches may be read by the model (lib/market.ts useUnderstanding).
- * Typing drops ?from and ?ask, so a reading never outlives the search it was for.
+ * Typing drops ?from, ?fit and ?ask, so a reading never outlives the search it was for.
+ * A search read as only a description has no ?q, so the field shows what was typed (?from).
  * Styles: styles/market.css (.search).
  */
 export function MarketSearch({ id, className }: { id?: string; className?: string }) {
   const params = useSearchParams()
   const router = useRouter()
   const path = usePathname()
-  const fromUrl = params.get("q") ?? ""
+  const fromUrl = params.get("q") || params.get("from") || ""
   const [value, setValue] = useState(fromUrl)
   const written = useRef(fromUrl)
 
@@ -34,6 +35,7 @@ export function MarketSearch({ id, className }: { id?: string; className?: strin
     if (q.trim() === "") next.delete("q")
     else next.set("q", q)
     next.delete("from")
+    next.delete("fit")
     if (ask && q.trim() !== "") next.set("ask", "1")
     else next.delete("ask")
     const qs = next.toString()

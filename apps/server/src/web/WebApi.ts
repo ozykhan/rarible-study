@@ -19,6 +19,7 @@ import { RuleRepo } from "../rules/RuleRepo.ts"
 import { Treasury } from "../solana/Treasury.ts"
 import { WalletAuth } from "../wallet/WalletAuth.ts"
 import { SearchService } from "../search/SearchService.ts"
+import { CardFit } from "../search/CardFit.ts"
 import { SearchUnderstanding } from "../search/SearchUnderstanding.ts"
 import { parseMarketQuery } from "./market.ts"
 import { RateLimits } from "./RateLimits.ts"
@@ -156,6 +157,7 @@ export const WebApiRoutes = HttpRouter.addAll(
     const catalog = yield* CatalogRepo
     const search = yield* SearchService
     const understanding = yield* SearchUnderstanding
+    const cardFit = yield* CardFit
     const rules = yield* RuleRepo
     const parser = yield* RuleParser
     const matcher = yield* Matcher
@@ -286,16 +288,28 @@ export const WebApiRoutes = HttpRouter.addAll(
     /**
      * Reads a submitted market search with the model when code cannot: the
      * page calls it on Enter, when a search still has words nothing matches.
-     * A cached reading is free; a new one counts against the costly limit.
+     * When the reading leaves a description no filter holds, the first cards
+     * the search shows are judged against it (CardFit), within ?set and
+     * ?grader, so the page can show only the ones that fit. Cached readings
+     * and judgments are free; each new model call counts against the costly
+     * limit.
      */
     const understand = route(
       "GET",
       "/search/understand",
       Effect.gen(function* () {
         const request = yield* HttpServerRequest.HttpServerRequest
-        const q = new URL(request.originalUrl, "http://localhost").searchParams.get("q") ?? ""
+        const params = new URL(request.originalUrl, "http://localhost").searchParams
+        const q = params.get("q") ?? ""
         if (q.length > 200) return yield* new ApiError({ message: "a search is at most 200 characters", status: 400 })
-        return yield* understanding.understand(q, limited("costly", null))
+        const read = yield* understanding.understand(q, limited("costly", null))
+        if (read.status !== "understood" || read.describes.length === 0) return read
+        const fit = read.describes.join(", ")
+        const checked = yield* cardFit.check(
+          { ...parseMarketQuery(params), q: read.q, from: q.trim(), fit, sort: "relevance", offset: 0 },
+          limited("costly", null)
+        )
+        return { ...read, fit, checked }
       })
     )
 

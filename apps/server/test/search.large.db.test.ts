@@ -19,6 +19,7 @@ const query = (over: Partial<MarketQuery> = {}): MarketQuery => ({
   q: "",
   sort: "recent",
   from: "",
+  fit: "",
   offset: 0,
   limit: 100,
   ...over

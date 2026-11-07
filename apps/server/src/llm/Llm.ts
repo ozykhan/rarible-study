@@ -5,7 +5,7 @@ import { SqlClient } from "effect/sql/SqlClient"
 import { AppConfig } from "../config.ts"
 import { currentTraceId } from "../tracing.ts"
 
-export type LlmPurpose = "parse_want" | "judge" | "agent" | "tag_cards" | "understand_search"
+export type LlmPurpose = "parse_want" | "judge" | "agent" | "tag_cards" | "understand_search" | "fit_cards"
 
 export class LlmError extends Schema.TaggedError<LlmError>()("LlmError", {
   message: Schema.String

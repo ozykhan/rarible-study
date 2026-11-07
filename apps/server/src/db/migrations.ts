@@ -544,6 +544,38 @@ const cardSearchVectors = Effect.gen(function* () {
   yield* sql`DROP INDEX listing_search_card_idx`
 })
 
+/**
+ * Which cards fit a description no filter can hold ("guards treasure"), as a
+ * model judged them (search/CardFit.ts). One row per card judged, keyed by
+ * the description normalized and the judging prompt's version, so the same
+ * description is judged once per card whatever search it came from. A card
+ * whose text changes loses its rows: they judged the old text.
+ */
+const cardFits = Effect.gen(function* () {
+  const sql = yield* SqlClient
+  yield* sql`
+    CREATE TABLE card_fits (
+      concept text NOT NULL,
+      version text NOT NULL,
+      card_id text NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
+      fits boolean NOT NULL,
+      created_at timestamptz NOT NULL DEFAULT now(),
+      PRIMARY KEY (concept, version, card_id)
+    )`
+  yield* sql`CREATE INDEX card_fits_card_idx ON card_fits (card_id)`
+  yield* sql`
+    CREATE FUNCTION card_fits_forget() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN
+      IF NEW.catalog_text IS DISTINCT FROM OLD.catalog_text THEN
+        DELETE FROM card_fits WHERE card_id = NEW.id;
+      END IF;
+      RETURN NULL;
+    END $$`
+  yield* sql`
+    CREATE TRIGGER cards_fits_forget AFTER UPDATE OF catalog_text ON cards
+    FOR EACH ROW EXECUTE FUNCTION card_fits_forget()`
+})
+
 export const migrations = {
   "0001_init": init,
   "0002_agent": agent,
@@ -552,5 +584,6 @@ export const migrations = {
   "0005_search": search,
   "0006_card_tags": cardTags,
   "0007_search_understandings": searchUnderstandings,
-  "0008_card_search_vectors": cardSearchVectors
+  "0008_card_search_vectors": cardSearchVectors,
+  "0009_card_fits": cardFits
 }

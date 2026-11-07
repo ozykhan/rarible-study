@@ -9,6 +9,8 @@ import {
   defaultSort,
   describedWords,
   describeSearch,
+  FIT_VERSION,
+  fitKey,
   isEmptySearch,
   parseSearch,
   searchChips,
@@ -74,12 +76,42 @@ export interface MarketSearchResult {
    * no card to rank by.
    */
   readonly sort: MarketSort
+  /**
+   * The description in ?fit, and whether a model has judged cards against it:
+   * then only the cards it judged to fit match. Null without ?fit.
+   */
+  readonly fit: { readonly phrase: string; readonly applied: boolean } | null
+}
+
+/** A card to judge against a description: the text it is judged on, and the catalog text that came from. */
+export interface FitCandidate {
+  readonly id: string
+  readonly text: string
+  readonly catalogText: string
+}
+
+/**
+ * What a card is judged on: its kinds and lore, the part of its catalog text
+ * that says what the creature is and does. The set's name describes the set,
+ * not the creature (a lizard from a set called Hidden Ruins does not lurk in
+ * ruins), and a name like Crystalborn Wyvern reads as glassy to a model; a
+ * search for a name is read as a name filter before this. Rarity and tags add
+ * nothing a description could ask.
+ */
+export const fitText = (catalogText: string, name: string): string => {
+  const at = catalogText.indexOf(`${name}. `)
+  return (at === -1 ? catalogText : catalogText.slice(at + name.length + 2)).replace(/\s*Rarity: [a-z ]+\./i, "").trim()
 }
 
 export class SearchService extends Context.Service<
   SearchService,
   {
     readonly search: (query: MarketQuery) => Effect.Effect<MarketSearchResult, SqlError>
+    /**
+     * The first `limit` cards a search shows best match first, ignoring any
+     * judgments for its ?fit: the cards CardFit asks a model about.
+     */
+    readonly fitCandidates: (query: MarketQuery, limit: number) => Effect.Effect<ReadonlyArray<FitCandidate>, SqlError>
     readonly stats: Effect.Effect<MarketStats, SqlError>
     /** The words that start some card, kind or set word, in the order given. */
     readonly knownWords: (words: ReadonlyArray<string>) => Effect.Effect<ReadonlyArray<string>, SqlError>
@@ -159,6 +191,8 @@ interface Resolved {
   readonly missingSeller: boolean
   /** Words that start no card, kind or set word. */
   readonly unknown: ReadonlyArray<string>
+  /** A description cards were judged against: only the cards judged to fit match. */
+  readonly fit: string | null
 }
 
 export const SearchServicePg = Layer.effect(
@@ -247,7 +281,8 @@ export const SearchServicePg = Layer.effect(
         sellerIds: [...found.values()],
         sellerHandles: [...found.keys()],
         missingSeller: parsed.handles.some((h) => h.orWords.length === 0 && !found.has(h.handle)),
-        unknown: words.filter((w) => !known.includes(w))
+        unknown: words.filter((w) => !known.includes(w)),
+        fit: null
       } satisfies Resolved
     })
 
@@ -268,8 +303,13 @@ export const SearchServicePg = Layer.effect(
       if (p.cardNumber !== null) c.push(sql`card_number = ${p.cardNumber}`)
       if (p.cert !== null) c.push(sql`cert_number = ${p.cert}`)
       if (r.sellerIds.length > 0) c.push(sql`seller_id IN ${sql.in(r.sellerIds)}`)
+      if (r.fit !== null) c.push(sql`card_id IN (${fitting(r.fit)})`)
       return c
     }
+
+    /** The cards a model judged to fit a description (see CardFit). */
+    const fitting = (key: string) =>
+      sql`SELECT card_id FROM card_fits WHERE concept = ${key} AND version = ${FIT_VERSION} AND fits`
 
     /** What a search asks of the card, on the cards table: Best match ranks these cards before it reads their listings. */
     const cardWhere = (r: Resolved, set: string | null): Array<Fragment> => {
@@ -279,6 +319,7 @@ export const SearchServicePg = Layer.effect(
       if (terms !== null) c.push(sql`search_terms @@ ${terms}::tsquery`)
       if (set !== null) c.push(sql`set_id = ${set}`)
       if (p.cardNumber !== null) c.push(sql`number = ${p.cardNumber}`)
+      if (r.fit !== null) c.push(sql`id IN (${fitting(r.fit)})`)
       return c
     }
 
@@ -408,26 +449,37 @@ export const SearchServicePg = Layer.effect(
       return [...page, ...rest.map((x) => x.listingId)]
     })
 
-    const run = (query: MarketQuery, suggest: boolean): Effect.Effect<MarketSearchResult, SqlError> =>
+    /** Whether a model has judged any card against a description, under the current judging prompt. */
+    const judged = (key: string) =>
+      sql<{ readonly any: boolean }>`
+        SELECT EXISTS (SELECT 1 FROM card_fits WHERE concept = ${key} AND version = ${FIT_VERSION}) AS any`.pipe(
+        Effect.map((rows) => rows[0]?.any === true)
+      )
+
+    /** `cut` false ignores judgments for ?fit, which still ranks: how CardFit finds the cards to judge. */
+    const run = (query: MarketQuery, suggest: boolean, cut = true): Effect.Effect<MarketSearchResult, SqlError> =>
       Effect.gen(function* () {
         const [market, catalogSets] = yield* Effect.all([stats, allSets])
         const knownSet = query.set !== null && catalogSets.some((s) => s.id === query.set) ? query.set : null
         const parsed = parseSearch(query.q)
-        const r = yield* resolve(parsed)
+        const key = fitKey(query.fit)
+        const applied = key !== "" && cut && (yield* judged(key))
+        const r = { ...(yield* resolve(parsed)), fit: applied ? key : null }
         const tabs = (counts: Readonly<Record<string, number>>) =>
           catalogSets.filter((s) => (market.sets[s.id]?.count ?? 0) > 0 || (counts[s.id] ?? 0) > 0)
-        const wanted = query.sort ?? defaultSort(parsed)
-        // Best match ranks the cards the words match, by the words that describe them: it needs both.
+        const wanted = query.sort ?? defaultSort(parsed, query.fit)
+        // Best match ranks the cards a search asks for by the words that describe them. A description alone
+        // ("something that guards treasure") asks for every card, so it ranks the whole catalog.
+        const described = [query.from, query.q, query.fit].map(describedWords).find((ws) => ws.length > 0) ?? []
         const rankText =
-          wanted === "relevance" && termsQuery(r.words, parsed.tags) !== null
-            ? (describedWords(query.from).length > 0 ? describedWords(query.from) : describedWords(query.q)).join(" ")
-            : ""
+          wanted === "relevance" && (termsQuery(r.words, parsed.tags) !== null || key !== "") ? described.join(" ") : ""
         const base = {
           stats: market,
           understood: describeSearch(parsed, r.sellerHandles),
           chips: searchChips(parsed, r.sellerHandles),
           unknown: r.unknown,
-          sort: wanted === "relevance" && rankText === "" ? ("recent" as const) : wanted
+          sort: wanted === "relevance" && rankText === "" ? ("recent" as const) : wanted,
+          fit: key === "" ? null : { phrase: query.fit, applied }
         }
 
         // A word nothing starts with, or a seller nobody is: no listing can match. Offer a fix instead of querying.
@@ -452,8 +504,8 @@ export const SearchServicePg = Layer.effect(
           }
         }
 
-        // No search and no grader: the counts are the whole market's, already cached.
-        const unfiltered = isEmptySearch(parsed) && query.grader === null
+        // No search, no grader and no judged description: the counts are the whole market's, already cached.
+        const unfiltered = isEmptySearch(parsed) && query.grader === null && r.fit === null
         // Otherwise count per set, reading at most COUNT_LIMIT + 1 matches.
         const counted = unfiltered
           ? Object.entries(market.sets).map(([setId, s]) => ({ setId, n: s.count }))
@@ -482,7 +534,8 @@ export const SearchServicePg = Layer.effect(
           total === 0
             ? []
             : vector !== null
-              ? yield* bestMatchPage({ ...pageOf, vector, exact })
+              ? // The whole market is counted exactly from stats, but fetching it all to sort would read every listing.
+                yield* bestMatchPage({ ...pageOf, vector, exact: !unfiltered && exact })
               : (yield* sortedPage({ ...pageOf, sort: sort === "relevance" ? "recent" : sort, materialize: !unfiltered && exact })).map(
                   (x) => x.listingId
                 )
@@ -499,8 +552,32 @@ export const SearchServicePg = Layer.effect(
         }
       })
 
+    const fitCandidates = Effect.fn("SearchService.fitCandidates")(function* (query: MarketQuery, limit: number) {
+      // Best match's first round is one listing per card, best card first.
+      const found = yield* run({ ...query, sort: "relevance", offset: 0, limit }, false, false)
+      if (found.ids.length === 0) return []
+      const rows = yield* sql<{
+        readonly listingId: string
+        readonly cardId: string
+        readonly catalogText: string
+        readonly name: string
+      }>`
+        SELECT ls.listing_id, c.id AS card_id, c.catalog_text, c.name
+        FROM listing_search ls JOIN cards c ON c.id = ls.card_id
+        WHERE ls.listing_id IN ${sql.in(found.ids)}`
+      const byListing = new Map(rows.map((x) => [x.listingId, x]))
+      const out: Array<FitCandidate> = []
+      for (const id of found.ids) {
+        const row = byListing.get(id)
+        if (row === undefined || out.some((c) => c.id === row.cardId)) continue
+        out.push({ id: row.cardId, text: fitText(row.catalogText, row.name), catalogText: row.catalogText })
+      }
+      return out
+    })
+
     return SearchService.of({
       search: (query) => run(query, true).pipe(Effect.withSpan("SearchService.search", { attributes: { "search.q": query.q } })),
+      fitCandidates,
       stats,
       knownWords,
       closeWords

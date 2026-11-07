@@ -58,7 +58,7 @@ const program = Effect.gen(function* () {
     "| search | matches | p50 | p95 |",
     "| --- | ---: | ---: | ---: |"
   ]
-  const query = (over: Partial<MarketQuery>): MarketQuery => ({ set: null, grader: null, q: "", sort: "recent", from: "", offset: 0, limit: 40, ...over })
+  const query = (over: Partial<MarketQuery>): MarketQuery => ({ set: null, grader: null, q: "", sort: "recent", from: "", fit: "", offset: 0, limit: 40, ...over })
   for (const [name, over] of searches) {
     const first = yield* search.search(query(over))
     const times: Array<number> = []

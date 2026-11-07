@@ -21,7 +21,7 @@ const int = (v: string | null, fallback: number, min: number, max: number) => {
 }
 
 /**
- * Reads ?set, ?grader, ?q, ?from, ?sort, ?offset and ?limit. These come from
+ * Reads ?set, ?grader, ?q, ?from, ?fit, ?sort, ?offset and ?limit. These come from
  * links people share, so an unknown grader or sort means "any" or "the
  * default" rather than an error; a set id that is not in the catalog is
  * ignored by the search. With no parameters it is the 40 newest, as before.
@@ -36,6 +36,7 @@ export const parseMarketQuery = (params: URLSearchParams): MarketQuery => {
     q: (params.get("q") ?? "").trim().slice(0, 100),
     sort: MARKET_SORTS.find((s) => s === sort) ?? null,
     from: (params.get("from") ?? "").trim().slice(0, 200),
+    fit: (params.get("fit") ?? "").trim().slice(0, 120),
     offset: int(params.get("offset"), 0, 0, MARKET_OFFSET_MAX),
     limit: int(params.get("limit"), MARKET_PAGE, 1, MARKET_PAGE_MAX)
   }

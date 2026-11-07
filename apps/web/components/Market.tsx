@@ -47,6 +47,27 @@ const searchHref = (f: MarketFilters, q: string) => {
   return qs === "" ? "/market" : `/market?${qs}`
 }
 
+/** The same search without its description's cut: every card the filters match, still ranked by what was typed. */
+const withoutFitHref = (f: MarketFilters) => {
+  const p = new URLSearchParams()
+  if (f.set !== "all") p.set("set", f.set)
+  if (f.grader !== "all") p.set("grader", f.grader)
+  if (f.q.trim() !== "") p.set("q", f.q.trim())
+  if (f.sort !== null) p.set("sort", f.sort)
+  if (f.from.trim() !== "") p.set("from", f.from.trim())
+  const qs = p.toString()
+  return qs === "" ? "/market" : `/market?${qs}`
+}
+
+/** Why the cards were not judged against a description; Best match still orders by it. */
+const UNCHECKED: Record<Extract<ReadNote, { kind: "unavailable" }>["reason"], string> = {
+  no_key: "this server has no model",
+  spend_cap: "the demo's daily model budget is used up",
+  busy: "too many searches from here this hour",
+  slow: "the model took too long; press Enter to try again",
+  failed: "the model could not answer; press Enter to try again"
+}
+
 /** Why a described search was not read; the keyword results stay either way. */
 const UNAVAILABLE: Record<Extract<ReadNote, { kind: "unavailable" }>["reason"], string> = {
   no_key: "Described searches are not read on this server, so only names, sets and the words cards are tagged with match.",
@@ -69,9 +90,21 @@ function EmptyMessage(props: {
   unread: boolean
   suggestion: string | null
   href: (q: string) => string
+  /** The description the listings were cut to, and the same search without the cut. */
+  cut: { readonly phrase: string; readonly href: string } | null
 }) {
-  const { q, note, suggestion } = props
+  const { q, note, suggestion, cut } = props
   if (note?.kind === "reading") return <>Reading &ldquo;{q}&rdquo; as a description…</>
+  if (cut !== null)
+    return (
+      <>
+        None of the cards checked fit &ldquo;{cut.phrase}&rdquo;.{" "}
+        <Link href={cut.href} scroll={false}>
+          Show every match
+        </Link>
+        , best match first.
+      </>
+    )
   if (note?.kind === "nothing")
     return <>Nothing in &ldquo;{q}&rdquo; could be read as something to search for. Try a card name, a set, a kind of creature or a finish.</>
   const why = note?.kind === "unavailable" ? `${UNAVAILABLE[note.reason]} ` : ""
@@ -117,7 +150,10 @@ export function Market(props: {
 }) {
   const { filters: f, market: m, note } = props
   const q = f.q.trim()
-  const filtered = f.set !== "all" || f.grader !== "all" || q !== ""
+  const fit = f.fit.trim()
+  const filtered = f.set !== "all" || f.grader !== "all" || q !== "" || fit !== ""
+  // Listings cut to the cards a model judged to fit the description.
+  const cut = m.fit?.applied === true ? { phrase: m.fit.phrase, href: withoutFitHref(f) } : null
   // Words nothing matches, in a search the model has not been asked about.
   const unread = q !== "" && m.unknown.length > 0 && note === null && f.from === ""
   // Past 10,000 matches the server stops counting: "10,000+" overall and no number per set.
@@ -195,7 +231,7 @@ export function Market(props: {
               <span className="select-word">Sort</span>
               <select value={m.sort} aria-label="Sort" onChange={(e) => props.onFilter("sort", e.target.value)}>
                 {/* Best match needs words to rank by. */}
-                {MARKET_SORTS.filter(([v]) => v !== "relevance" || f.q.trim() !== "").map(([v, t]) => (
+                {MARKET_SORTS.filter(([v]) => v !== "relevance" || q !== "" || fit !== "").map(([v, t]) => (
                   <option key={v} value={v}>
                     {t}
                   </option>
@@ -205,20 +241,36 @@ export function Market(props: {
           </div>
         </div>
 
-        {m.listings !== null && q !== "" && m.chips.length > 0 && (
+        {m.listings !== null && ((q !== "" && m.chips.length > 0) || cut !== null) && (
           <div className="market-read">
             <span>Searching for</span>
-            {m.chips.map((c) => (
-              <Link key={c.label} className="read-chip" href={searchHref(f, c.q)} scroll={false} aria-label={`Remove ${c.label}`}>
-                {c.label}
+            {q !== "" &&
+              m.chips.map((c) => (
+                <Link key={c.label} className="read-chip" href={searchHref(f, c.q)} scroll={false} aria-label={`Remove ${c.label}`}>
+                  {c.label}
+                  <CloseIcon />
+                </Link>
+              ))}
+            {cut !== null && (
+              <Link className="read-chip" href={cut.href} scroll={false} aria-label={`Remove fits “${cut.phrase}”`}>
+                fits &ldquo;{cut.phrase}&rdquo;
                 <CloseIcon />
               </Link>
-            ))}
+            )}
           </div>
         )}
         {m.listings !== null && f.from !== "" && (
           <p className="market-from">
             Read from &ldquo;{f.from}&rdquo;.
+            {cut !== null && <> Only cards a model judged to fit &ldquo;{cut.phrase}&rdquo; are listed.</>}
+            {m.fit !== null && !m.fit.applied && (
+              <>
+                {" "}
+                Not yet checked which cards fit &ldquo;{m.fit.phrase}&rdquo;
+                {note?.kind === "read" && note.checked?.status === "unavailable" && <> ({UNCHECKED[note.checked.reason]})</>}
+                {m.sort === "relevance" ? "; Best match orders by it." : "."}
+              </>
+            )}
             {note?.kind === "read" && note.notUnderstood.length > 0 && (
               <>
                 {" "}
@@ -254,7 +306,14 @@ export function Market(props: {
         {m.listings === null && m.failed && <p className="empty">Listings are not reachable right now.</p>}
         {m.listings !== null && m.listings.length === 0 && (
           <p className="empty">
-            <EmptyMessage q={q} note={note} unread={unread} suggestion={m.suggestion} href={(to) => searchHref(f, to)} />{" "}
+            <EmptyMessage
+              q={q === "" ? f.from : q}
+              note={note}
+              unread={unread}
+              suggestion={m.suggestion}
+              href={(to) => searchHref(f, to)}
+              cut={cut}
+            />{" "}
             {filtered && note?.kind !== "reading" && (
               <Button variant="link" size="inline" onClick={props.onClear}>
                 Clear the filters

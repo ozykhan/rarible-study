@@ -10,6 +10,7 @@ import { MatcherLive } from "./matcher/Matcher.ts"
 import { PurchasesLive } from "./purchases/Purchases.ts"
 import { RuleParserLive } from "./rules/RuleParser.ts"
 import { RuleRepoLive } from "./rules/RuleRepo.ts"
+import { CardFitLive } from "./search/CardFit.ts"
 import { CardVectorsLive } from "./search/CardVectors.ts"
 import { SearchServicePg } from "./search/SearchService.ts"
 import { SearchUnderstandingLive } from "./search/SearchUnderstanding.ts"
@@ -36,7 +37,15 @@ export const ReposLive = Layer.mergeAll(CatalogRepoLive, RuleRepoLive, SearchSer
  * against an in-process Solana VM.
  */
 export const makeAppLive = <E, R>(chain: Layer.Layer<Chain, E, R>) => {
-  const Services = Layer.mergeAll(MatcherLive, RuleParserLive, PurchasesLive, CardTaggerLive, CardVectorsLive, SearchUnderstandingLive).pipe(
+  const Services = Layer.mergeAll(
+    MatcherLive,
+    RuleParserLive,
+    PurchasesLive,
+    CardTaggerLive,
+    CardVectorsLive,
+    SearchUnderstandingLive,
+    CardFitLive
+  ).pipe(
     Layer.provideMerge(paymentsFor(chain)),
     Layer.provideMerge(ReposLive)
   )

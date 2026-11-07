@@ -29,6 +29,12 @@ export interface MarketQuery {
    * could express ("dragon that guards treasure" is read as "dragon").
    */
   readonly from: string
+  /**
+   * A description no filter can hold ("guards treasure"), in the shopper's
+   * words. When a model has judged cards against it (CardFit), only the cards
+   * it judged to fit match; otherwise it only ranks, like `from`.
+   */
+  readonly fit: string
   readonly offset: number
   readonly limit: number
 }
@@ -107,7 +113,35 @@ export const isEmptySearch = (p: ParsedSearch) =>
  * best match first; searches for names, sets or slabs newest first, since all
  * their matches fit equally well.
  */
-export const defaultSort = (p: ParsedSearch): MarketSort => (p.tags.length > 0 ? "relevance" : "recent")
+export const defaultSort = (p: ParsedSearch, fit = ""): MarketSort =>
+  p.tags.length > 0 || fitKey(fit) !== "" ? "relevance" : "recent"
+
+/**
+ * Bump when CardFit's judging prompt changes what a judgment means: rows from
+ * another version are ignored, so every card is judged again.
+ */
+export const FIT_VERSION = "fit1"
+
+/**
+ * Words that join a description but say nothing in it: "that guards
+ * treasure" asks what "guards treasure" asks. Negations stay ("not",
+ * "without"), since they turn the meaning around.
+ */
+const JOINING_WORDS = new Set([
+  "that", "which", "who", "whose", "is", "are", "was", "were", "be", "it", "its",
+  "has", "have", "had", "does", "do", "can", "one", "ones", "some", "any", "very", "really"
+])
+
+/** The words of a description that say something about a card, in the order typed. */
+export const descriptionWords = (text: string) =>
+  searchWords(text.slice(0, 200)).filter((w) => !isStopword(w) && !JOINING_WORDS.has(w))
+
+/**
+ * A description as judgments are stored under it: its words lowercased, in
+ * the order typed, without stopwords. Order stays because it can carry the
+ * meaning ("fire, not water" is not "water, not fire").
+ */
+export const fitKey = (fit: string) => descriptionWords(fit).join(" ")
 
 /**
  * The words of a search that describe a card, in the order typed: tag words

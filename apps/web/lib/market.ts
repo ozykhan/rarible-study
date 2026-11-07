@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { api } from "./api"
 import { GRADERS } from "./art"
-import type { Listing, MarketCounts, MarketResponse, MarketStats, SearchChip, SetRef, Understanding } from "./types"
+import type { FitCheck, Listing, MarketCounts, MarketResponse, MarketStats, SearchChip, SetRef, Understanding } from "./types"
 
 export const MARKET_SORTS = [
   ["relevance", "Best match"],
@@ -24,12 +24,18 @@ export interface MarketFilters {
   readonly sort: MarketSort | null
   /** What the shopper typed, when q is the model's rewrite of it. Shown, and best match ranks by it, but never a filter. */
   readonly from: string
+  /**
+   * What the search says about the card that no filter holds ("guards
+   * treasure"). Once a model has judged cards against it, only the ones that
+   * fit are listed.
+   */
+  readonly fit: string
   /** The search was submitted (Enter, or the home page's Search): words nothing matches may be read by the model. */
   readonly ask: boolean
 }
 
 /**
- * Reads ?set, ?grader, ?q, ?sort, ?from and ?ask, with unknown values falling back to the
+ * Reads ?set, ?grader, ?q, ?sort, ?from, ?fit and ?ask, with unknown values falling back to the
  * defaults. Any set id is taken as written: the catalog is the server's, and
  * the server ignores a set it does not have.
  */
@@ -43,6 +49,7 @@ export const readFilters = (params: URLSearchParams): MarketFilters => {
     q: params.get("q") ?? "",
     sort: MARKET_SORTS.find(([v]) => v === sort)?.[0] ?? null,
     from: (params.get("from") ?? "").slice(0, 200),
+    fit: (params.get("fit") ?? "").slice(0, 120),
     ask: params.get("ask") === "1"
   }
 }
@@ -58,6 +65,7 @@ const listingsPath = (f: MarketFilters, offset: number, limit: number) => {
   if (f.q.trim() !== "") p.set("q", f.q.trim())
   if (f.sort !== null) p.set("sort", f.sort)
   if (f.from.trim() !== "") p.set("from", f.from.trim())
+  if (f.fit.trim() !== "") p.set("fit", f.fit.trim())
   if (offset > 0) p.set("offset", String(offset))
   p.set("limit", String(limit))
   return `/listings?${p.toString()}`
@@ -87,6 +95,7 @@ interface MarketState {
   readonly suggestion: string | null
   /** The order the server put the listings in. */
   readonly sort: MarketSort | null
+  readonly fit: MarketResponse["fit"]
   readonly failed: boolean
 }
 
@@ -99,7 +108,7 @@ interface MarketState {
  * leave the market.
  */
 export function useMarket(filters: MarketFilters, keep: ReadonlySet<string>) {
-  const key = JSON.stringify([filters.set, filters.grader, filters.q.trim(), filters.sort, filters.from.trim()])
+  const key = JSON.stringify([filters.set, filters.grader, filters.q.trim(), filters.sort, filters.from.trim(), filters.fit.trim()])
   const [state, setState] = useState<MarketState>({
     key,
     listings: null,
@@ -113,6 +122,7 @@ export function useMarket(filters: MarketFilters, keep: ReadonlySet<string>) {
     unknown: [],
     suggestion: null,
     sort: null,
+    fit: null,
     failed: false
   })
   const [loadingMore, setLoadingMore] = useState(false)
@@ -140,6 +150,7 @@ export function useMarket(filters: MarketFilters, keep: ReadonlySet<string>) {
             unknown: r.unknown,
             suggestion: r.suggestion,
             sort: r.sort,
+            fit: r.fit,
             failed: false
           }))
         })
@@ -193,8 +204,8 @@ const without = <A>(all: Readonly<Record<string, A>>, key: string) => {
 /** What the page says about reading a search with the model, for the search it applies to. */
 export type ReadNote =
   | { readonly kind: "reading" }
-  /** On the rewritten search: what of the typed search became no filter. */
-  | { readonly kind: "read"; readonly notUnderstood: ReadonlyArray<string> }
+  /** On the rewritten search: what of the typed search became no filter, and how judging cards against its description went. */
+  | { readonly kind: "read"; readonly notUnderstood: ReadonlyArray<string>; readonly checked: FitCheck | null }
   | { readonly kind: "nothing"; readonly notUnderstood: ReadonlyArray<string> }
   | { readonly kind: "unavailable"; readonly reason: Extract<Understanding, { status: "unavailable" }>["reason"] }
 
@@ -228,13 +239,18 @@ export function useUnderstanding(
     let live = true
     const note = (key: string, n: ReadNote) => setNotes((all) => ({ ...without(all, q), [key]: n }))
     note(q, { kind: "reading" })
-    api<Understanding>(`/search/understand?q=${encodeURIComponent(q)}`)
+    // The set and grader picked narrow the cards a description is judged on.
+    const scope = new URLSearchParams({ q })
+    if (filters.set !== "all") scope.set("set", filters.set)
+    if (filters.grader !== "all") scope.set("grader", filters.grader)
+    api<Understanding>(`/search/understand?${scope.toString()}`)
       .then((r) => {
         if (!live) return
         live = false
         if (r.status === "understood") {
-          note(r.q, { kind: "read", notUnderstood: r.notUnderstood })
-          goRef.current({ q: r.q, from: q, ask: null })
+          // A search that is only a description has no ?q: its notes are kept under what was typed.
+          note(r.q === "" ? q : r.q, { kind: "read", notUnderstood: r.notUnderstood, checked: r.checked ?? null })
+          goRef.current({ q: r.q === "" ? null : r.q, from: q, fit: r.fit ?? null, ask: null })
           return
         }
         if (r.status === "nothing") note(q, { kind: "nothing", notUnderstood: r.notUnderstood })
@@ -252,7 +268,7 @@ export function useUnderstanding(
       if (live) setNotes((all) => without(all, q))
       live = false
     }
-  }, [filters.ask, q, loaded, unknown])
+  }, [filters.ask, q, loaded, unknown, filters.set, filters.grader])
 
-  return notes[q] ?? null
+  return notes[q === "" ? filters.from.trim() : q] ?? null
 }

@@ -120,7 +120,7 @@ const program = Effect.gen(function* () {
         )
 
   const query = (c: RankingCase, sort: MarketSort): MarketQuery => ({
-    set: null, grader: null, q: c.q, from: c.from, sort, offset: 0, limit: TOP
+    set: null, grader: null, q: c.q, from: c.from, fit: "", sort, offset: 0, limit: TOP
   })
 
   const cases: Array<CaseResult> = []

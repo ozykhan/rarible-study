@@ -39,7 +39,7 @@ export function MarketPage() {
   const note = useUnderstanding(filters, market, go)
   // A sort is kept once picked: the default depends on the search, so "Newest" has to be written down too.
   const onFilter = (key: "set" | "grader" | "sort", value: string) => go({ [key]: key !== "sort" && value === "all" ? null : value })
-  const onClear = () => go({ set: null, grader: null, q: null, from: null, ask: null })
+  const onClear = () => go({ set: null, grader: null, q: null, from: null, fit: null, ask: null })
   const openAgent = (seed: string | null) => setDrawer({ seed, n: Date.now() })
 
   return (

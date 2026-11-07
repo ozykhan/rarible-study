@@ -20,22 +20,24 @@ const q = (s: string) => parseMarketQuery(new URLSearchParams(s))
 
 describe("market query", () => {
   it("defaults to the first 40 in the search's own order and ignores unknown values", () => {
-    expect(q("")).toEqual({ set: null, grader: null, q: "", sort: null, from: "", offset: 0, limit: 40 })
+    expect(q("")).toEqual({ set: null, grader: null, q: "", sort: null, from: "", fit: "", offset: 0, limit: 40 })
     expect(q("set=X%20Y&grader=ABC&sort=cheapest&limit=5000&offset=-3")).toEqual({
       set: null,
       grader: null,
       q: "",
       sort: null,
       from: "",
+      fit: "",
       offset: 0,
       limit: 100
     })
-    expect(q("set=EF&grader=NVG&q=%20wyrm%20&sort=grade&offset=40&limit=20&from=%20a%20fiery%20wyrm")).toEqual({
+    expect(q("set=EF&grader=NVG&q=%20wyrm%20&sort=grade&offset=40&limit=20&from=%20a%20fiery%20wyrm&fit=%20fiery%20")).toEqual({
       set: "EF",
       grader: "NVG",
       q: "wyrm",
       sort: "grade",
       from: "a fiery wyrm",
+      fit: "fiery",
       offset: 40,
       limit: 20
     })
