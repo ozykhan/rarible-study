@@ -394,3 +394,22 @@ The agent page's Talk to the agent panel was a read-only log under a chat title:
 - Watch summaries (`/me`, the agent page) and `GET /api/catalog` still name sets and cards from the seed module, so a card only the database has shows its id.
 - The draft could say how many listings search finds for it right now, with a link, so the collector sees the two agree before saving.
 
+## One description of a card
+
+"Armored creature, grade 8 or better, up to $50" matched Reefguard Crab (QSG 9, $37.37), and the agent then declined to propose it: "the marketplace catalog lists Reefguard Crab's only kind as water, not armored", so the judge's match was "a loose reading". Search finds the crab for "armored" because the tagger gave it `#armored`. Neither the judge nor the agent was shown tags: the judge saw the lore and the kinds and guessed that a crab has a shell, the agent saw the same and read them strictly. Two model calls disagreed from the same incomplete facts.
+
+### Decisions
+
+- **The card's facts include its tags, in words.** `cardFacts` reads `tags` with the kinds and lore, and the judge's catalog block and the agent's `catalog_card` say "Described by the market as: animals, sea creatures, coastal, armored" (`described_as`). These are the labels search shows as chips and the words in the card's search vector, so search, the judge and the agent read a card from one description.
+- **Kinds are broad types.** The judge's and the agent's instructions say a card the market describes with what the want asks for fits that part, and a trait the kinds do not name is no evidence against it. A card not tagged yet says so ("not described yet"), and then the lore decides.
+- **`search_listings` returns `described_as` too,** so an agent that searches sees why a card might fit before it opens the listing.
+- **Still a model's call.** Code does not turn a tag into a match: the judge also reads the seller text, and it can still only make a verdict stricter.
+
+### Things the check caught
+
+- On the seed market with the real model, L-00039 (Reefguard Crab, QSG 9, $37.37, the listing from the report) was matched by the judge "with the market tag 'armored'", and the agent proposed it, citing the tag. With no tags the judge still matched it from the lore ("oversized claws").
+- The first listing tried, L-00037, was turned down for the right reason: its seller claims NVG 10 on an NVG 8.5 slab.
+
+### Open
+
+- The matcher's candidates still come from seller-text similarity, not from the tag filter (see Drafting watches): at scale an armored card can miss the judge's 20 while search shows it.

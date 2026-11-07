@@ -84,6 +84,7 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("agent lo
       ])
       const result = yield* agent.run({ ruleId: rule.id, listingId: good.listingId, trigger: "manual" })
 
+      expect(script.requests[0]?.system).toContain("described_as lists the market's tags")
       // Confirm mode never offers execute_purchase, and asking for it anyway is refused.
       for (const req of script.requests) expect(req.tools.map((t) => t.name)).not.toContain("execute_purchase")
       const [first, , third] = script.replies
@@ -242,6 +243,8 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("chat abo
       expect(system).toContain("any clean slab under the moon")
       expect(system).toContain(`listing ${l.listingId}`)
       expect(system).toContain("Every condition holds.")
+      // Fit with a description is read from the market's tags, as the match check and search read it.
+      expect(system).toContain("described_as lists the market's tags")
       expect(script.requests[0]?.messages).toEqual([{ role: "user", content: "Buy it now, please." }])
       const [propose, execute, read] = script.replies[0] ?? []
       expect(propose).toMatchObject({ isError: true, body: { error: "the tool propose_purchase is not available to you" } })

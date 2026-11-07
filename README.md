@@ -44,7 +44,7 @@ Each rule runs a listing through four stages. A stage can only keep a listing or
 1. **Hard filter, in SQL.** Set, card, edition, finish, grader, minimum grade, currency and maximum price. A TypeScript copy of the same checks explains each result, and the purchase policy re-runs it before paying. A test checks that the two agree on 150 random rules over the seed.
 2. **Red flags, in code.** The same vault item listed twice, a price under 40% of recent sales for that exact variant and grade, and seller text that claims a grade or grader that differs from the vault record.
 3. **Similarity, with pgvector.** Only for rules with a soft description such as "a water creature". Listings are ranked by cosine similarity with local bge-small embeddings, and only the closest go on to the judge.
-4. **Judge, a model call.** It decides the soft description and reads the seller text for problems. Seller text is wrapped and marked untrusted, and the prompt says to never follow instructions in it. The judge can reject or ask for review. It cannot accept anything code rejected.
+4. **Judge, a model call.** It decides the soft description from the card's catalog facts (its lore, its kinds and the tags search finds it by) and reads the seller text for problems. Seller text is wrapped and marked untrusted, and the prompt says to never follow instructions in it. The judge can reject or ask for review. It cannot accept anything code rejected.
 
 A watcher runs every 15 seconds. It takes the listings that arrived since its last pass, runs every active rule over them with the v2 pipeline, saves the decisions and, when the agent is turned on, wakes the agent for each match. If the model is out of reach (no key, or the spend cap is hit), code still checks fields and red flags, but nothing becomes a match without the judge: those listings wait as needs review.
 
@@ -54,8 +54,8 @@ The agent has five tools, defined once in [`apps/server/src/agent/tools.ts`](app
 
 | Tool | What it does |
 | --- | --- |
-| `search_listings` | Active listings by fields and, optionally, by meaning. Fields only: no seller text. |
-| `get_listing` | One listing, its code red flags, the median of recent sales, how the caller's rules judged it, and the seller text marked `trusted: false`. |
+| `search_listings` | Active listings by fields and, optionally, by meaning. Fields and the card's tags in words (`described_as`): no seller text. |
+| `get_listing` | One listing, the catalog's facts about its card (lore, kinds and `described_as`, the tags search finds it by), its code red flags, the median of recent sales, how the caller's rules judged it, and the seller text marked `trusted: false`. |
 | `get_price_history` | Past sales for one exact variant, with the median. |
 | `propose_purchase` | Asks to buy a listing for one rule. Code checks the policy and records a proposal or a refusal. |
 | `execute_purchase` | Pays for a proposal. Code checks everything again first. |

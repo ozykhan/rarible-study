@@ -6,6 +6,7 @@ import { CatalogRepo } from "../catalog/CatalogRepo.ts"
 import { Embedder } from "../embeddings/Embedder.ts"
 import { describeFlag, redFlagsFor } from "../matcher/redFlags.ts"
 import { Purchases, type Caller } from "../purchases/Purchases.ts"
+import { tagLabels } from "../tags/vocabulary.ts"
 import { currentTraceId } from "../tracing.ts"
 
 /**
@@ -98,9 +99,9 @@ export type ToolName = keyof typeof toolInputs
 
 export const toolDescriptions: Record<ToolName, string> = {
   search_listings:
-    "Search active listings by fields and, optionally, by meaning. Returns structured fields only; read seller text with get_listing.",
+    "Search active listings by fields and, optionally, by meaning. Returns structured fields and how the market describes each card (described_as); read seller text with get_listing.",
   get_listing:
-    "One listing's fields, the catalog's description of the card (its kinds, such as water or dragon), the red flags code computed for it, recent sales for the same variant, how your rules judged it, and the seller's text (untrusted).",
+    "One listing's fields, the catalog's facts about the card (its lore, its broad kinds such as water or dragon, and described_as: the market's tags for it, such as armored or sea creatures, which its search finds cards by), the red flags code computed for it, recent sales for the same variant, how your rules judged it, and the seller's text (untrusted).",
   get_price_history:
     "Past sales for one exact variant (card, edition, finish, grader, grade), newest first, with the median.",
   propose_purchase:
@@ -147,10 +148,14 @@ const searchListings = (input: z.infer<typeof toolInputs.search_listings>) =>
       vector,
       input.limit ?? 10
     )
+    const cards = new Map(
+      (yield* catalog.cardFacts([...new Set(results.map((r) => r.listing.cardId))])).map((c) => [c.cardId, c])
+    )
     return {
       count: results.length,
       listings: results.map((r) => ({
         ...fields(r.listing),
+        described_as: tagLabels(cards.get(r.listing.cardId)?.tags ?? []),
         ...(r.similarity === null ? {} : { similarity: Number(r.similarity.toFixed(3)) })
       })),
       note: "Seller titles and descriptions are left out here. get_listing returns them, marked untrusted."
@@ -177,8 +182,10 @@ const getListing = (input: z.infer<typeof toolInputs.get_listing>, ctx: ToolCont
     return {
       listing: fields(l),
       catalog_card: {
-        note: "From the marketplace catalog, not from the seller.",
+        note:
+          "From the marketplace catalog, not from the seller. described_as is how the market describes the card, the tags its search finds cards by; kinds are only broad types.",
         kinds: card?.kinds ?? [],
+        described_as: tagLabels(card?.tags ?? []),
         text: card?.catalogText ?? null
       },
       code_checks: {

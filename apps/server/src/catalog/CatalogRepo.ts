@@ -15,9 +15,15 @@ export interface MarketFacts {
   readonly medianSaleUsdCents: number | null
 }
 
+/** What the catalog says about a card: trusted, unlike anything a seller writes. */
 export interface CardFacts {
   readonly cardId: string
   readonly kinds: ReadonlyArray<string>
+  /**
+   * The market's tags for the card (tags/vocabulary.ts), the ones search finds
+   * it by. Empty until the tagger has read the card.
+   */
+  readonly tags: ReadonlyArray<string>
   readonly catalogText: string
 }
 
@@ -363,7 +369,7 @@ export const CatalogRepoLive = Layer.effect(
 
     const cardFacts = Effect.fn("CatalogRepo.cardFacts")(function* (cardIds: ReadonlyArray<string>) {
       if (cardIds.length === 0) return []
-      return yield* sql<CardFacts>`SELECT id AS card_id, kinds, catalog_text FROM cards WHERE id IN ${sql.in(cardIds)}`
+      return yield* sql<CardFacts>`SELECT id AS card_id, kinds, tags, catalog_text FROM cards WHERE id IN ${sql.in(cardIds)}`
     })
 
     // Names are compared lowercased, as the trigram index on cards (migration 0013) stores them.
