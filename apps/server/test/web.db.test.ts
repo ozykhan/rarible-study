@@ -20,9 +20,11 @@ import { HttpRouter, HttpServer } from "effect/http"
 import { SqlClient } from "effect/sql/SqlClient"
 import { CatalogRepo } from "../src/catalog/CatalogRepo.ts"
 import { Purchases } from "../src/purchases/Purchases.ts"
+import { RuleRepo } from "../src/rules/RuleRepo.ts"
 import { Treasury } from "../src/solana/Treasury.ts"
 import { WebApiRoutes } from "../src/web/WebApi.ts"
 import { seed, testLayer } from "./db.ts"
+import { ruleFor } from "./rules.ts"
 
 const TestLive = testLayer("web", { PAYMENTS: "devnet", DEVNET_SEED: "33".repeat(32), FAUCET_USD: "5000" })
 
@@ -294,5 +296,44 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("web api"
       let last = 0
       for (let i = 0; i < 31; i++) last = (yield* call("/auth/start", { body: { wallet: "nope" }, ip: "198.51.100.9" })).status
       expect(last).toBe(429)
+    }))
+
+  it.effect("checks chat messages, and shows chat turns and older runs in the watch's log", () =>
+    Effect.gen(function* () {
+      const call = yield* api
+      const sql = yield* SqlClient
+      const rules = yield* RuleRepo
+      const catalog = yield* CatalogRepo
+      const wallet = yield* Effect.promise(() => generateKeyPairSigner())
+      const token = yield* signIn(call, wallet, "192.0.2.44")
+      const listing = (yield* catalog.getListing(target.listing.id))!
+      const mine = ruleFor(listing, { ownerWallet: wallet.address })
+      const theirs = ruleFor(listing)
+      yield* rules.insert({ rule: mine, softEmbedding: null })
+      yield* rules.insert({ rule: theirs, softEmbedding: null })
+      const ask = (ruleId: string, message: unknown, withToken = true) =>
+        call(`/rules/${ruleId}/chat`, { body: { message }, ip: "192.0.2.44", ...(withToken ? { token } : {}) })
+
+      expect((yield* ask(mine.id, "Is this fair?", false)).status).toBe(401)
+      expect((yield* ask(theirs.id, "Is this fair?")).status).toBe(404)
+      expect((yield* ask(mine.id, "   ")).status).toBe(400)
+      expect((yield* ask(mine.id, "x".repeat(501))).status).toBe(400)
+      expect((yield* ask(mine.id, 42)).status).toBe(400)
+      const noKey = yield* ask(mine.id, "Is this fair?")
+      expect(noKey).toEqual({ status: 503, body: { error: "no model API key is configured on this server" } })
+
+      // A chat turn keeps its question and final text; a run saved before final_text existed still shows its last words.
+      yield* sql`
+        INSERT INTO agent_runs (id, rule_id, listing_id, trigger, status, outcome, transcript, started_at)
+        VALUES ('A-old', ${mine.id}, ${listing.listingId}, 'new_match', 'done', 'proposed',
+                ${JSON.stringify([{ role: "assistant", content: [{ type: "text", text: "Proposed it." }] }])}::jsonb, now() - interval '1 minute')`
+      yield* sql`
+        INSERT INTO agent_runs (id, rule_id, listing_id, trigger, status, outcome, question, final_text)
+        VALUES ('A-chat', ${mine.id}, NULL, 'chat', 'done', 'answered', 'Is this fair?', 'Yes, it is near the median.')`
+      const detail = yield* call(`/rules/${mine.id}`, { token, ip: "192.0.2.44" })
+      expect(detail.body["runs"]).toMatchObject([
+        { id: "A-chat", trigger: "chat", question: "Is this fair?", finalText: "Yes, it is near the median.", listingId: null },
+        { id: "A-old", trigger: "new_match", question: null, finalText: "Proposed it.", listingId: listing.listingId }
+      ])
     }))
 })

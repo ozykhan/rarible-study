@@ -1,13 +1,13 @@
 "use client"
 
 import Link from "next/link"
-import type { CSSProperties, ReactNode } from "react"
-import { useCallback, useEffect, useState } from "react"
+import type { CSSProperties, FormEvent, ReactNode } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { api } from "@/lib/api"
 import { ago, cardArt, GRADERS, setTheme } from "@/lib/art"
 import { explorerTx, label, money, toMinor, variant } from "@/lib/format"
 import { outcomeText, signAndPay } from "@/lib/purchase"
-import type { Decision, Purchase, RuleDetail, SigningRequest, Status } from "@/lib/types"
+import type { AgentRun, Decision, Purchase, RuleDetail, SigningRequest, Status } from "@/lib/types"
 import { useAction } from "@/lib/useAction"
 import { Badge, Button, Led, Panel, Pill, type PillTone } from "./ui"
 
@@ -23,6 +23,28 @@ const STATUS_WORD: Record<RuleDetail["rule"]["status"], string> = {
 /** Why an agent run started. */
 const TRIGGER: Record<string, string> = { new_match: "new match", manual: "you asked", eval: "test run" }
 
+/** The longest chat message the server takes. */
+const CHAT_MAX_CHARS = 500
+
+/** "1 model call", "3 model calls". */
+const count = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`
+
+/** How a run went, for its meta line. */
+const effort = (r: AgentRun) => `${count(r.modelCalls, "model call")}, ${count(r.toolCalls, "tool call")}`
+
+/** A run's outcome as a short word for its pill: "llm_error: ..." reads "llm error". */
+const outcomeWord = (r: AgentRun) => (r.outcome ?? r.status).split(":")[0]!.replaceAll("_", " ")
+
+/** What a run that ended without a final message says instead, by why it ended. */
+const silentRun = (r: AgentRun) =>
+  r.outcome === "spend_cap"
+    ? "The demo's daily model budget is used up, so the agent stopped. It resets at midnight UTC."
+    : r.outcome === "llm_not_configured"
+      ? "This server has no model key, so the agent did not run."
+      : r.outcome?.startsWith("llm_error")
+        ? "The model call failed, so there is no answer. Try again in a minute."
+        : "It ran without a final message."
+
 /** How many skipped listings show before "Show all". */
 const SKIPPED_SHOWN = 6
 
@@ -33,14 +55,22 @@ const until = (iso: string) =>
 /**
  * One watch rule from the server, refreshed every 10 seconds, and what the
  * collector can do with it: sign a waiting purchase, buy a match, ask the
- * agent about one, turn buying without asking on or off, pause or resume.
- * The /agent page shows it in two places, RuleView and RuleChat.
+ * agent about one, chat with the agent about the watch, turn buying without
+ * asking on or off, pause or resume. The /agent page shows it in two places,
+ * RuleView and RuleChat. The chat has its own busy state and error, so a
+ * question on its way does not hold up the buttons on the watch.
  */
 export function useRule(p: { token: string; ruleId: string | null; signText: (message: string) => Promise<string>; onChange: () => void }) {
   const { token, ruleId, signText, onChange } = p
   const [detail, setDetail] = useState<RuleDetail | null>(null)
   const [note, setNote] = useState<string | null>(null)
   const { busy, error, run } = useAction()
+  const talk = useAction()
+  const clearTalk = talk.clearError
+  const [asked, setAsked] = useState<string | null>(null)
+  // The watch on screen now: an answer that arrives after a switch must not reload the old one over it.
+  const shown = useRef(ruleId)
+  shown.current = ruleId
 
   const load = useCallback(async () => {
     if (ruleId !== null) setDetail(await api<RuleDetail>(`/rules/${ruleId}`, { token }))
@@ -49,11 +79,13 @@ export function useRule(p: { token: string; ruleId: string | null; signText: (me
   useEffect(() => {
     setDetail(null)
     setNote(null)
+    setAsked(null)
+    clearTalk()
     if (ruleId === null) return
     void load().catch(() => {})
     const t = setInterval(() => void load().catch(() => {}), 10_000)
     return () => clearInterval(t)
-  }, [load, ruleId])
+  }, [load, ruleId, clearTalk])
 
   /** Confirm mode: the wallet signs a text naming this one purchase, then the server pays. */
   const signPurchase = async (purchaseId: string) => {
@@ -85,6 +117,19 @@ export function useRule(p: { token: string; ruleId: string | null; signText: (me
       await load()
     })
 
+  /** One chat message. The answer is stored as a run on the watch, so it shows once the watch reloads. */
+  const ask = async (message: string) => {
+    const sentFor = ruleId
+    setAsked(message)
+    const sent = await talk.run("chat", async () => {
+      await api(`/rules/${sentFor}/chat`, { token, body: { message } })
+      if (shown.current === sentFor) await load()
+      return true
+    })
+    if (shown.current === sentFor) setAsked(null)
+    return sent === true
+  }
+
   const startAuto = (dailyCapUsd: number, hours: number) =>
     run("auto", async () => {
       const req = await api<SigningRequest>(`/rules/${ruleId}/auto/start`, { token, body: { dailyCapUsd, hours } })
@@ -110,7 +155,17 @@ export function useRule(p: { token: string; ruleId: string | null; signText: (me
       onChange()
     })
 
-  return { detail, note, busy, error, sign, buy, askAgent, startAuto, revoke, setStatus }
+  const chat: ChatControls = { ask, asked, error: talk.error }
+  return { detail, note, busy, error, sign, buy, askAgent, chat, startAuto, revoke, setStatus }
+}
+
+/** The chat box's side of useRule. */
+export interface ChatControls {
+  /** Sends a message. True once the agent's turn is stored, answered or not; false when the request failed. */
+  readonly ask: (message: string) => Promise<boolean>
+  /** The message on its way, shown in the log until the answer arrives. */
+  readonly asked: string | null
+  readonly error: string | null
 }
 
 export type RuleState = ReturnType<typeof useRule>
@@ -317,12 +372,37 @@ function RuleAuto({ state, canTrade }: { state: RuleState; canTrade: boolean }) 
 }
 
 /**
- * The watch as a conversation, with real lines only: what you asked for, then
- * what the agent wrote each time it ran for a match, with how it ran. There
- * are no free-form questions to the model here. Styles: styles/desk.css (.chat).
+ * The watch as a conversation: what you asked for, what the agent wrote each
+ * time it ran for a match, and the chat, where you ask about the watch and
+ * the agent answers. In the chat the agent has read tools only (listings and
+ * past sales): it cannot buy or change the watch. Each turn is stored as an
+ * agent run, so the log is the server's record, not the page's. The log
+ * scrolls on its own and keeps the newest line in view. Styles:
+ * styles/desk.css (.chat).
  */
-export function RuleChat({ detail, status }: { detail: RuleDetail | null; status: Status }) {
+export function RuleChat({ detail, status, chat }: { detail: RuleDetail | null; status: Status; chat: ChatControls }) {
   const runs = detail === null ? [] : [...detail.runs].reverse()
+  const [text, setText] = useState("")
+  const log = useRef<HTMLDivElement>(null)
+  const sending = chat.asked !== null
+  const loaded = detail !== null
+  const canAsk = loaded && status.modelConfigured
+  const newest = runs[runs.length - 1]?.id
+  // A reload during the request can bring the turn in as running; then the log already shows the question.
+  const pending = chat.asked !== null && !runs.some((r) => r.trigger === "chat" && r.status === "running")
+
+  useEffect(() => {
+    const el = log.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [newest, pending, loaded])
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault()
+    const message = text.trim()
+    if (message.length === 0 || sending) return
+    if (await chat.ask(message)) setText("")
+  }
+
   return (
     <Panel className="chat">
       <div className="panel-head">
@@ -332,36 +412,128 @@ export function RuleChat({ detail, status }: { detail: RuleDetail | null; status
       {detail === null ? (
         <p className="muted small">Loading…</p>
       ) : (
-        <ol className="chat-lines">
-          <li className="bubble you">
-            <span className="bubble-who">You</span>
-            {detail.rule.rawWant}
-          </li>
-          {runs.map((r) => (
-            <li className="bubble agent" key={r.id}>
-              <span className="bubble-who">
-                Agent · <Pill>{(r.outcome ?? r.status).replaceAll("_", " ")}</Pill>
-              </span>
-              <span className="quote">{r.finalText || "It ran without a final message."}</span>
-              <span className="bubble-meta mono">
-                {r.listingId ?? "no listing"} · {TRIGGER[r.trigger] ?? r.trigger} · {r.modelCalls} model calls, {r.toolCalls} tool calls ·{" "}
-                {/* Local time: the server's render and the browser's can differ, so React keeps the browser's. */}
-                <time dateTime={r.startedAt} suppressHydrationWarning>
-                  {new Date(r.startedAt).toLocaleTimeString()}
-                </time>
-              </span>
+        <div className="chat-log" ref={log} role="log" aria-label="Conversation with the agent" tabIndex={0}>
+          <ol className="chat-lines">
+            <li className="bubble you">
+              <span className="bubble-who">You</span>
+              {detail.rule.rawWant}
             </li>
-          ))}
-        </ol>
+            {runs.map((r) => (r.trigger === "chat" ? <ChatTurn key={r.id} r={r} /> : <RunLine key={r.id} r={r} />))}
+            {pending && (
+              <>
+                <li className="bubble you">
+                  <span className="bubble-who">You</span>
+                  <span className="quote">{chat.asked}</span>
+                </li>
+                <li className="bubble agent" aria-busy="true">
+                  <span className="bubble-who">Agent</span>
+                  <span className="quote muted">Looking into it…</span>
+                </li>
+              </>
+            )}
+          </ol>
+          {runs.length === 0 && !pending && (
+            <p className="muted small">
+              {!status.modelConfigured
+                ? "Only code checks new listings on this server: it has no model key."
+                : status.agentEnabled
+                  ? "The agent writes here each time it runs for a match. Ask it about this watch below."
+                  : "On this server the agent does not run on new matches by itself. Ask it about this watch below."}
+            </p>
+          )}
+        </div>
       )}
-      {detail !== null && runs.length === 0 && (
-        <p className="muted small">
-          {status.agentEnabled
-            ? "The agent writes here when it runs for a match: what it checked and what it did."
-            : "Agent runs are off on this server, so only code checks new listings for this watch."}
-        </p>
-      )}
+      <form className="chat-ask" onSubmit={submit}>
+        <label htmlFor="chat-ask">Ask about this watch, a listing or a price</label>
+        <div className="chat-ask-row">
+          <input
+            id="chat-ask"
+            type="text"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            maxLength={CHAT_MAX_CHARS}
+            autoComplete="off"
+            placeholder="Why was the last one skipped?"
+            disabled={!canAsk}
+          />
+          <Button type="submit" disabled={!canAsk || sending || text.trim().length === 0}>
+            {sending ? "Sending…" : "Send"}
+          </Button>
+        </div>
+        <span className="muted small">
+          {status.modelConfigured
+            ? "It looks up listings and past sales. It cannot buy or change this watch from here."
+            : "This server has no model key, so the agent cannot answer."}
+        </span>
+        {chat.error && <p className="error small">{chat.error}</p>}
+      </form>
     </Panel>
+  )
+}
+
+/** The time a run started, in the browser's own clock. */
+function RunTime({ r }: { r: AgentRun }) {
+  /* Local time: the server's render and the browser's can differ, so React keeps the browser's. */
+  return (
+    <time dateTime={r.startedAt} suppressHydrationWarning>
+      {new Date(r.startedAt).toLocaleTimeString()}
+    </time>
+  )
+}
+
+/** A run the agent made for a listing: its outcome, what it wrote, and how it ran. */
+function RunLine({ r }: { r: AgentRun }) {
+  return (
+    <li className="bubble agent">
+      <span className="bubble-who">
+        Agent · <Pill>{outcomeWord(r)}</Pill>
+      </span>
+      <span className="quote">{r.finalText || silentRun(r)}</span>
+      <span className="bubble-meta mono">
+        {r.listingId ?? "no listing"} · {TRIGGER[r.trigger] ?? r.trigger} · {effort(r)} · <RunTime r={r} />
+      </span>
+    </li>
+  )
+}
+
+/** A chat turn still running after this long has stopped without an answer (the server restarted, say). */
+const CHAT_STALE_MS = 3 * 60_000
+
+/**
+ * A chat turn: your message, then the agent's answer, with a pill only when
+ * there is no answer. A turn the server is still working on reads as busy.
+ */
+function ChatTurn({ r }: { r: AgentRun }) {
+  const working = r.status === "running" && Date.now() - Date.parse(r.startedAt) < CHAT_STALE_MS
+  return (
+    <>
+      <li className="bubble you">
+        <span className="bubble-who">You</span>
+        <span className="quote">{r.question}</span>
+      </li>
+      {working ? (
+        <li className="bubble agent" aria-busy="true">
+          <span className="bubble-who">Agent</span>
+          <span className="quote muted">Looking into it…</span>
+        </li>
+      ) : (
+        <li className="bubble agent">
+          <span className="bubble-who">
+            Agent
+            {r.outcome !== "answered" && (
+              <>
+                {" "}
+                · <Pill>{r.status === "running" ? "stopped" : outcomeWord(r)}</Pill>
+              </>
+            )}
+          </span>
+          <span className="quote">{r.finalText || (r.status === "running" ? "It stopped before it answered." : silentRun(r))}</span>
+          <span className="bubble-meta mono">
+            {effort(r)} · <RunTime r={r} />
+          </span>
+        </li>
+      )}
+    </>
   )
 }
 

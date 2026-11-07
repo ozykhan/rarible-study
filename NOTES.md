@@ -340,3 +340,29 @@ The same `SearchService` on OpenSearch 3.9, run locally from a copy of the searc
 - One node and one shard on the same 4 cores as Postgres. Shards, replicas and a second node, which are what an engine is for at 10 million listings, are not measured.
 - At a million cards, exact vector scoring gets slow on both engines; approximate nearest neighbours with filters is the next comparison.
 
+
+## Talk to the agent
+
+The agent page's Talk to the agent panel was a read-only log under a chat title: your want, then the agent's closing note from each run on a match, with no way to write to it. It is now a chat about the selected watch.
+
+### Decisions
+
+- **Read tools only.** The chat gets `search_listings`, `get_listing` and `get_price_history`, whatever the watch's mode, and `runTool` refuses the others. Buying stays on Buy now, Ask the agent and a signed budget, where the policy and the collector's signature already sit. The prompt names those places, so "buy it" and "raise my top price" get a pointer instead of a promise.
+- **A chat turn is an agent run.** Trigger `chat`, with the question and the answer on the row (migration 0012). The log is one list of runs ordered by time, read through an index on (rule, started), and nothing new is needed for tracing, the spend ledger or the trace links.
+- **Bounded context.** The prompt carries the watch and at most 8 found, 8 skipped, 8 purchases and 5 agent notes, read with a capped query (index on decisions by rule and time). History is the last 6 exchanges. The newest two keep their tool results, clipped to 2,000 characters; older ones keep their tool calls with a placeholder for each result. A busy watch or a long chat costs the same per message.
+- **final_text on every run.** The page reloads a watch every 10 seconds and used to read each run's whole transcript to find its last words. Runs now store their final text, and older runs fall back to the transcript.
+- **Synchronous, and it finishes.** The request waits for the answer (3 to 4 seconds on Haiku in the runs below). Once the run row is written the turn is uninterruptible, so a closed tab still gets its answer stored.
+
+### Things the tests and browser caught
+
+- With only the question and answer as history, the model took back its own earlier answers ("I had not looked up the listing before quoting it") and looked everything up again. Keeping the tool calls, and the newest results, stopped it.
+- The SQL client camel-cases keys inside json values, so a stored transcript read back had `toolUseId` where the API wrote `tool_use_id`. History reads the transcript as text.
+- Closing the page mid-answer interrupted the request and left the run "running" forever (the server logged a 499). A test interrupts a slow turn and checks it ends done and answered.
+- "1 model calls" on the meta line.
+
+### Open
+
+- Ask the agent on a match is still interruptible when the page closes; making it finish too touches the purchase path, so it is left for its own change.
+- The chat cannot change a watch. A tool that drafts the change into Change this watch, for the collector to check and save, would match the design's chat box.
+- No eval yet for the chat: injected seller text read through `get_listing` during a chat, and questions that try to pull it off the marketplace.
+- Answers come back whole; streaming would show the first words sooner.

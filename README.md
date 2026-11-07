@@ -68,6 +68,12 @@ The model can ask for anything. Code decides, in [`apps/server/src/purchases/`](
 
 The agent loop ([`apps/server/src/agent/Agent.ts`](apps/server/src/agent/Agent.ts)) is a plain tool loop on Claude Haiku 5.5 at low effort: at most 6 model calls, the spend cap checked before each one, history passed back unchanged, and every run recorded in `agent_runs` with its transcript, counts, outcome and trace id. The outcome comes from the purchases table, not from what the model says it did.
 
+### Talking to the agent
+
+On the agent page, Talk to the agent is a chat about the selected watch (`POST /api/rules/:id/chat`). The agent answers with the three read tools only, whatever the watch's mode, so asking it to buy or to change the watch gets an answer that points to Buy now or Change this watch. Its prompt holds the watch and a capped summary of what code recorded for it: the newest found and skipped listings with a reason each, purchases, and the agent's notes from runs on matches. A follow-up gets the last 6 exchanges back with their tool calls; the newest two keep their tool results (clipped), older ones a placeholder, so the history stays small however long the chat gets. Without the calls the model took its own earlier answers back as unchecked.
+
+Each message is a run with trigger `chat`, the question and the answer stored on it, so the log on the page is the server's record. A turn runs to the end even if the page is closed, so it never stays "running" and the answer is there on return. Messages are 1 to 500 characters and limited to 30 an hour per IP and per wallet, in buckets of their own so a long chat does not use up rule drafting or described searches. Every model call counts against the daily spend cap.
+
 ### The MCP endpoint
 
 `POST /mcp` speaks MCP over Streamable HTTP with the official SDK, statelessly: each request gets a fresh server. It needs a bearer token:
@@ -244,7 +250,7 @@ What it costs: a second system to run (a JVM that wants a few GB of memory), a s
 | `/` | The front page: search, the four sets, the five newest listings, how buying works, the graders, and a band that offers the agent |
 | `/market` | Every active listing as a grid of slabs, with set tabs, grader, search, sort and paging. The filters live in the URL and run on the server: `GET /api/listings` takes `?set`, `?grader`, `?q`, `?from`, `?fit`, `?sort`, `?offset` and `?limit`. A search that reads as a tag or carries a description is sorted Best match unless `?sort` says otherwise, and the response says which order it used and whether `?fit` cut it. Pressing Enter in the search adds `?ask=1`, and a search with words nothing matches is then read by the model, which also judges the cards against any description before the page loads. Search is described [below](#how-market-search-works). Watch on a tile opens the agent in a drawer |
 | `/listing/[id]` | One listing in full, with Buy now inline and more from the same set. `GET /api/listings/:id` also answers for sold and withdrawn listings, so their pages say so |
-| `/agent` | The optional agent: your watches, the selected watch with its matches, listings to review, skipped listings, purchases and agent runs. You can buy a match by signing it, ask the agent about a listing, or sign an auto-buy approval and revoke it later. A watch cannot be edited, so Change this watch saves a new watch and pauses the old one |
+| `/agent` | The optional agent: your watches, the selected watch with its matches, listings to review, skipped listings, purchases and agent runs. You can buy a match by signing it, ask the agent about a listing, chat with the agent about the watch, or sign an auto-buy approval and revoke it later. A watch cannot be edited, so Change this watch saves a new watch and pauses the old one |
 
 Seller text is shown as plain text, since some of it is written to trick an AI buyer.
 
@@ -401,8 +407,9 @@ Outside a terminal the backend logs one JSON object per line, in the shape Railw
 - A model's verdict that a card fits a description counts only with words copied from that card's own text, which code checks; the model sees 10 cards' kinds and lore at a time, never seller text.
 - Seller text is escaped and marked untrusted in every prompt and tool result.
 - The agent is off unless `AGENT_ENABLED=true`, and the watcher starts at most 3 runs per pass.
+- The chat about a watch has read tools only: it cannot propose, pay, or change the watch, whatever the watch's mode.
 - Secrets live only in `.env` (git-ignored) or the hosting platform's environment. gitleaks runs as a pre-commit hook and in CI. A key that reaches git history gets rotated, not just deleted.
-- The web API limits requests per IP and per wallet in Postgres: endpoints that cost a model call or a devnet transaction get 30 and 20 an hour by default, sign-in 30 per 10 minutes, the faucet once a day per wallet and 3 times a day per IP, and every route 600 per 10 minutes per IP. A wallet has at most 5 active rules.
+- The web API limits requests per IP and per wallet in Postgres: endpoints that cost a model call or a devnet transaction get 30 and 20 an hour by default, chat messages another 30, sign-in 30 per 10 minutes, the faucet once a day per wallet and 3 times a day per IP, and every route 600 per 10 minutes per IP. A wallet has at most 5 active rules.
 - `DEMO_READ_ONLY=true` turns the demo read-only: purchase tools are hidden and refused, and the faucet, allowance and approval endpoints answer 403.
 - Signatures are one-time: a signing request expires after 10 minutes and is marked used in the same update that accepts it.
 - Devnet only: the genesis hash check above, and devnet keys derived from one seed that never reaches the repo or the browser.
