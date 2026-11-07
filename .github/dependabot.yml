@@ -1,0 +1,31 @@
+# Dependabot version updates, kept quiet: once a month, at most two pull
+# requests per ecosystem (one for minor and patch updates, one for majors).
+# Security updates are separate: they arrive as soon as an advisory lands,
+# once "Dependabot security updates" is on in the repository settings.
+version: 2
+updates:
+  - package-ecosystem: npm
+    # pnpm workspace root: covers apps/*, packages/* and evals.
+    directory: /
+    schedule:
+      interval: monthly
+    # Wait a week before proposing a new npm release, so a compromised
+    # version is likely caught and pulled before it reaches this repo.
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    groups:
+      npm-minor-and-patch:
+        update-types: [minor, patch]
+      npm-major:
+        update-types: [major]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions-minor-and-patch:
+        update-types: [minor, patch]
+      actions-major:
+        update-types: [major]

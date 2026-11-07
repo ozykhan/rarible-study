@@ -1,0 +1,48 @@
+name: codeql
+
+# Static analysis with CodeQL on every pull request, every push to main, and
+# once a week so new queries also run over unchanged code. Results show on
+# pull requests and in the repository's Security tab.
+#
+# This is CodeQL's "advanced setup". Leave CodeQL "default setup" off in the
+# repository settings: GitHub refuses results from both at once.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "23 4 * * 1"
+
+permissions:
+  contents: read
+
+# A newer push to the same pull request cancels the older run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  analyze:
+    name: analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read # read the workflow run CodeQL reports for
+      contents: read # check out the code
+      security-events: write # upload the results to code scanning
+    strategy:
+      fail-fast: false
+      matrix:
+        # actions: the workflows in .github; python: the card art script.
+        language: [actions, javascript-typescript, python]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+      - uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          category: "/language:${{ matrix.language }}"
