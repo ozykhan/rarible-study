@@ -1,6 +1,8 @@
 import { generateLargeCatalog, handWritten } from "@slabwatch/seed"
 import { describe, expect, it } from "@effect/vitest"
 import {
+  defaultSort,
+  describedWords,
   describeSearch,
   emptySearch,
   isEmptySearch,
@@ -17,24 +19,27 @@ import { parseMarketQuery } from "../src/web/market.ts"
 const q = (s: string) => parseMarketQuery(new URLSearchParams(s))
 
 describe("market query", () => {
-  it("defaults to the 40 newest and ignores unknown values", () => {
-    expect(q("")).toEqual({ set: null, grader: null, q: "", sort: "recent", offset: 0, limit: 40 })
+  it("defaults to the first 40 in the search's own order and ignores unknown values", () => {
+    expect(q("")).toEqual({ set: null, grader: null, q: "", sort: null, from: "", offset: 0, limit: 40 })
     expect(q("set=X%20Y&grader=ABC&sort=cheapest&limit=5000&offset=-3")).toEqual({
       set: null,
       grader: null,
       q: "",
-      sort: "recent",
+      sort: null,
+      from: "",
       offset: 0,
       limit: 100
     })
-    expect(q("set=EF&grader=NVG&q=%20wyrm%20&sort=grade&offset=40&limit=20")).toEqual({
+    expect(q("set=EF&grader=NVG&q=%20wyrm%20&sort=grade&offset=40&limit=20&from=%20a%20fiery%20wyrm")).toEqual({
       set: "EF",
       grader: "NVG",
       q: "wyrm",
       sort: "grade",
+      from: "a fiery wyrm",
       offset: 40,
       limit: 20
     })
+    expect(q("sort=relevance").sort).toBe("relevance")
     // Generated sets are valid ids; whether one exists is the search's business.
     expect(q("set=X050").set).toBe("X050")
     // Deep pages stop where search engines stop.
@@ -158,6 +163,25 @@ describe("reading the search box", () => {
       "seller @vaultkeeper",
       '"ashen wyrm"'
     ])
+  })
+})
+
+describe("best match", () => {
+  it("is the default for described searches only", () => {
+    expect(defaultSort(parseSearch("sea animal with hologram"))).toBe("relevance")
+    expect(defaultSort(parseSearch("flying creature"))).toBe("relevance")
+    expect(defaultSort(parseSearch("ashen wyrm"))).toBe("recent")
+    expect(defaultSort(parseSearch("holo nvg 10 under 50"))).toBe("recent")
+    expect(defaultSort(parseSearch(""))).toBe("recent")
+  })
+
+  it("ranks by the words that describe a card, in the order typed", () => {
+    expect(describedWords("dragon that guards treasure")).toEqual(["dragon", "that", "guards", "treasure"])
+    expect(describedWords("a bird made of lightning")).toEqual(["bird", "made", "lightning"])
+    // What is about the slab or the listing is not about the card.
+    expect(describedWords("sea animal with hologram, NVG 9+ under $50 @vaultkeeper")).toEqual(["sea", "animal"])
+    expect(describedWords("glowing moth glowing")).toEqual(["glowing", "moth"])
+    expect(describedWords("holo 1st edition")).toEqual([])
   })
 })
 

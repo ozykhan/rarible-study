@@ -7,7 +7,8 @@
     "typecheck": "tsc -p .",
     "test": "vitest run --passWithNoTests",
     "eval:agent": "tsx --env-file-if-exists=../.env src/agentInjection.ts",
-    "eval:search": "tsx --env-file-if-exists=../.env src/searchUnderstanding.ts"
+    "eval:search": "tsx --env-file-if-exists=../.env src/searchUnderstanding.ts",
+    "eval:rank": "tsx --env-file-if-exists=../.env src/searchRanking.ts"
   },
   "dependencies": {
     "@slabwatch/domain": "workspace:*",

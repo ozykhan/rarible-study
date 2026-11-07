@@ -76,6 +76,8 @@ export class AppConfig extends Context.Service<
     readonly watcherIntervalSeconds: number
     /** Seconds between runs of the card tagger, which tags cards that need it with the model. 0 turns it off. */
     readonly taggerIntervalSeconds: number
+    /** Seconds between runs that write search vectors for new and changed cards. 0 turns it off. */
+    readonly cardVectorsIntervalSeconds: number
     /** Where spans go over OTLP/HTTP, from the standard OpenTelemetry variables. Null when nothing is set. */
     readonly otlp: OtlpSettings | null
     /** How purchases pay: a simulated ledger, or SPL token transfers on Solana devnet. */
@@ -126,6 +128,7 @@ const config = Config.all({
   agentMaxSteps: Config.Number("AGENT_MAX_STEPS").pipe(Config.withDefault(6)),
   watcherIntervalSeconds: Config.Number("WATCHER_INTERVAL_SECONDS").pipe(Config.withDefault(15)),
   taggerIntervalSeconds: Config.Number("TAGGER_INTERVAL_SECONDS").pipe(Config.withDefault(600)),
+  cardVectorsIntervalSeconds: Config.Number("CARD_VECTORS_INTERVAL_SECONDS").pipe(Config.withDefault(60)),
   otlp: Config.all({
     tracesEndpoint: optionalString("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"),
     endpoint: optionalString("OTEL_EXPORTER_OTLP_ENDPOINT"),

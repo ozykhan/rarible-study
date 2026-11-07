@@ -272,7 +272,7 @@ export const WebApiRoutes = HttpRouter.addAll(
       "GET",
       "/listings",
       Effect.gen(function* () {
-        // ?set, ?grader, ?q, ?sort, ?offset and ?limit pick one page; with none, the 40 newest.
+        // ?set, ?grader, ?q, ?from, ?sort, ?offset and ?limit pick one page; with none, the 40 newest.
         // stats cover the whole market, counts what matches the search and grader per set.
         const request = yield* HttpServerRequest.HttpServerRequest
         // originalUrl keeps the query string; url is the path after the /api prefix.

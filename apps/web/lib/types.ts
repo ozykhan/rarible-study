@@ -129,6 +129,12 @@ export interface MarketResponse {
   readonly unknown: ReadonlyArray<string>
   /** A corrected search that has results, when this one has none because of a misspelled word. */
   readonly suggestion: string | null
+  /**
+   * The order the listings are in: the one asked for, or the default for the
+   * search (best match for a described search, newest otherwise). Best match
+   * falls back to newest when the search describes no card.
+   */
+  readonly sort: "relevance" | "recent" | "price_asc" | "price_desc" | "grade"
 }
 
 export interface SearchChip {

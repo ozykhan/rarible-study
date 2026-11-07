@@ -42,7 +42,7 @@ const searchHref = (f: MarketFilters, q: string) => {
   if (f.set !== "all") p.set("set", f.set)
   if (f.grader !== "all") p.set("grader", f.grader)
   if (q !== "") p.set("q", q)
-  if (f.sort !== "recent") p.set("sort", f.sort)
+  if (f.sort !== null) p.set("sort", f.sort)
   const qs = p.toString()
   return qs === "" ? "/market" : `/market?${qs}`
 }
@@ -193,8 +193,9 @@ export function Market(props: {
             </label>
             <label>
               <span className="select-word">Sort</span>
-              <select value={f.sort} aria-label="Sort" onChange={(e) => props.onFilter("sort", e.target.value)}>
-                {MARKET_SORTS.map(([v, t]) => (
+              <select value={m.sort} aria-label="Sort" onChange={(e) => props.onFilter("sort", e.target.value)}>
+                {/* Best match needs words to rank by. */}
+                {MARKET_SORTS.filter(([v]) => v !== "relevance" || f.q.trim() !== "").map(([v, t]) => (
                   <option key={v} value={v}>
                     {t}
                   </option>
@@ -218,7 +219,13 @@ export function Market(props: {
         {m.listings !== null && f.from !== "" && (
           <p className="market-from">
             Read from &ldquo;{f.from}&rdquo;.
-            {note?.kind === "read" && note.notUnderstood.length > 0 && <> No filter for {quoted(note.notUnderstood)}.</>}
+            {note?.kind === "read" && note.notUnderstood.length > 0 && (
+              <>
+                {" "}
+                No filter for {quoted(note.notUnderstood)}
+                {m.sort === "relevance" ? "; Best match still uses those words to order the cards." : "."}
+              </>
+            )}
           </p>
         )}
         {m.listings !== null && m.total > 0 && (

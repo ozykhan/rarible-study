@@ -15,9 +15,11 @@
     "db:seed": "pnpm --filter @slabwatch/server db:seed",
     "db:seed:large": "pnpm --filter @slabwatch/server db:seed:large",
     "tags:run": "pnpm --filter @slabwatch/server tags:run",
+    "vectors:run": "pnpm --filter @slabwatch/server vectors:run",
     "bench:search": "pnpm --filter @slabwatch/server bench:search",
     "eval": "pnpm --filter @slabwatch/evals eval",
     "eval:search": "pnpm --filter @slabwatch/evals eval:search",
+    "eval:rank": "pnpm --filter @slabwatch/evals eval:rank",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test"
   },

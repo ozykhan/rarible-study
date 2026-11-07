@@ -21,10 +21,10 @@ const int = (v: string | null, fallback: number, min: number, max: number) => {
 }
 
 /**
- * Reads ?set, ?grader, ?q, ?sort, ?offset and ?limit. These come from links
- * people share, so an unknown grader or sort means "any" rather than an
- * error; a set id that is not in the catalog is ignored by the search. With
- * no parameters it is the 40 newest, as before.
+ * Reads ?set, ?grader, ?q, ?from, ?sort, ?offset and ?limit. These come from
+ * links people share, so an unknown grader or sort means "any" or "the
+ * default" rather than an error; a set id that is not in the catalog is
+ * ignored by the search. With no parameters it is the 40 newest, as before.
  */
 export const parseMarketQuery = (params: URLSearchParams): MarketQuery => {
   const set = params.get("set")
@@ -34,7 +34,8 @@ export const parseMarketQuery = (params: URLSearchParams): MarketQuery => {
     set: set !== null && /^[A-Za-z0-9-]{1,16}$/.test(set) ? set : null,
     grader: grader !== null && grader in graderNames ? (grader as Grader) : null,
     q: (params.get("q") ?? "").trim().slice(0, 100),
-    sort: MARKET_SORTS.find((s) => s === sort) ?? "recent",
+    sort: MARKET_SORTS.find((s) => s === sort) ?? null,
+    from: (params.get("from") ?? "").trim().slice(0, 200),
     offset: int(params.get("offset"), 0, 0, MARKET_OFFSET_MAX),
     limit: int(params.get("limit"), MARKET_PAGE, 1, MARKET_PAGE_MAX)
   }

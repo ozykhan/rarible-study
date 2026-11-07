@@ -1,10 +1,13 @@
 import type { Grader } from "@slabwatch/domain"
-import { Context, Effect, Layer } from "effect"
+import { Cache, Context, Effect, Exit, Layer } from "effect"
 import type { SqlError } from "effect/sql/SqlError"
 import { SqlClient } from "effect/sql/SqlClient"
 import type { Fragment } from "effect/sql/Statement"
-import { toTextArray } from "../db/Database.ts"
+import { toTextArray, toVector } from "../db/Database.ts"
+import { Embedder } from "../embeddings/Embedder.ts"
 import {
+  defaultSort,
+  describedWords,
   describeSearch,
   isEmptySearch,
   parseSearch,
@@ -65,6 +68,12 @@ export interface MarketSearchResult {
   readonly unknown: ReadonlyArray<string>
   /** A corrected search that has results, when this one has none because of a word we do not know. */
   readonly suggestion: string | null
+  /**
+   * The order the page is in: the one asked for, or the search's default
+   * (defaultSort). Best match falls back to newest when the search describes
+   * no card to rank by.
+   */
+  readonly sort: MarketSort
 }
 
 export class SearchService extends Context.Service<
@@ -97,6 +106,18 @@ export const STATS_TTL = "10 seconds"
  */
 export const COUNT_LIMIT = 10_000
 
+/**
+ * Best match, the "relevance" sort. Each card has a vector of its trusted text
+ * and tags (CardVectors); the words a search describes a card with
+ * (describedWords, from ?from when a model read the search) become a query
+ * vector, and the cards the search matches are ordered by cosine distance to
+ * it, each card's listings newest first. Filters still decide what matches;
+ * the order only decides what comes first, so words no filter can express
+ * ("that guards treasure") still count. No model call: the query vector comes
+ * from the local embedder and is cached.
+ */
+const QUERY_VECTORS = { capacity: 2000, timeToLive: "1 hour" } as const
+
 /** Search words become a prefix query: 'ashen':* & 'wyrm':*. Words are letters and digits only, so they need no escaping. */
 const prefixQuery = (words: ReadonlyArray<string>) => words.map((w) => `'${w}':*`).join(" & ")
 
@@ -113,8 +134,8 @@ export const termsQuery = (words: ReadonlyArray<string>, tags: ReadonlyArray<Tag
   return parts.length === 0 ? null : parts.join(" & ")
 }
 
-/** Every sort ends in the listing id so pages never overlap; each matches an index in 0005_search. */
-const orderBy = (sql: SqlClient, sort: MarketSort) => {
+/** Every sort ends in the listing id so pages never overlap; each matches an index in 0005_search. Best match has its own queries. */
+const orderBy = (sql: SqlClient, sort: Exclude<MarketSort, "relevance">) => {
   switch (sort) {
     case "recent":
       return sql`listed_at DESC, listing_id`
@@ -144,6 +165,7 @@ export const SearchServicePg = Layer.effect(
   SearchService,
   Effect.gen(function* () {
     const sql = yield* SqlClient
+    const embedder = yield* Embedder
 
     const statsQuery = Effect.gen(function* () {
       const rows = yield* sql<{ readonly setId: string; readonly count: number; readonly floor: number | null }>`
@@ -162,6 +184,16 @@ export const SearchServicePg = Layer.effect(
     const allSets = yield* Effect.cachedWithTTL(
       sql<SetRef>`SELECT id, name FROM sets ORDER BY release_year, id`,
       "1 minute"
+    )
+
+    const queryVectors = yield* Cache.makeWith(
+      (text: string) =>
+        embedder.embed([text], "query").pipe(
+          Effect.map((vs) => toVector(vs[0] ?? [])),
+          Effect.withSpan("SearchService.queryVector")
+        ),
+      // A failure is tried again next time rather than remembered.
+      { capacity: QUERY_VECTORS.capacity, timeToLive: (exit) => (Exit.isSuccess(exit) ? QUERY_VECTORS.timeToLive : 0) }
     )
 
     const knownWords = Effect.fn("SearchService.knownWords")(function* (words: ReadonlyArray<string>) {
@@ -239,6 +271,46 @@ export const SearchServicePg = Layer.effect(
       return c
     }
 
+    /** What a search asks of the card, on the cards table: Best match ranks these cards before it reads their listings. */
+    const cardWhere = (r: Resolved, set: string | null): Array<Fragment> => {
+      const p = r.parsed
+      const c: Array<Fragment> = []
+      const terms = termsQuery(r.words, p.tags)
+      if (terms !== null) c.push(sql`search_terms @@ ${terms}::tsquery`)
+      if (set !== null) c.push(sql`set_id = ${set}`)
+      if (p.cardNumber !== null) c.push(sql`number = ${p.cardNumber}`)
+      return c
+    }
+
+    /** What a search asks of the slab and the listing, on listing_search: the rest of `where`. */
+    const listingWhere = (r: Resolved, grader: Grader | null): Array<Fragment> => {
+      const p = r.parsed
+      const c: Array<Fragment> = []
+      if (grader !== null) c.push(sql`grader = ${grader}`)
+      if (p.graders.length > 0) c.push(sql`grader IN ${sql.in(p.graders)}`)
+      if (p.editions.length > 0) c.push(sql`edition IN ${sql.in(p.editions)}`)
+      if (p.finishes.length > 0) c.push(sql`finish IN ${sql.in(p.finishes)}`)
+      if (p.grades.length > 0) c.push(sql`grade IN ${sql.in(p.grades)}`)
+      if (p.minGrade !== null) c.push(sql`grade >= ${p.minGrade}`)
+      if (p.maxUsdCents !== null) c.push(sql`usd_cents <= ${p.maxUsdCents}`)
+      if (p.cert !== null) c.push(sql`cert_number = ${p.cert}`)
+      if (r.sellerIds.length > 0) c.push(sql`seller_id IN ${sql.in(r.sellerIds)}`)
+      return c
+    }
+
+    /**
+     * The query vector for Best match, or null when there are no words to rank
+     * by or the embedder failed: then the page is newest first, never an error.
+     */
+    const rankVector = (text: string) =>
+      text === ""
+        ? Effect.succeed(null)
+        : Cache.get(queryVectors, text).pipe(
+            Effect.catchCause((cause) =>
+              Effect.logWarning("search: no query vector, so newest first", cause).pipe(Effect.as(null))
+            )
+          )
+
     /** The search with each unknown word swapped for the closest catalog word, if every one has a close match. */
     const correct = Effect.fn("SearchService.correct")(function* (q: string, unknown: ReadonlyArray<string>) {
       const close = yield* closeWords(unknown, 1)
@@ -251,6 +323,91 @@ export const SearchServicePg = Layer.effect(
       return fixed === q ? null : fixed
     })
 
+    interface PageOf {
+      readonly r: Resolved
+      readonly grader: Grader | null
+      readonly set: string | null
+      readonly limit: number
+      readonly offset: number
+    }
+
+    /**
+     * One page in a fixed order. A search counted in full has at most COUNT_LIMIT matches (`materialize`): fetch them all
+     * and sort, which costs at most that many rows. Walking a sort index instead pays for every row it skips, and the
+     * planner guesses how many that is from per-word statistics. "glowing sea creature holo" (1,492 matches) skipped
+     * 60,000 rows that way: 165 ms instead of 20. Past the cap, matches are common enough that walking the index finds a
+     * page quickly.
+     */
+    const sortedPage = (o: PageOf & { readonly sort: Exclude<MarketSort, "relevance">; readonly materialize: boolean }) => {
+      const filters = sql.and(where(o.r, o.grader, o.set))
+      return o.materialize
+        ? sql<{ readonly listingId: string }>`
+            WITH m AS MATERIALIZED (
+              SELECT listing_id, listed_at, usd_cents, grade FROM listing_search WHERE ${filters}
+            )
+            SELECT listing_id FROM m ORDER BY ${orderBy(sql, o.sort)}
+            LIMIT ${o.limit} OFFSET ${o.offset}`
+        : sql<{ readonly listingId: string }>`
+            SELECT listing_id FROM listing_search WHERE ${filters}
+            ORDER BY ${orderBy(sql, o.sort)}
+            LIMIT ${o.limit} OFFSET ${o.offset}`
+    }
+
+    /**
+     * One page best match first. Matches are ordered by their card's distance to the query vector, in two rounds:
+     * first the newest listing of each card, then every other listing, card by card. At marketplace size a card has
+     * dozens of listings, and the first page should show the cards that fit best, not one card's whole stock.
+     *
+     * Counted in full (at most COUNT_LIMIT matches), every match is fetched and sorted, as in sortedPage. Past the cap,
+     * the matching cards are ranked first and each one's newest listing is read with one index probe, best card
+     * first, stopping once the page is full; the second round is read only for pages beyond the first round.
+     */
+    const bestMatchPage = Effect.fn("SearchService.bestMatchPage")(function* (
+      o: PageOf & { readonly vector: string; readonly exact: boolean }
+    ) {
+      if (o.exact) {
+        const rows = yield* sql<{ readonly listingId: string }>`
+          WITH m AS MATERIALIZED (
+            SELECT listing_id, listed_at, card_id FROM listing_search WHERE ${sql.and(where(o.r, o.grader, o.set))}
+          ), r AS (
+            SELECT id, search_vector <=> ${o.vector}::vector AS d FROM cards WHERE id IN (SELECT card_id FROM m)
+          )
+          SELECT m.listing_id FROM m JOIN r ON r.id = m.card_id
+          ORDER BY row_number() OVER (PARTITION BY m.card_id ORDER BY m.listed_at DESC, m.listing_id) > 1,
+                   r.d, m.listed_at DESC, m.listing_id
+          LIMIT ${o.limit} OFFSET ${o.offset}`
+        return rows.map((x) => x.listingId)
+      }
+      const cards = sql`SELECT id, search_vector <=> ${o.vector}::vector AS d FROM cards WHERE ${sql.and(cardWhere(o.r, o.set))}`
+      const listings = sql.and(listingWhere(o.r, o.grader))
+      const end = o.offset + o.limit
+      const firsts = (yield* sql<{ readonly listingId: string }>`
+        SELECT l.listing_id
+        FROM (${cards} ORDER BY d) AS r
+        CROSS JOIN LATERAL (
+          SELECT listing_id, listed_at FROM listing_search WHERE card_id = r.id AND ${listings}
+          ORDER BY listed_at DESC, listing_id LIMIT 1
+        ) AS l
+        ORDER BY r.d, l.listed_at DESC, l.listing_id
+        LIMIT ${end}`).map((x) => x.listingId)
+      const page = firsts.slice(o.offset, end)
+      // Fewer than asked for: the first round is complete, and the page carries on into the second.
+      if (firsts.length >= end) return page
+      const second = sql<{ readonly listingId: string }>`
+        SELECT ls.listing_id
+        FROM (${cards}) AS r
+        JOIN listing_search ls ON ls.card_id = r.id
+        WHERE ${listings} AND ls.listing_id NOT IN (SELECT unnest(${toTextArray(firsts)}::text[]))
+        ORDER BY r.d, ls.listed_at DESC, ls.listing_id
+        LIMIT ${o.limit - page.length} OFFSET ${Math.max(0, o.offset - firsts.length)}`
+      // Planned for its own values every time: after five runs Postgres would reuse one plan for every search, made
+      // without knowing how many cards the words match, and that plan sorts every match (200 ms instead of 65).
+      const rest = yield* sql.withTransaction(
+        Effect.andThen(sql`SELECT set_config('plan_cache_mode', 'force_custom_plan', true)`, second)
+      )
+      return [...page, ...rest.map((x) => x.listingId)]
+    })
+
     const run = (query: MarketQuery, suggest: boolean): Effect.Effect<MarketSearchResult, SqlError> =>
       Effect.gen(function* () {
         const [market, catalogSets] = yield* Effect.all([stats, allSets])
@@ -259,11 +416,18 @@ export const SearchServicePg = Layer.effect(
         const r = yield* resolve(parsed)
         const tabs = (counts: Readonly<Record<string, number>>) =>
           catalogSets.filter((s) => (market.sets[s.id]?.count ?? 0) > 0 || (counts[s.id] ?? 0) > 0)
+        const wanted = query.sort ?? defaultSort(parsed)
+        // Best match ranks the cards the words match, by the words that describe them: it needs both.
+        const rankText =
+          wanted === "relevance" && termsQuery(r.words, parsed.tags) !== null
+            ? (describedWords(query.from).length > 0 ? describedWords(query.from) : describedWords(query.q)).join(" ")
+            : ""
         const base = {
           stats: market,
           understood: describeSearch(parsed, r.sellerHandles),
           chips: searchChips(parsed, r.sellerHandles),
-          unknown: r.unknown
+          unknown: r.unknown,
+          sort: wanted === "relevance" && rankText === "" ? ("recent" as const) : wanted
         }
 
         // A word nothing starts with, or a seller nobody is: no listing can match. Offer a fix instead of querying.
@@ -311,29 +475,22 @@ export const SearchServicePg = Layer.effect(
                   SELECT count(*)::int AS n FROM (
                     SELECT 1 FROM listing_search WHERE ${sql.and(where(r, query.grader, knownSet))} LIMIT ${COUNT_LIMIT}
                   ) AS m`)[0]?.n ?? 0)
-        const filters = sql.and(where(r, query.grader, knownSet))
-        // A search counted in full has at most COUNT_LIMIT matches: fetch them all and sort, which costs at most that many rows.
-        // Walking a sort index instead pays for every row it skips, and the planner guesses how many that is from
-        // per-word statistics. "glowing sea creature holo" (1,492 matches) skipped 60,000 rows that way: 165 ms instead of 20.
-        // Past the cap, matches are common enough that walking the index finds a page quickly.
+        const vector = total === 0 || base.sort !== "relevance" ? null : yield* rankVector(rankText)
+        const sort = base.sort === "relevance" && total > 0 && vector === null ? "recent" : base.sort
+        const pageOf = { r, grader: query.grader, set: knownSet, limit: query.limit, offset: query.offset }
         const page =
           total === 0
             ? []
-            : !unfiltered && exact
-              ? yield* sql<{ readonly listingId: string }>`
-                  WITH m AS MATERIALIZED (
-                    SELECT listing_id, listed_at, usd_cents, grade FROM listing_search WHERE ${filters}
-                  )
-                  SELECT listing_id FROM m ORDER BY ${orderBy(sql, query.sort)}
-                  LIMIT ${query.limit} OFFSET ${query.offset}`
-              : yield* sql<{ readonly listingId: string }>`
-                  SELECT listing_id FROM listing_search WHERE ${filters}
-                  ORDER BY ${orderBy(sql, query.sort)}
-                  LIMIT ${query.limit} OFFSET ${query.offset}`
+            : vector !== null
+              ? yield* bestMatchPage({ ...pageOf, vector, exact })
+              : (yield* sortedPage({ ...pageOf, sort: sort === "relevance" ? "recent" : sort, materialize: !unfiltered && exact })).map(
+                  (x) => x.listingId
+                )
         const sets = tabs(exact ? counts : {})
         return {
           ...base,
-          ids: page.map((x) => x.listingId),
+          sort,
+          ids: page,
           total,
           exact,
           counts: { all, sets: exact ? Object.fromEntries(sets.map((s) => [s.id, counts[s.id] ?? 0])) : {} },
