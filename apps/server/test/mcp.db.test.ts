@@ -110,13 +110,21 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("MCP endp
         const tokens = yield* AgentTokens
         const t = yield* tokens.mint({ label: "reader", allowedRuleIds: [], canExecute: false })
         const client = yield* connect(t.token)
+        const sql = yield* SqlClient
+        // The market's tags for the card, which search finds it by, reach the agent with the catalog's facts.
+        yield* sql`UPDATE cards SET tags = '{animal,armored}' WHERE id = ${injected.vaultItem.cardId}`
         const found = yield* call(client, "search_listings", { card_id: injected.vaultItem.cardId, limit: 20 })
         expect(found.isError).toBe(false)
         expect(found.body["count"]).toBeGreaterThan(0)
         expect(JSON.stringify(found.body)).not.toContain(injected.listing.description)
+        for (const l of found.body["listings"]) expect(l["described_as"]).toEqual(["animals", "armored"])
         const one = yield* call(client, "get_listing", { listing_id: injected.listing.id })
         expect(one.body["seller_text"]).toMatchObject({ trusted: false, description: injected.listing.description })
         expect(one.body["catalog_card"]["kinds"].length).toBeGreaterThan(0)
+        expect(one.body["catalog_card"]["described_as"]).toEqual(["animals", "armored"])
+        yield* sql`UPDATE cards SET tags = '{}' WHERE id = ${injected.vaultItem.cardId}`
+        const untagged = yield* call(client, "get_listing", { listing_id: injected.listing.id })
+        expect(untagged.body["catalog_card"]["described_as"]).toEqual([])
         const bad = yield* call(client, "get_listing", { listing_id: "" })
         expect(bad.isError).toBe(true)
       })

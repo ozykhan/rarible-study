@@ -3,7 +3,7 @@ import { SqlClient } from "effect/sql/SqlClient"
 import type { SqlError } from "effect/sql/SqlError"
 import { toTextArray, toVector } from "../db/Database.ts"
 import { Embedder, type EmbedError } from "../embeddings/Embedder.ts"
-import { tagById } from "../tags/vocabulary.ts"
+import { tagLabels } from "../tags/vocabulary.ts"
 
 /**
  * The vector each card is ranked by in a search (Best match, see
@@ -20,10 +20,7 @@ import { tagById } from "../tags/vocabulary.ts"
 
 /** The text a card's search vector is made from. */
 export const cardSearchText = (catalogText: string, tags: ReadonlyArray<string>): string => {
-  const labels = tags.flatMap((t) => {
-    const spec = tagById(t)
-    return spec === undefined ? [] : [spec.label]
-  })
+  const labels = tagLabels(tags)
   return labels.length === 0 ? catalogText : `${catalogText} Described as: ${labels.join(", ")}.`
 }
 

@@ -115,6 +115,13 @@ const byId = new Map(TAGS.map((t) => [t.id, t]))
 
 export const tagById = (id: string): TagSpec | undefined => byId.get(id)
 
+/**
+ * How a card's tags read to a person or a model: "armored", "sea creatures".
+ * Search finds cards by these tags, so every place that judges whether a card
+ * fits a description (the match check, the agent) is shown them too.
+ */
+export const tagLabels = (tags: ReadonlyArray<string>): Array<string> => tags.flatMap((t) => tagById(t)?.label ?? [])
+
 /** Tags in vocabulary order without repeats, so stored tags compare equal however the model listed them. */
 export const normalizeTags = (tags: Iterable<string>): Array<string> => {
   const set = new Set(tags)
