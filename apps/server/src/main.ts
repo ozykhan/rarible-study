@@ -9,6 +9,7 @@ import { Config, Effect, Layer } from "effect"
 import { HttpRouter, HttpServerResponse } from "effect/http"
 import { SqlClient } from "effect/sql/SqlClient"
 import { migrate } from "./db/Database.ts"
+import { CardVectorsJobLive } from "./jobs/cardVectors.ts"
 import { GeneratorLive } from "./jobs/generator.ts"
 import { TaggerLive } from "./jobs/tagger.ts"
 import { WatcherLive } from "./jobs/watcher.ts"
@@ -91,7 +92,7 @@ const DevnetSetup = Layer.effectDiscard(
 
 const Routes = Layer.mergeAll(Health, McpRoute, WebApiRoutes).pipe(Layer.provide(Cors))
 
-const Main = Layer.mergeAll(HttpRouter.serve(Routes), GeneratorLive, WatcherLive, TaggerLive, DevnetSetup).pipe(
+const Main = Layer.mergeAll(HttpRouter.serve(Routes), GeneratorLive, WatcherLive, TaggerLive, CardVectorsJobLive, DevnetSetup).pipe(
   Layer.provide(Migrated),
   Layer.provide(ServerLive),
   Layer.provideMerge(AppLive),

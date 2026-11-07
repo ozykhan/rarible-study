@@ -243,4 +243,34 @@ Described search, second part: when a submitted search has words code cannot rea
 - The model still varies between runs ("gem" once read as crystal instead of part of "gem mint"); one eval run is one sample.
 - A word that really means two filters ("firebird") can keep only one.
 - Old cache rows are never deleted, only ignored after 30 days or a version change. A nightly delete belongs with the other jobs once there are many.
-- Sorting by relevance: a described search is still sorted newest first.
+- ~~Sorting by relevance: a described search is still sorted newest first.~~ Best match, below.
+
+## Best match
+
+Described search, third part: a described search is ordered by meaning, closest card first, instead of newest first. Measured with `pnpm eval:rank` and `pnpm bench:search` on the large market before writing this.
+
+### Decisions
+
+- **Rank cards, not listings.** A vector per card (20,040) rather than per listing (a million): a listing's own text is the seller's, which is untrusted and can claim what the slab is not, and cards are what the shopper describes. Every listing takes its card's distance.
+- **The card's text is its catalog text plus its tags in words.** "Described as: sea creatures, glowing." The tags carry what the tagging model read in the lore, so a card scores on what it is even when its lore uses other words. It is a column of its own: the matcher's card embeddings, and so its eval, do not move.
+- **Kept fresh like tags.** A trigger marks the vector stale when the catalog text or the tags change (retagging with the same tags does not), and a vector is written only if the text and tags are still the ones embedded. The server rewrites up to 2,000 stale vectors a minute; `pnpm vectors:run` backfills, about 85 cards a second on CPU.
+- **The query is the describing words, as typed.** Tag words and words no filter reads, in typed order, from `?from=` when a model read the search. Grades, prices, graders, finishes and filler are filters already and say nothing about a card's text. The vector is cached in the process for an hour, up to 2,000 searches; a failed embedding is not cached.
+- **Order only, no cut.** Filters decide what matches; Best match never hides a listing. A distance threshold means different things for different searches, so cutting waits for the rerank, measured on its own.
+- **Two rounds.** Ordered purely by distance, the first page at marketplace size is one card's whole stock, since a card has about 50 listings. The newest listing of each card comes first, then the rest; both rounds break ties newest first and by id, so pages never overlap.
+- **The default only where it helps.** A search with a tag defaults to Best match. A name search ("ashen wyrm") has a few cards the shopper already knows, and newest first answers what is new. A search with nothing that describes a card ("holo") falls back to newest first whatever was asked, and so does a failed embedding. The response carries the order it used, so the Sort menu shows the truth, and picking an order always writes it to the URL.
+- **Exact distances, no vector index yet.** Past the 10,000 cap the cards the search matches are ranked exactly (a few thousand at most here), then each one's newest matching listing is one probe of a new `(card_id, listed_at DESC, listing_id)` index, best card first, until the page is full. An approximate index finds the nearest cards overall and filters afterwards, which loses cards when the filter is narrow. It belongs with the rerank, which looks for cards no tag names.
+- **A custom plan for one query.** Postgres switches a prepared statement to a generic plan after five runs. For the second round past the cap that plan took over 200 ms instead of about 65. Forcing custom plans for the whole pool fixed it but slowed two other searches by half (20 to 31 ms, 46 to 77 ms), so only that query sets `plan_cache_mode`, for its own transaction.
+- **Labels from the generator.** Generated lore is "A creature that does something somewhere" from fixed habits and places, so whether a card fits a search is a fact of the data. The eval's searches paraphrase the lore and avoid every tag word, so the filter is the kind alone and only the order can find the cards that fit.
+
+### Things the eval, tests and bench caught
+
+- The bench showed a deep Best match page at 65 ms for five runs and then over 200 ms: the generic plan above. Literal `LIMIT` and `OFFSET` did not help.
+- The test for pages past the cap first matched 8,438 listings, under the cap, so it tested the exact path twice. It loads 16,000 bulk listings now.
+- In the eval, newest first lands on the base rate (0.19 against 0.19), which checks the judging as much as the order.
+
+### Open
+
+- Places rank worse than habits: 0.51 against 0.86 at 20. "dragon from the glassy wastes" for "beyond the glass desert" is 0.10, no better than newest first. A larger embedding model, or the rerank, should be measured on these.
+- Ranking every matching card exactly grows with the cards a search matches: fine at 20,040, not at millions. That needs an approximate index with filtering.
+- The live demo has 40 cards, so Best match there orders a handful of cards at most; the large market is where it shows.
+- `pnpm eval:rank` labels cards by the generator. Hand-written cards, and what shoppers really type, are not measured.

@@ -6,6 +6,7 @@ import { GRADERS } from "./art"
 import type { Listing, MarketCounts, MarketResponse, MarketStats, SearchChip, SetRef, Understanding } from "./types"
 
 export const MARKET_SORTS = [
+  ["relevance", "Best match"],
   ["recent", "Newest"],
   ["price_asc", "Price, low to high"],
   ["price_desc", "Price, high to low"],
@@ -14,13 +15,14 @@ export const MARKET_SORTS = [
 
 export type MarketSort = (typeof MARKET_SORTS)[number][0]
 
-/** The market's filters as the URL holds them: "all" and "recent" are the defaults and stay out of the URL. */
+/** The market's filters as the URL holds them: "all" and the default sort stay out of the URL. */
 export interface MarketFilters {
   readonly set: string
   readonly grader: string
   readonly q: string
-  readonly sort: MarketSort
-  /** What the shopper typed, when q is the model's rewrite of it. Shown, never searched. */
+  /** Null until one is picked: the server then orders a described search best match first, anything else newest first. */
+  readonly sort: MarketSort | null
+  /** What the shopper typed, when q is the model's rewrite of it. Shown, and best match ranks by it, but never a filter. */
   readonly from: string
   /** The search was submitted (Enter, or the home page's Search): words nothing matches may be read by the model. */
   readonly ask: boolean
@@ -39,7 +41,7 @@ export const readFilters = (params: URLSearchParams): MarketFilters => {
     set: set !== null && /^[A-Za-z0-9-]{1,16}$/.test(set) ? set : "all",
     grader: grader !== null && grader in GRADERS ? grader : "all",
     q: params.get("q") ?? "",
-    sort: MARKET_SORTS.find(([v]) => v === sort)?.[0] ?? "recent",
+    sort: MARKET_SORTS.find(([v]) => v === sort)?.[0] ?? null,
     from: (params.get("from") ?? "").slice(0, 200),
     ask: params.get("ask") === "1"
   }
@@ -54,7 +56,8 @@ const listingsPath = (f: MarketFilters, offset: number, limit: number) => {
   if (f.set !== "all") p.set("set", f.set)
   if (f.grader !== "all") p.set("grader", f.grader)
   if (f.q.trim() !== "") p.set("q", f.q.trim())
-  if (f.sort !== "recent") p.set("sort", f.sort)
+  if (f.sort !== null) p.set("sort", f.sort)
+  if (f.from.trim() !== "") p.set("from", f.from.trim())
   if (offset > 0) p.set("offset", String(offset))
   p.set("limit", String(limit))
   return `/listings?${p.toString()}`
@@ -82,6 +85,8 @@ interface MarketState {
   readonly chips: ReadonlyArray<SearchChip>
   readonly unknown: ReadonlyArray<string>
   readonly suggestion: string | null
+  /** The order the server put the listings in. */
+  readonly sort: MarketSort | null
   readonly failed: boolean
 }
 
@@ -94,7 +99,7 @@ interface MarketState {
  * leave the market.
  */
 export function useMarket(filters: MarketFilters, keep: ReadonlySet<string>) {
-  const key = JSON.stringify([filters.set, filters.grader, filters.q.trim(), filters.sort])
+  const key = JSON.stringify([filters.set, filters.grader, filters.q.trim(), filters.sort, filters.from.trim()])
   const [state, setState] = useState<MarketState>({
     key,
     listings: null,
@@ -107,6 +112,7 @@ export function useMarket(filters: MarketFilters, keep: ReadonlySet<string>) {
     chips: [],
     unknown: [],
     suggestion: null,
+    sort: null,
     failed: false
   })
   const [loadingMore, setLoadingMore] = useState(false)
@@ -133,6 +139,7 @@ export function useMarket(filters: MarketFilters, keep: ReadonlySet<string>) {
             chips: r.chips,
             unknown: r.unknown,
             suggestion: r.suggestion,
+            sort: r.sort,
             failed: false
           }))
         })
@@ -173,7 +180,9 @@ export function useMarket(filters: MarketFilters, keep: ReadonlySet<string>) {
   }, [])
 
   const current = state.key === key ? state : { ...state, listings: null }
-  return { ...current, loadingMore, more }
+  // While a new page loads, the menu shows the order picked, or else the one the page was last in.
+  const sort: MarketSort = (state.key === key ? state.sort : (filters.sort ?? state.sort)) ?? "recent"
+  return { ...current, sort, loadingMore, more }
 }
 
 const without = <A>(all: Readonly<Record<string, A>>, key: string) => {

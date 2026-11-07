@@ -115,7 +115,7 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("reading 
       const read = yield* reader.understand("something that lives in the ocean, shiny", open)
       expect(read).toMatchObject({ status: "understood", q: "ocean, holo" })
       const q = (read as { readonly q: string }).q
-      const query = { set: null, grader: null, sort: "recent", offset: 0, limit: 100 } as const
+      const query = { set: null, grader: null, sort: "recent", from: "", offset: 0, limit: 100 } as const
       // Typed as is, the search has unknown words and finds nothing; rewritten, it is the sea and holo search.
       expect(yield* search.search({ ...query, q: "something that lives in the ocean, shiny" })).toMatchObject({
         total: 0,

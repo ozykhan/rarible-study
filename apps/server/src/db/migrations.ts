@@ -511,6 +511,39 @@ const searchUnderstandings = Effect.gen(function* () {
     )`
 })
 
+/**
+ * A vector per card for ordering search results by meaning
+ * (search/CardVectors.ts). It is built from the card's catalog text and its
+ * tags, so it is its own column: `embedding` holds the catalog text alone and
+ * the matcher depends on it. A card whose text or tags change is marked
+ * stale and keeps its old vector until a new one is written, so it never
+ * drops out of the order.
+ */
+const cardSearchVectors = Effect.gen(function* () {
+  const sql = yield* SqlClient
+  yield* sql`
+    ALTER TABLE cards
+      ADD COLUMN search_vector vector(384),
+      ADD COLUMN search_vector_stale boolean NOT NULL DEFAULT true`
+  yield* sql`CREATE INDEX cards_search_vector_queue_idx ON cards (id) WHERE search_vector_stale`
+  yield* sql`
+    CREATE FUNCTION card_search_text_changed() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN
+      IF NEW.catalog_text IS DISTINCT FROM OLD.catalog_text OR NEW.tags IS DISTINCT FROM OLD.tags THEN
+        NEW.search_vector_stale := true;
+      END IF;
+      RETURN NEW;
+    END $$`
+  yield* sql`
+    CREATE TRIGGER cards_search_text_changed BEFORE UPDATE OF catalog_text, tags ON cards
+    FOR EACH ROW EXECUTE FUNCTION card_search_text_changed()`
+  // Best match ranks the cards a search matches before it looks at their listings,
+  // then reads each card's newest matching listing: one index probe per card.
+  yield* sql`CREATE INDEX cards_search_terms_idx ON cards USING gin (search_terms)`
+  yield* sql`CREATE INDEX listing_search_card_recent_idx ON listing_search (card_id, listed_at DESC, listing_id)`
+  yield* sql`DROP INDEX listing_search_card_idx`
+})
+
 export const migrations = {
   "0001_init": init,
   "0002_agent": agent,
@@ -518,5 +551,6 @@ export const migrations = {
   "0004_direct_buy": directBuy,
   "0005_search": search,
   "0006_card_tags": cardTags,
-  "0007_search_understandings": searchUnderstandings
+  "0007_search_understandings": searchUnderstandings,
+  "0008_card_search_vectors": cardSearchVectors
 }

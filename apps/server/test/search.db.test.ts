@@ -14,6 +14,7 @@ const query = (over: Partial<MarketQuery> = {}): MarketQuery => ({
   grader: null,
   q: "",
   sort: "recent",
+  from: "",
   offset: 0,
   limit: 100,
   ...over
@@ -72,7 +73,7 @@ const oracle = (q: string, grader: string | null = null): Array<Row> => {
   )
 }
 
-const by = (sort: MarketSort) => (a: Row, b: Row) => {
+const by = (sort: Exclude<MarketSort, "relevance">) => (a: Row, b: Row) => {
   const recent = a.minutesAgo - b.minutesAgo || a.id.localeCompare(b.id)
   switch (sort) {
     case "recent":

@@ -33,7 +33,12 @@ const searches: ReadonlyArray<readonly [string, Partial<MarketQuery>]> = [
   ["described: two tags and a finish", { q: "glowing sea creature holo" }],
   ["described: tags, grade, price", { q: "flying fire 9+ under 300" }],
   ["described: tag and a name word", { q: "flying owl" }],
-  ["deep page", { q: "holo", offset: 5000 }]
+  ["deep page", { q: "holo", offset: 5000 }],
+  ["best match: tag", { q: "sea animal", sort: "relevance" }],
+  ["best match: tag, ranked by typed words", { q: "dragon", from: "dragon sitting on a pile of treasure", sort: "relevance" }],
+  ["best match: two tags and a finish", { q: "glowing sea creature holo", sort: "relevance" }],
+  ["best match: tags, grade, price", { q: "flying fire 9+ under 300", sort: "relevance" }],
+  ["best match: deep page", { q: "dragon", sort: "relevance", offset: 5000 }]
 ]
 
 const percentile = (xs: ReadonlyArray<number>, p: number) => {
@@ -53,7 +58,7 @@ const program = Effect.gen(function* () {
     "| search | matches | p50 | p95 |",
     "| --- | ---: | ---: | ---: |"
   ]
-  const query = (over: Partial<MarketQuery>): MarketQuery => ({ set: null, grader: null, q: "", sort: "recent", offset: 0, limit: 40, ...over })
+  const query = (over: Partial<MarketQuery>): MarketQuery => ({ set: null, grader: null, q: "", sort: "recent", from: "", offset: 0, limit: 40, ...over })
   for (const [name, over] of searches) {
     const first = yield* search.search(query(over))
     const times: Array<number> = []

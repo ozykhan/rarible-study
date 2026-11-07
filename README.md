@@ -16,7 +16,7 @@ This is a three-day study project, not a product. Nothing here is audited or pro
 | 2 | MCP server, agent loop with limits in code, injection tests, tracing | Built, tested, measured |
 | 3 | Wallet sign-in and signed approvals, SPL payments on devnet, Next.js wallet page, rate limits, deploy | Built, tested, deployed |
 | Redesign | Marketplace first: a home page, the market with server-side search, listing pages, direct buy with a checkout, and the agent on its own page | Built, tested |
-| Search | Search at a million listings, card tags, and described searches read by a model once and cached | Built, tested, measured |
+| Search | Search at a million listings, card tags, described searches read by a model once and cached, and Best match ordering by meaning | Built, tested, measured |
 
 ## Live demo
 
@@ -120,6 +120,7 @@ The market's search box, set tabs and counts run in Postgres behind one service,
 5. **Counts stop at 10,000.** Matches per set (the tabs) are counted exactly up to 10,000; past that the page says "10,000+", as search engines do by default, and paging stops at the same depth. The whole market's numbers (listings, sets, lowest price) are cached for 10 seconds.
 6. **Did you mean.** A word that starts no catalog word gets the closest one by trigram similarity (`pg_trgm`), offered only if the corrected search finds listings: "ashen wyrn" suggests "ashen wyrm".
 7. **A model reads what the words miss, once.** A search with a word that starts no catalog word ("cheapest shiny wyrm thing from the ocean") finds nothing above. When the shopper presses Enter, one model call reads it as filters; typing alone never calls a model. See [Described searches](#described-searches) below.
+8. **Best match puts the cards that fit first.** Filters decide which listings match; a described search is then ordered by how close each card's text is to what was typed, including words no filter reads. "dragon that guards a frozen treasure" matches every dragon and shows the treasure guards first. No model call (see Best match below).
 
 The response also says what the box was read as, one removable chip per filter ("sea creatures", "holo", "wyrm"); removing one links to the search without it. A test runs 42 searches against the seed both in SQL and in a plain TypeScript copy of the rules and expects the same listings, counts and order.
 
@@ -140,30 +141,46 @@ The response also says what the box was read as, one removable chip per filter (
 
 The running server tags waiting cards in the background, up to 400 every 10 minutes, and stays off without a model key; the live demo's 40 cards take one call, under a cent. `pnpm tags:run` tags a whole catalog through the Message Batches API at half the price. All 20,040 cards of the large market cost $0.71: a sample of 200, then the other 19,840 in 7 minutes, 496 calls of 40 cards, about 3.5 cents per 1,000 cards. The generator knows what each generated creature is, so the run checks the tags against it: 98.4% of the 20,000 generated cards got the tag for their kind, every kind at 100% but sea creatures, where the misses are otters, turtles and eels the generator put in forests and marshes. Turning the model's thinking off halved the price but tagged a lava eel as a sea creature and missed that a lion is a cat, so thinking stays on at low effort.
 
+**Best match.** The market's default order for any search that reads as a tag, and a choice in the Sort menu whenever there is a search. Name searches ("ashen wyrm") stay newest first: the shopper knows the card and wants what is new.
+
+- **Each card has a vector of its trusted text.** Its catalog text (name, set, kinds, lore) plus its tags in words ("Described as: sea creatures, glowing."), from the same local bge-small model the matcher uses, in a column of its own so the matcher's embeddings do not move. Seller text is never part of it. A trigger marks the vector stale when the text or tags change, and the server rewrites stale vectors in the background, up to 2,000 a minute; `pnpm vectors:run` writes a whole catalog, about 85 cards a second here.
+- **The query is the words that describe a card.** Tag words and words no filter reads, in the order typed, without filler, grades, prices, graders or finishes, which are filters already. When a model read the search, the words come from what was typed (`?from=`), so what the reading could not keep ("that guards a frozen treasure") still counts. The query vector is cached for an hour; a search costs nothing.
+- **Cards first, then their stock.** Matches are ordered by their card's cosine distance to the query, in two rounds: the newest listing of each card, then every other listing. At marketplace size a card has about 50 listings, and the first page should show 20 cards that fit, not one card's stock. Ties go newest first, so pages never overlap.
+- **Filters still decide what matches.** Best match only orders; it never hides a listing. Cutting what does not fit is the next step.
+- **Past 10,000 matches** the matching cards are ranked first, then each one's newest listing is read with one index probe, best card first, until the page is full.
+- **It falls back to newest first** when nothing describes a card ("holo") or the embedder fails, and the response's `sort` says which order the page is in.
+
+`pnpm eval:rank` measures it on the large catalog. Results are [below](#best-match-results).
+
 **At scale.** `pnpm db:seed:large` adds a fictional catalog of 20,040 cards in 204 sets, 2,012 sellers and a million active listings; it took 138 seconds here. `pnpm bench:search` times searches through the same service. On a 4-core container with Postgres 16 at default settings, with 1,000,199 active listings and every card tagged:
 
 | Search | Matches | p50 ms | p95 ms |
 | --- | ---: | ---: | ---: |
-| home page (newest) | 1,000,199 | 1.1 | 5.4 |
-| cheapest first | 1,000,199 | 0.9 | 1.3 |
-| one set | 4,949 | 1.0 | 1.4 |
-| card name ("ashen wyrm") | 38 | 9.7 | 11.9 |
-| half a word ("wyr") | 10,000+ | 24.1 | 29.9 |
-| kind ("dragon") | 10,000+ | 33.8 | 49.1 |
-| finish ("holo") | 10,000+ | 6.6 | 7.6 |
-| grader and grade ("NVG 10") | 10,000+ | 73.5 | 82.7 |
-| kind, finish, price ("dragon holo under 200") | 10,000+ | 54.9 | 87.3 |
-| set name and min grade ("emberfall 9+") | 235 | 2.8 | 3.9 |
-| seller ("@vaultkeeper") | 483 | 3.4 | 4.1 |
-| typo ("ashen wyrn") | 0, with a suggestion | 11.0 | 24.2 |
-| described: a tag ("sea animal") | 10,000+ | 27.0 | 35.0 |
-| described: two tags and a finish ("glowing sea creature holo") | 1,492 | 29.0 | 39.4 |
-| described: tags, grade, price ("flying fire 9+ under 300") | 10,000+ | 61.1 | 79.5 |
-| described: a tag and a name word ("flying owl") | 10,000+ | 24.9 | 39.6 |
+| home page (newest) | 1,000,199 | 1.5 | 8.3 |
+| cheapest first | 1,000,199 | 1.1 | 1.3 |
+| one set | 4,949 | 1.0 | 2.0 |
+| card name ("ashen wyrm") | 38 | 10.6 | 12.4 |
+| half a word ("wyr") | 10,000+ | 18.7 | 45.9 |
+| kind ("dragon") | 10,000+ | 38.4 | 74.0 |
+| finish ("holo") | 10,000+ | 6.4 | 9.5 |
+| grader and grade ("NVG 10") | 10,000+ | 65.1 | 104.9 |
+| kind, finish, price ("dragon holo under 200") | 10,000+ | 52.3 | 86.0 |
+| set name and min grade ("emberfall 9+") | 235 | 2.4 | 3.5 |
+| seller ("@vaultkeeper") | 483 | 3.2 | 3.8 |
+| typo ("ashen wyrn") | 0, with a suggestion | 10.2 | 14.6 |
+| described, newest first: a tag ("sea animal") | 10,000+ | 20.2 | 28.3 |
+| described, newest first: two tags and a finish ("glowing sea creature holo") | 1,492 | 25.2 | 30.8 |
+| described, newest first: tags, grade, price ("flying fire 9+ under 300") | 10,000+ | 54.9 | 81.6 |
+| described, newest first: a tag and a name word ("flying owl") | 10,000+ | 19.0 | 27.6 |
+| Best match: a tag ("sea animal") | 10,000+ | 28.9 | 35.8 |
+| Best match: a tag, ranked by what was typed ("dragon sitting on a pile of treasure") | 10,000+ | 42.2 | 64.1 |
+| Best match: two tags and a finish ("glowing sea creature holo") | 1,492 | 29.1 | 123.5 |
+| Best match: tags, grade, price ("flying fire 9+ under 300") | 10,000+ | 52.0 | 83.0 |
+| Best match: page 126 ("dragon", from listing 5,000) | 10,000+ | 70.8 | 86.6 |
 
-Fifty searches at once ran at about 135 a second on the pool of 10 connections, down from about 180 before card tags. Recomputing the whole market's numbers takes about 94 ms, once every 10 seconds. Before the 10,000 cap, broad searches took 100 to 200 ms, nearly all of it counting matches per set, and 50 at once ran at about 60 a second.
+A page is 40 listings. The p95 column varies more between runs than p50: one slow run in 20 is enough to move it. Fifty searches at once, Best match among them, ran at about 105 a second on the pool of 10 connections; the mix without them ran at about 148 the same day, and at about 180 before card tags. Recomputing the whole market's numbers takes about 94 ms, once every 10 seconds. Before the 10,000 cap, broad searches took 100 to 200 ms, nearly all of it counting matches per set, and 50 at once ran at about 60 a second.
 
-Bulk listings carry no listing vectors (embedding a million seller texts locally takes hours), so the agent's search by meaning covers the seed and generated listings only.
+Bulk listings carry no listing vectors (embedding a million seller texts locally takes hours), so the agent's search by meaning covers the seed and generated listings only. Best match uses card vectors, one per card, so it covers every listing.
 
 ## The web app
 
@@ -172,7 +189,7 @@ Bulk listings carry no listing vectors (embedding a million seller texts locally
 | Route | What it shows |
 | --- | --- |
 | `/` | The front page: search, the four sets, the five newest listings, how buying works, the graders, and a band that offers the agent |
-| `/market` | Every active listing as a grid of slabs, with set tabs, grader, search, sort and paging. The filters live in the URL and run on the server: `GET /api/listings` takes `?set`, `?grader`, `?q`, `?sort`, `?offset` and `?limit`. Pressing Enter in the search adds `?ask=1`, and a search with words nothing matches is then read by the model. Search is described [below](#how-market-search-works). Watch on a tile opens the agent in a drawer |
+| `/market` | Every active listing as a grid of slabs, with set tabs, grader, search, sort and paging. The filters live in the URL and run on the server: `GET /api/listings` takes `?set`, `?grader`, `?q`, `?from`, `?sort`, `?offset` and `?limit`. A search that reads as a tag is sorted Best match unless `?sort` says otherwise, and the response says which order it used. Pressing Enter in the search adds `?ask=1`, and a search with words nothing matches is then read by the model. Search is described [below](#how-market-search-works). Watch on a tile opens the agent in a drawer |
 | `/listing/[id]` | One listing in full, with Buy now inline and more from the same set. `GET /api/listings/:id` also answers for sold and withdrawn listings, so their pages say so |
 | `/agent` | The optional agent: your watches, the selected watch with its matches, listings to review, skipped listings, purchases and agent runs. You can buy a match by signing it, ask the agent about a listing, or sign an auto-buy approval and revoke it later. A watch cannot be edited, so Change this watch saves a new watch and pauses the old one |
 
@@ -272,6 +289,20 @@ All six use Claude Haiku 5.5. Rows with commit and time are in [`evals/results/s
 
 **How much to trust this.** About 50 searches over a 40-card catalog, each run once, and prompts 2 to 4 were written after reading earlier errors on the same set. Runs 4 and 5 used the same prompt and differ by more than the code fixes explain, so one run is one sample of a model that varies. It shows the reading does what it was meant to on these searches, not an accuracy rate on what shoppers type.
 
+### Best match results
+
+`pnpm eval:rank` measures the order, not the filter, on the large catalog of 20,040 cards and a million listings. Every generated card's lore is "A creature that does something somewhere", from four habits per kind and eight places, so the generator itself says which cards fit: nobody labels them, and no model does. Each of the [32 searches](evals/src/rankingDataset.ts) is a tag plus words no tag reads, paraphrased so no word of the lore is copied: "bird nesting on sheer cliffs" filters to birds, and only the order can find the ones that nest on cliff ledges. 28 are habits and 4 are places, where a fitting card must also be that kind first. Each search runs newest first and Best match, and the first 20 listings are judged. A test checks that every search reads as exactly its tag and that every lore phrase fits more than 100 cards.
+
+| Run | Precision at 10 | Precision at 20 | MRR | Base rate | Cards in the first 20 | Best match, p50 / p95 | Newest first, p50 / p95 | No model calls |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| run1 | 0.81 / 0.19 | 0.81 / 0.19 | 0.90 / 0.40 | 0.19 | 20 / 20 | 38 / 61 ms | 30 / 52 ms | $0 |
+
+Pairs are Best match / newest first. The base rate is the share of the cards each search matches that fit, and newest first lands on it, as it should. Rows with commit and time are in [`evals/results/search-ranking.md`](evals/results/search-ranking.md), and every case is in the JSON beside it.
+
+**Reading run 1.** Best match fills 81% of the first 20 places with cards that fit, against 19% newest first, and the first listing fits in 27 of 32 searches. Every one of the first 20 listings is a different card. 20 of the 28 habits score 0.85 or better; the weakest is "golem that obeys every command forever" for "never forgets an order", at 0.40. Places are harder: 0.51 on average, and "dragon from the glassy wastes" for "beyond the glass desert" scores 0.10, no better than newest first. The small embedding model does not bring those two phrases close, and the kind adds a second condition. A search costs 8 ms more than newest first at the median, and the first time a search is seen the query is embedded too: 62 ms at p50.
+
+**How much to trust this.** The lore is generated from templates, one sentence per card, so the words a shopper might use for a card are far tidier here than on a real market. The searches were written before the eval first ran and not changed after. 32 searches, one embedding model and one run: this shows the order does what it was meant to on a catalog where fit is known, not how well it ranks what real shoppers type.
+
 ## Tracing and logs
 
 Every step is an Effect span: each HTTP request, rule parsing, each matcher stage, model calls with tokens and cost, each tool call (`tool.search_listings` and so on), purchase checks, agent runs and SQL queries. The backend exports them over OTLP/HTTP when the standard OpenTelemetry variables name an endpoint (`OTEL_EXPORTER_OTLP_ENDPOINT`, plus `OTEL_EXPORTER_OTLP_HEADERS`, `OTEL_EXPORTER_OTLP_PROTOCOL` and `OTEL_SERVICE_NAME`). Railway sets them when tracing is on for the service, so the backend's spans appear in Railway's trace view under the edge's request span. Langfuse, Jaeger and any OpenTelemetry collector take the same variables. Trace ids are stored on `llm_calls`, `agent_runs` and `purchases`, so a row in the database leads to its trace.
@@ -311,9 +342,11 @@ pnpm eval:search            # reads 51 labelled described searches, needs the AP
 pnpm db:seed:large          # optional: 20,040 cards and a million listings, for search at scale
 pnpm bench:search           # times market searches against the database
 pnpm tags:run               # tags every card that needs it, through the Message Batches API (needs the API key)
+pnpm vectors:run            # writes every card's Best match vector with the local model, no cost
+pnpm eval:rank              # Best match against newest first on the large catalog, no model calls
 ```
 
-The large seed is for local databases only and refuses to run on Railway. Its cards have no tags until `pnpm tags:run` (about $0.71 for all of them); `TAG_NOW=1 TAG_LIMIT=200 pnpm tags:run` tags a sample with ordinary calls first, to check tags and cost. `BULK_LISTINGS=100000` loads fewer listings, and an interrupted load picks up where it stopped. To keep it apart from the demo data, run both seeds and the server with `DB_SCHEMA=large` (any name), which puts every table in that schema.
+The large seed is for local databases only and refuses to run on Railway. Its cards have no tags until `pnpm tags:run` (about $0.71 for all of them) and no Best match vectors until `pnpm vectors:run` (about 4 minutes for 20,040 cards); `pnpm eval:rank` needs both, and reads the schema `bench` unless `DB_SCHEMA` names another. `TAG_NOW=1 TAG_LIMIT=200 pnpm tags:run` tags a sample with ordinary calls first, to check tags and cost. `BULK_LISTINGS=100000` loads fewer listings, and an interrupted load picks up where it stopped. To keep it apart from the demo data, run both seeds and the server with `DB_SCHEMA=large` (any name), which puts every table in that schema.
 
 Payments are simulated unless you set `PAYMENTS=devnet` and a `DEVNET_SEED` (`openssl rand -hex 32`). With `SOLANA_RPC_URL=memory` the devnet code runs on an in-process VM; with the default devnet RPC the server creates the dUSD mint and the escrow account on its first boot and asks the devnet faucet for SOL for fees. If the faucet refuses (it is rate limited), the log prints the treasury address to fund at faucet.solana.com.
 
@@ -351,10 +384,10 @@ To turn the public demo read-only, set `DEMO_READ_ONLY=true` on the backend.
 packages/domain   Effect Schema types: money, catalog, watch rules, match decisions, hard checks
 packages/seed     the fictional catalog, prices, sales history, the listing generator and the large test market
 apps/server       Effect backend: Postgres and pgvector, embeddings, model calls, rule parser, matcher,
-                  market search, card tags, purchase policy, agent loop and tools, MCP endpoint, watcher,
+                  market search, card tags, Best match, purchase policy, agent loop and tools, MCP endpoint, watcher,
                   tracing, wallet signatures, devnet payments, the web API and its rate limits
 apps/web          Next.js marketplace: home, market, listing pages, checkout and the agent page
-evals             labelled eval set, metrics, the matcher eval and the agent injection eval
+evals             labelled eval set, metrics, the matcher eval, the agent injection eval and the search evals
 ```
 
 ## Built with coding agents
@@ -363,7 +396,7 @@ I built this with Claude Code as a coding agent. I set the scope, the plan and t
 
 ## What's next
 
-- The rest of search by description: card vectors for what no tag covers, and reranking with its own eval. Then the same `SearchService` on OpenSearch, run locally and fed from Postgres, to compare the two.
+- The rest of search by description: a model rerank that cuts what does not fit, and finds cards for what no tag covers through the card vectors, with its own eval. Then the same `SearchService` on OpenSearch, run locally and fed from Postgres, to compare the two.
 
 - A binder view of what a wallet has bought was cut for time. `GET /api/me/purchases` already lists it.
 - Direct buys and confirm mode sign a text and the delegate pays. Having the wallet sign the transfer itself would show the payment in the wallet's own approval screen.

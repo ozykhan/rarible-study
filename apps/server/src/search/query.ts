@@ -13,14 +13,22 @@ import { TAGS, tagById } from "../tags/vocabulary.ts"
  * same answer every time, and a filter only when the word is unambiguous.
  */
 
-export const MARKET_SORTS = ["recent", "price_asc", "price_desc", "grade"] as const
+/** "relevance" is Best match: the cards closest in meaning to what was typed first (see SearchService). */
+export const MARKET_SORTS = ["relevance", "recent", "price_asc", "price_desc", "grade"] as const
 export type MarketSort = (typeof MARKET_SORTS)[number]
 
 export interface MarketQuery {
   readonly set: string | null
   readonly grader: Grader | null
   readonly q: string
-  readonly sort: MarketSort
+  /** Null picks the default for the search: see defaultSort. */
+  readonly sort: MarketSort | null
+  /**
+   * What the shopper typed, when q is a model's reading of it. Never a filter:
+   * it is only what Best match ranks by, since it keeps the words no filter
+   * could express ("dragon that guards treasure" is read as "dragon").
+   */
+  readonly from: string
   readonly offset: number
   readonly limit: number
 }
@@ -93,6 +101,27 @@ export const isEmptySearch = (p: ParsedSearch) =>
   p.maxUsdCents === null &&
   p.cardNumber === null &&
   p.cert === null
+
+/**
+ * Described searches ("sea animal", "dragon that guards treasure") are shown
+ * best match first; searches for names, sets or slabs newest first, since all
+ * their matches fit equally well.
+ */
+export const defaultSort = (p: ParsedSearch): MarketSort => (p.tags.length > 0 ? "relevance" : "recent")
+
+/**
+ * The words of a search that describe a card, in the order typed: tag words
+ * and free words, without stopwords and without what is about the slab or the
+ * listing (grader, grade, edition, finish, price, seller). Best match ranks
+ * cards by these. Empty when the search describes no card.
+ */
+export const describedWords = (q: string): Array<string> => {
+  const p = parseSearch(q)
+  const keep = new Set([...p.tags.flatMap((t) => t.words), ...p.words])
+  const out: Array<string> = []
+  for (const w of searchWords(q.slice(0, 200))) if (keep.has(w) && !out.includes(w)) out.push(w)
+  return out
+}
 
 /** Lowercase runs of letters and digits: the same split as search_words() in the database. */
 export const searchWords = (text: string): Array<string> =>

@@ -11,7 +11,7 @@ import { seed, testLayer } from "./db.ts"
 
 const TestLive = testLayer("tags")
 
-const query = (q: string): MarketQuery => ({ set: null, grader: null, q, sort: "recent", offset: 0, limit: 100 })
+const query = (q: string): MarketQuery => ({ set: null, grader: null, q, sort: "recent", from: "", offset: 0, limit: 100 })
 
 const active = seed.listings.filter((x) => x.listing.status === "active")
 const listingsOf = (pick: (cardId: string) => boolean) =>
