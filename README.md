@@ -295,11 +295,11 @@ All six use Claude Haiku 5.5. Rows with commit and time are in [`evals/results/s
 
 | Run | Precision at 10 | Precision at 20 | MRR | Base rate | Cards in the first 20 | Best match, p50 / p95 | Newest first, p50 / p95 | No model calls |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| run1 | 0.81 / 0.19 | 0.81 / 0.19 | 0.90 / 0.40 | 0.19 | 20 / 20 | 38 / 61 ms | 30 / 52 ms | $0 |
+| run1 | 0.81 / 0.19 | 0.81 / 0.19 | 0.90 / 0.40 | 0.19 | 20 / 20 | 38 / 59 ms | 29 / 46 ms | $0 |
 
 Pairs are Best match / newest first. The base rate is the share of the cards each search matches that fit, and newest first lands on it, as it should. Rows with commit and time are in [`evals/results/search-ranking.md`](evals/results/search-ranking.md), and every case is in the JSON beside it.
 
-**Reading run 1.** Best match fills 81% of the first 20 places with cards that fit, against 19% newest first, and the first listing fits in 27 of 32 searches. Every one of the first 20 listings is a different card. 20 of the 28 habits score 0.85 or better; the weakest is "golem that obeys every command forever" for "never forgets an order", at 0.40. Places are harder: 0.51 on average, and "dragon from the glassy wastes" for "beyond the glass desert" scores 0.10, no better than newest first. The small embedding model does not bring those two phrases close, and the kind adds a second condition. A search costs 8 ms more than newest first at the median, and the first time a search is seen the query is embedded too: 62 ms at p50.
+**Reading run 1.** Best match fills 81% of the first 20 places with cards that fit, against 19% newest first, and the first listing fits in 27 of 32 searches. Every one of the first 20 listings is a different card. 20 of the 28 habits score 0.85 or better; the weakest is "golem that obeys every command forever" for "never forgets an order", at 0.40. Places are harder: 0.51 on average, and "dragon from the glassy wastes" for "beyond the glass desert" scores 0.10, no better than newest first. The small embedding model does not bring those two phrases close, and the kind adds a second condition. A search costs 9 ms more than newest first at the median, and the first time a search is seen the query is embedded too: 59 ms at p50.
 
 **How much to trust this.** The lore is generated from templates, one sentence per card, so the words a shopper might use for a card are far tidier here than on a real market. The searches were written before the eval first ran and not changed after. 32 searches, one embedding model and one run: this shows the order does what it was meant to on a catalog where fit is known, not how well it ranks what real shoppers type.
 
