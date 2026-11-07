@@ -146,7 +146,8 @@ The running server tags waiting cards in the background, up to 400 every 10 minu
 
 - **Each card has a vector of its trusted text.** Its catalog text (name, set, kinds, lore) plus its tags in words ("Described as: sea creatures, glowing."), from the same local bge-small model the matcher uses, in a column of its own so the matcher's embeddings do not move. Seller text is never part of it. A trigger marks the vector stale when the text or tags change, and the server rewrites stale vectors in the background, up to 2,000 a minute; `pnpm vectors:run` writes a whole catalog, about 85 cards a second here.
 - **The query is the words that describe a card.** Tag words and words no filter reads, in the order typed, without filler, grades, prices, graders or finishes, which are filters already. When a model read the search, the words come from what was typed (`?from=`), so what the reading could not keep ("that guards a frozen treasure") still counts. The query vector is cached for an hour; a search costs nothing.
-- **Cards first, then their stock.** Matches are ordered by their card's cosine distance to the query, in two rounds: the newest listing of each card, then every other listing. At marketplace size a card has about 50 listings, and the first page should show 20 cards that fit, not one card's stock. Ties go newest first, so pages never overlap.
+- **Cards first, then their stock.** Matches are ordered by how close their card's vector is to the query's, in two rounds: the newest listing of each card, then every other listing. At marketplace size a card has about 50 listings, and the first page should show 20 cards that fit, not one card's stock. Ties go newest first, so pages never overlap.
+- **Whole-number vectors.** A vector is stored scaled to length 2048 with each part rounded, and closeness is the dot product, pgvector's `<#>`. Every sum along the way is then a whole number below 2^24, exact in single precision whatever order the CPU adds in, so Postgres and OpenSearch compute the same number for each card on any machine, and cards that tie, tie in both. Rounding moves a similarity by about 0.0002, where 1 is a perfect match.
 - **Filters still decide what matches.** Best match only orders; it never hides a listing. The cut below does, for a described search.
 - **Past 10,000 matches** the matching cards are ranked first, then each one's newest listing is read with one index probe, best card first, until the page is full.
 - **It falls back to newest first** when nothing describes a card ("holo") or the embedder fails, and the response's `sort` says which order the page is in.
@@ -201,32 +202,32 @@ The same `SearchService` runs on OpenSearch 3.9 too, so the two can be compared 
 
 - **What the engine holds.** Three indexes. One document per active listing, with the fields of `listing_search` and the card's words and tags as keywords; one per card, with its words, set, number and Best match vector; one per catalog word, with its trigrams. Each is read through an alias, so a full copy is built in new indexes and searches move to it in one step. The set list, sellers, the model's verdicts and card text stay in Postgres, since they are small lookups.
 - **How it stays current.** Migration 0010 adds an outbox table. Once a copy is registered, triggers record every listing, card and word that changes. [`SearchSync`](apps/server/src/search/opensearch/SearchSync.ts) takes the oldest rows, reads the current state of what they name, writes or deletes it in the engine and removes the rows, in one transaction, so a refused write is tried again and a change seen twice does no harm. A full copy registers first and waits for writes already under way, so a change made during the copy is not missed. A change is searchable 1 to 2 seconds after it commits: up to a second until the outbox is read, and up to a second until the engine refreshes. On the live demo no copy is registered, so nothing is recorded.
-- **The same answers.** One engine request returns a sorted page and its counts per set: an aggregation counts over the whole search while a post filter narrows the page to the set picked. Postgres needs a count and a page query. Best match scores the matching cards exactly against the query vector, a few hundred at a time, and one aggregation finds each card's newest matching listing, which gives Postgres's order of one listing per card first. "Did you mean" divides shared trigrams by all trigrams in the engine, which is pg_trgm's similarity, so the same words come back. [A test](apps/server/test/opensearch.db.test.ts) runs about 200 searches of every kind on both engines and expects identical answers: before and after cards have vectors, with a judged description, and after the outbox has carried a sale, a price change, a new listing and a renamed card. CI starts an OpenSearch node for it.
+- **The same answers.** One engine request returns a sorted page and its counts per set: an aggregation counts over the whole search while a post filter narrows the page to the set picked. Postgres needs a count and a page query. Best match scores the matching cards with the same whole-number dot product as Postgres, a few hundred at a time, and one aggregation finds each card's newest matching listing, which gives Postgres's order of one listing per card first. "Did you mean" divides shared trigrams by all trigrams in the engine, which is pg_trgm's similarity, so the same words come back. [A test](apps/server/test/opensearch.db.test.ts) runs about 200 searches of every kind on both engines and expects identical answers: before and after cards have vectors, with a judged description, and after the outbox has carried a sale, a price change, a new listing and a renamed card. CI starts an OpenSearch node for it.
 
 `pnpm bench:engines` runs the benchmark searches on both, checks the answers match and times them. On the same 4-core container as above, OpenSearch with one node, one shard and a 3 GB heap, warm, in ms ([full table](evals/results/search-engines.md)):
 
 | Search | Matches | Same answer | Postgres p50 / p95 | OpenSearch p50 / p95 |
 | --- | ---: | --- | ---: | ---: |
-| home page (newest) | 1,000,199 | yes | 1.5 / 2.7 | 8.9 / 13 |
-| one set | 4,949 | yes | 0.9 / 2.8 | 13 / 15 |
-| card name ("ashen wyrm") | 38 | yes | 11 / 13 | 9.4 / 13 |
-| kind ("dragon") | 10,000+ | yes | 33 / 48 | 11 / 12 |
-| grader and grade ("NVG 10") | 10,000+ | yes | 76 / 102 | 9.2 / 14 |
-| kind, finish, price ("dragon holo under 200") | 10,000+ | yes | 47 / 83 | 8.5 / 14 |
-| described: tags, grade, price ("flying fire 9+ under 300") | 10,000+ | yes | 52 / 67 | 7.6 / 15 |
-| deep page ("holo", from listing 5,000) | 10,000+ | yes | 14 / 18 | 32 / 45 |
-| Best match: a tag, ranked by what was typed | 10,000+ | yes | 43 / 68 | 25 / 37 |
-| Best match: page 126 ("dragon", from listing 5,000) | 10,000+ | yes | 77 / 168 | 152 / 173 |
+| home page (newest) | 1,000,199 | yes | 1.2 / 2.1 | 6.8 / 11 |
+| one set | 4,949 | yes | 1.0 / 1.4 | 11 / 15 |
+| card name ("ashen wyrm") | 38 | yes | 10 / 17 | 7.7 / 12 |
+| kind ("dragon") | 10,000+ | yes | 33 / 44 | 9.1 / 13 |
+| grader and grade ("NVG 10") | 10,000+ | yes | 68 / 102 | 8.6 / 15 |
+| kind, finish, price ("dragon holo under 200") | 10,000+ | yes | 53 / 91 | 9.4 / 16 |
+| described: tags, grade, price ("flying fire 9+ under 300") | 10,000+ | yes | 56 / 148 | 7.5 / 16 |
+| deep page ("holo", from listing 5,000) | 10,000+ | yes | 16 / 37 | 34 / 48 |
+| Best match: a tag, ranked by what was typed | 10,000+ | yes | 42 / 52 | 27 / 33 |
+| Best match: page 126 ("dragon", from listing 5,000) | 10,000+ | yes | 80 / 193 | 174 / 205 |
 
-**Reading it.** All 24 benchmark searches give the same answer on both engines, and so do the word lookups described search makes, for all 968 catalog words and 2,772 misspellings and beginnings of them. `pnpm eval:rank` on OpenSearch scores exactly what it scores on Postgres (precision at 20 of 0.81 against 0.19).
+**Reading it.** All 24 benchmark searches give the same answer on both engines, and so do the word lookups described search makes, for all 968 catalog words and 2,772 misspellings and beginnings of them. `pnpm eval:rank` on OpenSearch scores exactly what it scores on Postgres (precision at 20 of 0.81 against 0.19). For five described searches, every one of the 20,040 cards' distances is the same number on both engines.
 
-- Postgres is faster where an index already holds the order: newest first, cheapest first, one set. About a millisecond, against 6 to 13 on the engine, most of which is the HTTP round trip and JSON.
-- OpenSearch is faster where many listings match several filters and are counted per set: 5 to 8 times faster for "NVG 10", "dragon holo under 200" and "flying fire 9+ under 300", 3 times for "dragon" and "sea animal". Postgres reads up to 10,001 matching rows to count them; the engine counts from column storage in the same request as the page.
+- Postgres is faster where an index already holds the order: newest first, cheapest first, one set. About a millisecond, against 5 to 11 on the engine, most of which is the HTTP round trip and JSON.
+- OpenSearch is faster where many listings match several filters and are counted per set: 5 to 8 times faster for "NVG 10", "dragon holo under 200" and "flying fire 9+ under 300", 2 to 4 times for "dragon" and "sea animal". Postgres reads up to 10,001 matching rows to count them; the engine counts from column storage in the same request as the page.
 - Best match is faster on the engine for the first page and twice as slow for page 126: it collects every card's newest listing in one aggregation, where Postgres probes one card at a time and stops when the page is full.
-- 50 searches at once took 346 ms on the engine and 467 ms on Postgres. The listings index takes 215 MB; `listing_search` with its eight indexes takes 737 MB.
+- 50 searches at once took 396 ms on the engine and 500 ms on Postgres. The listings index takes 215 MB; `listing_search` with its eight indexes takes 737 MB.
 - A full copy of 1,000,199 listings, 20,040 cards and 968 words takes about 55 seconds.
 
-What it costs: a second system to run (a JVM that wants a few GB of memory), a sync to watch, and results that trail writes by a second or two. One finding along the way: a grade stored as `scaled_float` sorted the wrong page for "highest grade first" when it was the first sort key, and the parity check caught it; a plain `float` sorts right.
+What it costs: a second system to run (a JVM that wants a few GB of memory), a sync to watch, and results that trail writes by a second or two. Two findings along the way, both caught by the parity check. A grade stored as `scaled_float` sorted the wrong page for "highest grade first" when it was the first sort key; a plain `float` sorts right. And on CI's machine two cards whose distances to a search differed by 0.000000005 came back in opposite orders: each engine summed the vectors' fractions in its own order, and so did each machine's pgvector build. The vectors became whole numbers (see Best match above), so the sums are exact everywhere, and the test now also checks that every card's distance is the same number on both.
 
 **How much to trust this.** One run on one machine, both engines warm on the same 4 cores, Postgres at default settings and one OpenSearch shard. At the design's target of 10 million listings, counting in Postgres grows with the matches while the engine would add shards and nodes, and Best match at a million cards needs approximate nearest neighbours with filters on both; neither is measured here.
 
@@ -350,8 +351,10 @@ All nine use Claude Haiku 5.5. Rows with commit and time are in [`evals/results/
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | run1 | 0.81 / 0.19 | 0.81 / 0.19 | 0.90 / 0.40 | 0.19 | 20 / 20 | 38 / 59 ms | 29 / 46 ms | $0 |
 | opensearch1 | 0.81 / 0.19 | 0.81 / 0.19 | 0.90 / 0.40 | 0.19 | 20 / 20 | 24 / 33 ms | 8 / 12 ms | $0 |
+| run2 | 0.81 / 0.19 | 0.81 / 0.19 | 0.90 / 0.40 | 0.19 | 20 / 20 | 38 / 58 ms | 30 / 42 ms | $0 |
+| opensearch2 | 0.81 / 0.19 | 0.81 / 0.19 | 0.90 / 0.40 | 0.19 | 20 / 20 | 26 / 33 ms | 9 / 11 ms | $0 |
 
-Pairs are Best match / newest first. The base rate is the share of the cards each search matches that fit, and newest first lands on it, as it should. `opensearch1` is the same eval with `SEARCH_ENGINE=opensearch`: the same listings in the same order, faster because these searches filter by tags (see [Postgres and OpenSearch](#postgres-and-opensearch)). Rows with commit and time are in [`evals/results/search-ranking.md`](evals/results/search-ranking.md), and every case is in the JSON beside it.
+Pairs are Best match / newest first. The base rate is the share of the cards each search matches that fit, and newest first lands on it, as it should. `opensearch1` is the same eval with `SEARCH_ENGINE=opensearch`: the same listings in the same order, faster because these searches filter by tags (see [Postgres and OpenSearch](#postgres-and-opensearch)). `run2` and `opensearch2` are the same with whole-number vectors: rounding them changed no score. Rows with commit and time are in [`evals/results/search-ranking.md`](evals/results/search-ranking.md), and every case is in the JSON beside it.
 
 **Reading run 1.** Best match fills 81% of the first 20 places with cards that fit, against 19% newest first, and the first listing fits in 27 of 32 searches. Every one of the first 20 listings is a different card. 20 of the 28 habits score 0.85 or better; the weakest is "golem that obeys every command forever" for "never forgets an order", at 0.40. Places are harder: 0.51 on average, and "dragon from the glassy wastes" for "beyond the glass desert" scores 0.10, no better than newest first. The small embedding model does not bring those two phrases close, and the kind adds a second condition. A search costs 9 ms more than newest first at the median, and the first time a search is seen the query is embedded too: 59 ms at p50.
 

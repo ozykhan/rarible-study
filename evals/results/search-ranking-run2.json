@@ -1,0 +1,739 @@
+{
+  "label": "run2",
+  "ranAt": "2026-11-07T12:20:09.932Z",
+  "commit": "3619e89",
+  "embedder": "Xenova/bge-small-en-v1.5",
+  "cards": 20040,
+  "listings": 1000199,
+  "summary": {
+    "cases": 32,
+    "baseRate": 0.191,
+    "relevance": {
+      "p10": 0.813,
+      "p20": 0.813,
+      "mrr": 0.904,
+      "cards": 20,
+      "msP50": 38,
+      "msP95": 58
+    },
+    "recent": {
+      "p10": 0.191,
+      "p20": 0.189,
+      "mrr": 0.396,
+      "cards": 20,
+      "msP50": 30,
+      "msP95": 42
+    },
+    "firstSearchMsP50": 65
+  },
+  "cases": [
+    {
+      "from": "dragon sitting on a pile of treasure",
+      "q": "dragon",
+      "lore": "guards a hoard of old coins",
+      "candidates": 2241,
+      "fitting": 553,
+      "firstSearchMs": 190,
+      "relevance": {
+        "p10": 0.9,
+        "p20": 0.85,
+        "rr": 1,
+        "cards": 20,
+        "ms": 47.02957800000013
+      },
+      "recent": {
+        "p10": 0.3,
+        "p20": 0.3,
+        "rr": 0.3333333333333333,
+        "cards": 20,
+        "ms": 36.270048999999744
+      }
+    },
+    {
+      "from": "dragon that hibernates for a hundred years",
+      "q": "dragon",
+      "lore": "sleeps for a century at a time",
+      "candidates": 2241,
+      "fitting": 567,
+      "firstSearchMs": 56,
+      "relevance": {
+        "p10": 0.9,
+        "p20": 0.95,
+        "rr": 1,
+        "cards": 20,
+        "ms": 53.54419999999982
+      },
+      "recent": {
+        "p10": 0.2,
+        "p20": 0.3,
+        "rr": 0.2,
+        "cards": 20,
+        "ms": 31.219266999999945
+      }
+    },
+    {
+      "from": "dragon soaring over summits at sunrise",
+      "q": "dragon",
+      "lore": "circles the peaks at dawn",
+      "candidates": 2241,
+      "fitting": 551,
+      "firstSearchMs": 72,
+      "relevance": {
+        "p10": 0.8,
+        "p20": 0.9,
+        "rr": 1,
+        "cards": 20,
+        "ms": 44.421318000000156
+      },
+      "recent": {
+        "p10": 0.3,
+        "p20": 0.2,
+        "rr": 1,
+        "cards": 20,
+        "ms": 31.936784999999873
+      }
+    },
+    {
+      "from": "sea creature living in shipwrecks",
+      "q": "sea creature",
+      "lore": "hides in sunken ships",
+      "candidates": 1878,
+      "fitting": 450,
+      "firstSearchMs": 47,
+      "relevance": {
+        "p10": 0.9,
+        "p20": 0.7,
+        "rr": 1,
+        "cards": 20,
+        "ms": 41.7817670000004
+      },
+      "recent": {
+        "p10": 0,
+        "p20": 0.2,
+        "rr": 0.07142857142857142,
+        "cards": 20,
+        "ms": 21.02306099999987
+      }
+    },
+    {
+      "from": "sea creature that serenades sailors",
+      "q": "sea creature",
+      "lore": "sings to passing boats",
+      "candidates": 1878,
+      "fitting": 433,
+      "firstSearchMs": 50,
+      "relevance": {
+        "p10": 1,
+        "p20": 1,
+        "rr": 1,
+        "cards": 20,
+        "ms": 31.870241000000533
+      },
+      "recent": {
+        "p10": 0.2,
+        "p20": 0.15,
+        "rr": 0.3333333333333333,
+        "cards": 20,
+        "ms": 19.788877999999386
+      }
+    },
+    {
+      "from": "sea creature carried by tropical currents",
+      "q": "sea creature",
+      "lore": "drifts with the warm currents",
+      "candidates": 1878,
+      "fitting": 473,
+      "firstSearchMs": 56,
+      "relevance": {
+        "p10": 0.5,
+        "p20": 0.45,
+        "rr": 1,
+        "cards": 20,
+        "ms": 33.61949000000004
+      },
+      "recent": {
+        "p10": 0.2,
+        "p20": 0.3,
+        "rr": 0.125,
+        "cards": 20,
+        "ms": 22.529688999999962
+      }
+    },
+    {
+      "from": "animal wandering upland pastures",
+      "q": "animal",
+      "lore": "roams the high meadows",
+      "candidates": 7717,
+      "fitting": 501,
+      "firstSearchMs": 96,
+      "relevance": {
+        "p10": 0.5,
+        "p20": 0.45,
+        "rr": 0.3333333333333333,
+        "cards": 20,
+        "ms": 57.81735800000024
+      },
+      "recent": {
+        "p10": 0.1,
+        "p20": 0.05,
+        "rr": 0.16666666666666666,
+        "cards": 20,
+        "ms": 31.462649000000056
+      }
+    },
+    {
+      "from": "bird nesting on sheer cliffs",
+      "q": "bird",
+      "lore": "nests on cliff ledges",
+      "candidates": 2328,
+      "fitting": 613,
+      "firstSearchMs": 76,
+      "relevance": {
+        "p10": 1,
+        "p20": 1,
+        "rr": 1,
+        "cards": 20,
+        "ms": 38.05324699999983
+      },
+      "recent": {
+        "p10": 0.1,
+        "p20": 0.05,
+        "rr": 0.1111111111111111,
+        "cards": 20,
+        "ms": 35.16763300000002
+      }
+    },
+    {
+      "from": "bird whose call brings rainfall",
+      "q": "bird",
+      "lore": "calls the rain with its cry",
+      "candidates": 2328,
+      "fitting": 570,
+      "firstSearchMs": 70,
+      "relevance": {
+        "p10": 1,
+        "p20": 1,
+        "rr": 1,
+        "cards": 20,
+        "ms": 37.04466299999967
+      },
+      "recent": {
+        "p10": 0.3,
+        "p20": 0.3,
+        "rr": 1,
+        "cards": 20,
+        "ms": 41.47712599999977
+      }
+    },
+    {
+      "from": "bird that travels thousands of miles each year",
+      "q": "bird",
+      "lore": "migrates across three seas",
+      "candidates": 2328,
+      "fitting": 577,
+      "firstSearchMs": 65,
+      "relevance": {
+        "p10": 1,
+        "p20": 1,
+        "rr": 1,
+        "cards": 20,
+        "ms": 38.60812299999998
+      },
+      "recent": {
+        "p10": 0.3,
+        "p20": 0.2,
+        "rr": 0.25,
+        "cards": 20,
+        "ms": 29.752046999999948
+      }
+    },
+    {
+      "from": "bird that surveys the lowlands from on high",
+      "q": "bird",
+      "lore": "watches the valley from above",
+      "candidates": 2328,
+      "fitting": 564,
+      "firstSearchMs": 70,
+      "relevance": {
+        "p10": 0.8,
+        "p20": 0.85,
+        "rr": 1,
+        "cards": 20,
+        "ms": 53.32505900000069
+      },
+      "recent": {
+        "p10": 0.3,
+        "p20": 0.45,
+        "rr": 0.2,
+        "cards": 20,
+        "ms": 35.74175399999967
+      }
+    },
+    {
+      "from": "ghost that shows up under a full moon",
+      "q": "ghost",
+      "lore": "appears only in moonlight",
+      "candidates": 3603,
+      "fitting": 561,
+      "firstSearchMs": 67,
+      "relevance": {
+        "p10": 0.4,
+        "p20": 0.55,
+        "rr": 1,
+        "cards": 20,
+        "ms": 34.657028999999966
+      },
+      "recent": {
+        "p10": 0.1,
+        "p20": 0.15,
+        "rr": 1,
+        "cards": 20,
+        "ms": 21.917234000000462
+      }
+    },
+    {
+      "from": "ghost that never forgets a wanderer's face",
+      "q": "ghost",
+      "lore": "remembers every traveler it meets",
+      "candidates": 3603,
+      "fitting": 578,
+      "firstSearchMs": 72,
+      "relevance": {
+        "p10": 0.8,
+        "p20": 0.9,
+        "rr": 1,
+        "cards": 20,
+        "ms": 32.05328799999916
+      },
+      "recent": {
+        "p10": 0.2,
+        "p20": 0.15,
+        "rr": 0.125,
+        "cards": 20,
+        "ms": 21.84455800000069
+      }
+    },
+    {
+      "from": "ghost whose faint humming you can barely hear",
+      "q": "ghost",
+      "lore": "hums at the edge of hearing",
+      "candidates": 3603,
+      "fitting": 582,
+      "firstSearchMs": 49,
+      "relevance": {
+        "p10": 0.9,
+        "p20": 0.9,
+        "rr": 0.5,
+        "cards": 20,
+        "ms": 34.09114899999986
+      },
+      "recent": {
+        "p10": 0.2,
+        "p20": 0.2,
+        "rr": 0.5,
+        "cards": 20,
+        "ms": 21.256798000000344
+      }
+    },
+    {
+      "from": "ghost flickering in the mist",
+      "q": "ghost",
+      "lore": "flickers like a candle in fog",
+      "candidates": 3603,
+      "fitting": 561,
+      "firstSearchMs": 64,
+      "relevance": {
+        "p10": 0.8,
+        "p20": 0.85,
+        "rr": 1,
+        "cards": 20,
+        "ms": 36.25032000000101
+      },
+      "recent": {
+        "p10": 0.2,
+        "p20": 0.1,
+        "rr": 0.3333333333333333,
+        "cards": 20,
+        "ms": 28.843455000000176
+      }
+    },
+    {
+      "from": "golem sculpted to stand watch at an entrance",
+      "q": "golem",
+      "lore": "was carved to guard a gate",
+      "candidates": 3472,
+      "fitting": 605,
+      "firstSearchMs": 105,
+      "relevance": {
+        "p10": 1,
+        "p20": 1,
+        "rr": 1,
+        "cards": 20,
+        "ms": 66.84559000000081
+      },
+      "recent": {
+        "p10": 0.1,
+        "p20": 0.25,
+        "rr": 0.3333333333333333,
+        "cards": 20,
+        "ms": 39.430834999999206
+      }
+    },
+    {
+      "from": "golem stirred awake by earthquakes",
+      "q": "golem",
+      "lore": "wakes when the ground shakes",
+      "candidates": 3472,
+      "fitting": 542,
+      "firstSearchMs": 72,
+      "relevance": {
+        "p10": 1,
+        "p20": 1,
+        "rr": 1,
+        "cards": 20,
+        "ms": 55.5204849999991
+      },
+      "recent": {
+        "p10": 0.4,
+        "p20": 0.25,
+        "rr": 0.5,
+        "cards": 20,
+        "ms": 38.19445799999994
+      }
+    },
+    {
+      "from": "golem covered in lichen",
+      "q": "golem",
+      "lore": "carries moss on its shoulders",
+      "candidates": 3472,
+      "fitting": 508,
+      "firstSearchMs": 79,
+      "relevance": {
+        "p10": 0.9,
+        "p20": 0.8,
+        "rr": 0.5,
+        "cards": 20,
+        "ms": 52.8907960000015
+      },
+      "recent": {
+        "p10": 0.1,
+        "p20": 0.2,
+        "rr": 0.2,
+        "cards": 20,
+        "ms": 40.11985900000036
+      }
+    },
+    {
+      "from": "golem that obeys every command forever",
+      "q": "golem",
+      "lore": "never forgets an order",
+      "candidates": 3472,
+      "fitting": 579,
+      "firstSearchMs": 66,
+      "relevance": {
+        "p10": 0.2,
+        "p20": 0.4,
+        "rr": 0.5,
+        "cards": 20,
+        "ms": 54.511491000001115
+      },
+      "recent": {
+        "p10": 0.1,
+        "p20": 0.05,
+        "rr": 1,
+        "cards": 20,
+        "ms": 40.62662900000032
+      }
+    },
+    {
+      "from": "insect building mud spires",
+      "q": "insect",
+      "lore": "builds towers of mud and leaf",
+      "candidates": 2130,
+      "fitting": 524,
+      "firstSearchMs": 72,
+      "relevance": {
+        "p10": 1,
+        "p20": 1,
+        "rr": 1,
+        "cards": 20,
+        "ms": 36.16405699999996
+      },
+      "recent": {
+        "p10": 0.2,
+        "p20": 0.3,
+        "rr": 0.2,
+        "cards": 20,
+        "ms": 41.82060300000012
+      }
+    },
+    {
+      "from": "insect buzzing around the fruit groves",
+      "q": "insect",
+      "lore": "hums through the orchard",
+      "candidates": 2130,
+      "fitting": 533,
+      "firstSearchMs": 58,
+      "relevance": {
+        "p10": 1,
+        "p20": 1,
+        "rr": 1,
+        "cards": 20,
+        "ms": 36.21476900000016
+      },
+      "recent": {
+        "p10": 0.3,
+        "p20": 0.15,
+        "rr": 1,
+        "cards": 20,
+        "ms": 30.293578000000707
+      }
+    },
+    {
+      "from": "flower that blooms only at midnight",
+      "q": "flower",
+      "lore": "opens only at midnight",
+      "candidates": 3161,
+      "fitting": 540,
+      "firstSearchMs": 48,
+      "relevance": {
+        "p10": 1,
+        "p20": 1,
+        "rr": 1,
+        "cards": 20,
+        "ms": 29.574084999998377
+      },
+      "recent": {
+        "p10": 0.2,
+        "p20": 0.1,
+        "rr": 1,
+        "cards": 20,
+        "ms": 23.785585999999967
+      }
+    },
+    {
+      "from": "plant that climbs up walls",
+      "q": "plant",
+      "lore": "creeps across old walls",
+      "candidates": 3377,
+      "fitting": 566,
+      "firstSearchMs": 94,
+      "relevance": {
+        "p10": 0.9,
+        "p20": 0.9,
+        "rr": 1,
+        "cards": 20,
+        "ms": 53.19813400000021
+      },
+      "recent": {
+        "p10": 0,
+        "p20": 0.2,
+        "rr": 0.09090909090909091,
+        "cards": 20,
+        "ms": 43.10156700000152
+      }
+    },
+    {
+      "from": "plant drinking dewdrops at sunrise",
+      "q": "plant",
+      "lore": "drinks the morning dew",
+      "candidates": 3377,
+      "fitting": 550,
+      "firstSearchMs": 82,
+      "relevance": {
+        "p10": 1,
+        "p20": 1,
+        "rr": 1,
+        "cards": 20,
+        "ms": 52.07247699999971
+      },
+      "recent": {
+        "p10": 0.2,
+        "p20": 0.2,
+        "rr": 0.3333333333333333,
+        "cards": 20,
+        "ms": 40.39618700000028
+      }
+    },
+    {
+      "from": "flower that follows the constellations",
+      "q": "flower",
+      "lore": "turns its petals to the stars",
+      "candidates": 3161,
+      "fitting": 549,
+      "firstSearchMs": 64,
+      "relevance": {
+        "p10": 1,
+        "p20": 0.95,
+        "rr": 1,
+        "cards": 20,
+        "ms": 30.25536800000009
+      },
+      "recent": {
+        "p10": 0.1,
+        "p20": 0.1,
+        "rr": 0.2,
+        "cards": 20,
+        "ms": 19.48319199999969
+      }
+    },
+    {
+      "from": "lizard sunbathing on warm boulders",
+      "q": "lizard",
+      "lore": "basks on hot black rock",
+      "candidates": 2383,
+      "fitting": 585,
+      "firstSearchMs": 60,
+      "relevance": {
+        "p10": 1,
+        "p20": 1,
+        "rr": 1,
+        "cards": 20,
+        "ms": 26.48087999999916
+      },
+      "recent": {
+        "p10": 0.2,
+        "p20": 0.2,
+        "rr": 0.3333333333333333,
+        "cards": 20,
+        "ms": 27.043915000000197
+      }
+    },
+    {
+      "from": "lizard that stays perfectly still for ages",
+      "q": "lizard",
+      "lore": "waits motionless for hours",
+      "candidates": 2383,
+      "fitting": 525,
+      "firstSearchMs": 44,
+      "relevance": {
+        "p10": 0.7,
+        "p20": 0.7,
+        "rr": 1,
+        "cards": 20,
+        "ms": 25.93487500000083
+      },
+      "recent": {
+        "p10": 0.6,
+        "p20": 0.35,
+        "rr": 1,
+        "cards": 20,
+        "ms": 18.421957000000475
+      }
+    },
+    {
+      "from": "lizard lurking in abandoned temples",
+      "q": "lizard",
+      "lore": "hides in desert ruins",
+      "candidates": 2383,
+      "fitting": 547,
+      "firstSearchMs": 57,
+      "relevance": {
+        "p10": 0.9,
+        "p20": 0.8,
+        "rr": 1,
+        "cards": 20,
+        "ms": 38.10302799999954
+      },
+      "recent": {
+        "p10": 0.1,
+        "p20": 0.15,
+        "rr": 0.1,
+        "cards": 20,
+        "ms": 27.703558999999586
+      }
+    },
+    {
+      "from": "sea creature that lurks near a lighthouse",
+      "q": "sea creature",
+      "lore": "near the old lighthouse",
+      "kind": "water",
+      "candidates": 1878,
+      "fitting": 238,
+      "firstSearchMs": 59,
+      "relevance": {
+        "p10": 1,
+        "p20": 0.95,
+        "rr": 1,
+        "cards": 20,
+        "ms": 30.228806999999506
+      },
+      "recent": {
+        "p10": 0.1,
+        "p20": 0.25,
+        "rr": 0.1111111111111111,
+        "cards": 20,
+        "ms": 25.173706999999922
+      }
+    },
+    {
+      "from": "golem from a drowned city",
+      "q": "golem",
+      "lore": "inside the sunken city",
+      "kind": "golem",
+      "candidates": 3472,
+      "fitting": 307,
+      "firstSearchMs": 79,
+      "relevance": {
+        "p10": 0.7,
+        "p20": 0.6,
+        "rr": 1,
+        "cards": 20,
+        "ms": 57.11639899999864
+      },
+      "recent": {
+        "p10": 0.2,
+        "p20": 0.1,
+        "rr": 0.3333333333333333,
+        "cards": 20,
+        "ms": 40.04764100000102
+      }
+    },
+    {
+      "from": "bird from the hovering islands",
+      "q": "bird",
+      "lore": "on the floating isles",
+      "kind": "bird",
+      "candidates": 2328,
+      "fitting": 286,
+      "firstSearchMs": 52,
+      "relevance": {
+        "p10": 0.5,
+        "p20": 0.45,
+        "rr": 1,
+        "cards": 20,
+        "ms": 42.25881400000071
+      },
+      "recent": {
+        "p10": 0,
+        "p20": 0,
+        "rr": 0,
+        "cards": 20,
+        "ms": 29.66000300000087
+      }
+    },
+    {
+      "from": "dragon from the glassy wastes",
+      "q": "dragon",
+      "lore": "beyond the glass desert",
+      "kind": "dragon",
+      "candidates": 2241,
+      "fitting": 259,
+      "firstSearchMs": 49,
+      "relevance": {
+        "p10": 0,
+        "p20": 0.1,
+        "rr": 0.08333333333333333,
+        "cards": 20,
+        "ms": 38.897367000001395
+      },
+      "recent": {
+        "p10": 0.2,
+        "p20": 0.1,
+        "rr": 0.2,
+        "cards": 20,
+        "ms": 29.461256999999023
+      }
+    }
+  ]
+}
