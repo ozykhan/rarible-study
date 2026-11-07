@@ -27,22 +27,33 @@ export interface FoundItem {
 }
 
 /**
- * The cards in Found for you, in order: purchases waiting for a signature
- * first, then each match and each listing to review. A listing with a
- * waiting purchase shows once, as the purchase.
+ * What a card still needs from the collector: nothing once bought, or once
+ * the listing is off the market. A waiting purchase whose listing did not
+ * come with it stays open.
+ */
+const open = (i: FoundItem) => i.bought === null && (i.listing === null ? i.waiting !== null : i.listing.status === "active")
+
+/**
+ * The cards in Found for you, in order: purchases waiting for a signature,
+ * newest first, then each match and each listing to review. A listing with a
+ * waiting purchase shows once, as the purchase. Cards that need nothing more
+ * (bought, or off the market) go last, so a busy watch's old proposals do
+ * not crowd out the ones you can still sign. A waiting purchase takes its
+ * card from the purchase: the watch sends its 60 newest decisions, and a busy
+ * watch has more purchases than that.
  */
 export function foundItems(detail: RuleDetail): ReadonlyArray<FoundItem> {
   const decisions = new Map(detail.decisions.map((d) => [d.listingId, d]))
   const bought = new Map(detail.purchases.filter((p) => p.status === "executed").map((p) => [p.listingId, p]))
   const items: FoundItem[] = []
   const shown = new Set<string>()
-  for (const p of detail.purchases) {
+  for (const p of [...detail.purchases].reverse()) {
     if (p.status !== "proposed") continue
     const d = decisions.get(p.listingId)
     items.push({
       key: `p:${p.id}`,
       listingId: p.listingId,
-      listing: d?.listing ?? null,
+      listing: p.listing ?? d?.listing ?? null,
       kind: "waiting",
       reasons: d?.reasons ?? [],
       waiting: p,
@@ -64,7 +75,7 @@ export function foundItems(detail: RuleDetail): ReadonlyArray<FoundItem> {
       price: d.listing?.price ?? null
     })
   }
-  return items
+  return [...items.filter(open), ...items.filter((i) => !open(i))]
 }
 
 const KIND: Record<FoundKind, { readonly word: string; readonly tone: PillTone | null }> = {
@@ -72,9 +83,6 @@ const KIND: Record<FoundKind, { readonly word: string; readonly tone: PillTone |
   match: { word: "match", tone: "ok" },
   review: { word: "needs your review", tone: "warn" }
 }
-
-/** What a card still needs from the collector: nothing once bought, or once the listing is off the market. */
-const open = (i: FoundItem) => i.bought === null && (i.waiting !== null || i.listing?.status === "active")
 
 /** "$40.00 under your top price", when the listing and the watch price in the same currency. */
 const underTop = (price: Money | null, top: Money) => {
