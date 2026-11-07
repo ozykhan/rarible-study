@@ -110,7 +110,7 @@ export interface FitCandidate {
  */
 export const fitText = (catalogText: string, name: string): string => {
   const at = catalogText.indexOf(`${name}. `)
-  return (at === -1 ? catalogText : catalogText.slice(at + name.length + 2)).replace(/\s*Rarity: [a-z ]+\./i, "").trim()
+  return (at === -1 ? catalogText : catalogText.slice(at + name.length + 2)).replace(/Rarity: [a-z ]+\./i, "").trim()
 }
 
 export class SearchService extends Context.Service<

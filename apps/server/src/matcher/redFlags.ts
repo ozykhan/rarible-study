@@ -6,7 +6,9 @@ import type { MarketFacts } from "../catalog/CatalogRepo.ts"
 export const TOO_CHEAP_RATIO = 0.4
 
 const GRADER_CLAIM = /\b(NVG|QSG|LCA)\s*(10|[1-9](?:\.5)?)\b/gi
-const GEM_MINT_CLAIM = /\bgem\s*mint\s*(?:NVG|QSG|LCA)?\s*(10|[1-9](?:\.5)?)\b/gi
+// The grader and its trailing space are one optional group, so two runs of
+// \s* never sit side by side: that made a long run of spaces quadratic.
+const GEM_MINT_CLAIM = /\bgem\s*mint\s*(?:(?:NVG|QSG|LCA)\s*)?(10|[1-9](?:\.5)?)\b/gi
 
 /**
  * Grade or grader claims in seller text that disagree with the vault record.

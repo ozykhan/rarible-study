@@ -26,6 +26,13 @@ describe("gradeClaimMismatch", () => {
   it("catches a bare gem mint claim", () => {
     expect(gradeClaimMismatch(listing({ grade: 9, description: "Gem mint 10 copy." }))).toBe(true)
   })
+
+  it("reads a long run of spaces in seller text in linear time", () => {
+    // The old pattern backtracked quadratically here: about 0.6 s for 20,000 spaces.
+    const started = performance.now()
+    expect(gradeClaimMismatch(listing({ description: `Gem mint${" ".repeat(20_000)}x` }))).toBe(false)
+    expect(performance.now() - started).toBeLessThan(100)
+  })
 })
 
 describe("redFlagsFor", () => {

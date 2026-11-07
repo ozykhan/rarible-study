@@ -24,6 +24,13 @@ export interface OtlpEnv {
   readonly serviceName: string | null
 }
 
+/** A loop, not /\/+$/, which backtracks quadratically on a long run of slashes. */
+const withoutTrailingSlashes = (url: string): string => {
+  let end = url.length
+  while (end > 0 && url[end - 1] === "/") end--
+  return url.slice(0, end)
+}
+
 /**
  * Applies the OpenTelemetry rules for the standard variables, which Railway
  * sets when tracing is on for a service and which Langfuse, Jaeger and any
@@ -36,7 +43,7 @@ export const resolveOtlp = (env: OtlpEnv): OtlpSettings | null => {
   if (env.disabled) return null
   if (env.exporter !== null && !env.exporter.split(",").some((e) => e.trim().toLowerCase() === "otlp")) return null
   const tracesUrl =
-    env.tracesEndpoint ?? (env.endpoint === null ? null : `${env.endpoint.replace(/\/+$/, "")}/v1/traces`)
+    env.tracesEndpoint ?? (env.endpoint === null ? null : `${withoutTrailingSlashes(env.endpoint)}/v1/traces`)
   if (tracesUrl === null) return null
   return {
     tracesUrl,
