@@ -135,6 +135,11 @@ export interface MarketResponse {
    * falls back to newest when the search describes no card.
    */
   readonly sort: "relevance" | "recent" | "price_asc" | "price_desc" | "grade"
+  /**
+   * The description in ?fit, and whether a model has judged cards against it:
+   * then only the cards it judged to fit are listed. Null without ?fit.
+   */
+  readonly fit: { readonly phrase: string; readonly applied: boolean } | null
 }
 
 export interface SearchChip {
@@ -144,18 +149,32 @@ export interface SearchChip {
 }
 
 /** GET /api/search/understand: a submitted search read by the model, or why not. */
+/** Why a model could not be asked this time. */
+export type UnavailableReason = "no_key" | "spend_cap" | "busy" | "slow" | "failed"
+
+/** How judging the first cards against a description went. */
+export type FitCheck =
+  | { readonly status: "checked"; readonly checked: number; readonly fitting: number; readonly source: "cache" | "model" }
+  | { readonly status: "no_cards" }
+  | { readonly status: "unavailable"; readonly reason: UnavailableReason }
+
 export type Understanding =
   | { readonly status: "not_needed" }
   | {
       readonly status: "understood"
-      /** The search to run instead, in words the server reads without a model. */
+      /** The search to run instead, in words the server reads without a model. Empty when it is only a description. */
       readonly q: string
       readonly understood: ReadonlyArray<string>
+      /** What the search says about the card that no filter holds, in the shopper's words. */
+      readonly describes: ReadonlyArray<string>
       readonly notUnderstood: ReadonlyArray<string>
       readonly source: "cache" | "model"
+      /** With a description: the text for ?fit, and how the first cards were judged against it. */
+      readonly fit?: string
+      readonly checked?: FitCheck
     }
   | { readonly status: "nothing"; readonly notUnderstood: ReadonlyArray<string>; readonly source: "cache" | "model" }
-  | { readonly status: "unavailable"; readonly reason: "no_key" | "spend_cap" | "busy" | "slow" | "failed" }
+  | { readonly status: "unavailable"; readonly reason: UnavailableReason }
 
 export type RedFlag = "duplicate_vault_item" | "price_far_below_market" | "grade_claim_mismatch"
 

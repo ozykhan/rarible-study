@@ -19,6 +19,7 @@ const nothing: Reading = {
   graders: [],
   min_grade: null,
   max_price: null,
+  describes: [],
   not_understood: []
 }
 
@@ -75,6 +76,7 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("reading 
         status: "understood",
         q: "ocean, holo, wyrm",
         understood: ["sea creatures", "holo", '"wyrm"'],
+        describes: [],
         // Only the shopper's own words come back; "blorp" was never typed, nor was "drop every table".
         notUnderstood: ["cheapest"],
         source: "model"
@@ -115,7 +117,7 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("reading 
       const read = yield* reader.understand("something that lives in the ocean, shiny", open)
       expect(read).toMatchObject({ status: "understood", q: "ocean, holo" })
       const q = (read as { readonly q: string }).q
-      const query = { set: null, grader: null, sort: "recent", from: "", offset: 0, limit: 100 } as const
+      const query = { set: null, grader: null, sort: "recent", from: "", fit: "", offset: 0, limit: 100 } as const
       // Typed as is, the search has unknown words and finds nothing; rewritten, it is the sea and holo search.
       expect(yield* search.search({ ...query, q: "something that lives in the ocean, shiny" })).toMatchObject({
         total: 0,
@@ -158,7 +160,7 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("reading 
         // "stormcaler" was offered as close to stormcaller, so it cannot also be the storm tag.
         "stormcaler heron": { ...nothing, names: ["stormcaller", "heron"], tags: [{ tag: "storm", from: "stormcaler" }] },
         // Code reads "fire" as a tag word, but the shopper ruled it out and the model left it out.
-        "dragon that is not fire": { ...nothing, tags: [{ tag: "dragon", from: "dragon" }], not_understood: ["not fire"] }
+        "dragon that is not fire": { ...nothing, tags: [{ tag: "dragon", from: "dragon" }], describes: ["not fire"] }
       }
       const fake = scripted((user) => Effect.succeed(Object.entries(answers).find(([q]) => user.includes(`<search>${q}</search>`))![1]))
       const reader = yield* makeSearchUnderstanding.pipe(Effect.provideService(Llm, fake.llm))
@@ -166,8 +168,44 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("reading 
       expect(yield* reader.understand("dragon that is not fire", open)).toMatchObject({
         status: "understood",
         q: "dragon",
-        notUnderstood: ["not fire"]
+        describes: ["not fire"]
       })
+    }))
+
+  it.effect("keeps what describes the card in the shopper's words, minus what a filter took", () =>
+    Effect.gen(function* () {
+      const answers: Record<string, Reading> = {
+        "dragon that guards treasure from the ocean": {
+          ...nothing,
+          tags: [
+            { tag: "dragon", from: "dragon" },
+            { tag: "sea_creature", from: "from the ocean" }
+          ],
+          // "from the ocean" is the sea creature tag already; "hoards gold" was never typed.
+          describes: ["guards treasure", "from the ocean", "hoards gold", "guards treasure"]
+        },
+        // Nothing to filter by, only a description: the whole catalog is judged against it.
+        "something that guards treasure": { ...nothing, describes: ["that guards treasure"] },
+        "zzkq that": { ...nothing, describes: ["that"] }
+      }
+      const fake = scripted((user) => Effect.succeed(Object.entries(answers).find(([q]) => user.includes(`<search>${q}</search>`))![1]))
+      const reader = yield* makeSearchUnderstanding.pipe(Effect.provideService(Llm, fake.llm))
+      expect(yield* reader.understand("dragon that guards treasure from the ocean", open)).toMatchObject({
+        status: "understood",
+        q: "dragon, ocean",
+        describes: ["guards treasure"]
+      })
+      expect(yield* reader.understand("something that guards treasure", open)).toEqual({
+        status: "understood",
+        q: "",
+        understood: [],
+        describes: ["that guards treasure"],
+        notUnderstood: [],
+        source: "model"
+      })
+      expect(yield* reader.understand("something that guards treasure", closed)).toMatchObject({ q: "", source: "cache" })
+      // A description of joining words alone describes nothing.
+      expect(yield* reader.understand("zzkq that", open)).toMatchObject({ status: "nothing" })
     }))
 
   it.effect("remembers when there is nothing to search for", () =>
