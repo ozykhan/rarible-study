@@ -5,6 +5,7 @@ import { SqlClient } from "effect/sql/SqlClient"
 import type { Fragment } from "effect/sql/Statement"
 import { toTextArray, toVector } from "../db/Database.ts"
 import { Embedder } from "../embeddings/Embedder.ts"
+import { searchVector } from "./CardVectors.ts"
 import {
   defaultSort,
   describedWords,
@@ -151,8 +152,10 @@ export const COUNT_LIMIT = 10_000
  * Best match, the "relevance" sort. Each card has a vector of its trusted text
  * and tags (CardVectors); the words a search describes a card with
  * (describedWords, from ?from when a model read the search) become a query
- * vector, and the cards the search matches are ordered by cosine distance to
- * it, each card's listings newest first. Filters still decide what matches;
+ * vector, and the cards the search matches are ordered by how close their
+ * vectors are to it, each card's listings newest first. Both vectors are
+ * whole numbers (searchVector) and closeness is their dot product, pgvector's
+ * <#> (the negative of it, so smaller is closer). Filters still decide what matches;
  * the order only decides what comes first, so words no filter can express
  * ("that guards treasure") still count. No model call: the query vector comes
  * from the local embedder and is cached.
@@ -232,7 +235,7 @@ export const SearchServicePg = Layer.effect(
     const queryVectors = yield* Cache.makeWith(
       (text: string) =>
         embedder.embed([text], "query").pipe(
-          Effect.map((vs) => toVector(vs[0] ?? [])),
+          Effect.map((vs) => toVector(searchVector(vs[0] ?? []))),
           Effect.withSpan("SearchService.queryVector")
         ),
       // A failure is tried again next time rather than remembered.
@@ -404,7 +407,8 @@ export const SearchServicePg = Layer.effect(
     }
 
     /**
-     * One page best match first. Matches are ordered by their card's distance to the query vector, in two rounds:
+     * One page best match first. Matches are ordered by their card's distance to the query vector (the negative dot
+     * product, a whole number, so cards that tie in one engine tie in every engine), in two rounds:
      * first the newest listing of each card, then every other listing, card by card. At marketplace size a card has
      * dozens of listings, and the first page should show the cards that fit best, not one card's whole stock.
      *
@@ -420,7 +424,7 @@ export const SearchServicePg = Layer.effect(
           WITH m AS MATERIALIZED (
             SELECT listing_id, listed_at, card_id FROM listing_search WHERE ${sql.and(where(o.r, o.grader, o.set))}
           ), r AS (
-            SELECT id, search_vector <=> ${o.vector}::vector AS d FROM cards WHERE id IN (SELECT card_id FROM m)
+            SELECT id, search_vector <#> ${o.vector}::vector AS d FROM cards WHERE id IN (SELECT card_id FROM m)
           )
           SELECT m.listing_id FROM m JOIN r ON r.id = m.card_id
           ORDER BY row_number() OVER (PARTITION BY m.card_id ORDER BY m.listed_at DESC, m.listing_id) > 1,
@@ -428,7 +432,7 @@ export const SearchServicePg = Layer.effect(
           LIMIT ${o.limit} OFFSET ${o.offset}`
         return rows.map((x) => x.listingId)
       }
-      const cards = sql`SELECT id, search_vector <=> ${o.vector}::vector AS d FROM cards WHERE ${sql.and(cardWhere(o.r, o.set))}`
+      const cards = sql`SELECT id, search_vector <#> ${o.vector}::vector AS d FROM cards WHERE ${sql.and(cardWhere(o.r, o.set))}`
       const listings = sql.and(listingWhere(o.r, o.grader))
       const end = o.offset + o.limit
       const firsts = (yield* sql<{ readonly listingId: string }>`

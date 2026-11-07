@@ -5,7 +5,7 @@ import { SqlClient } from "effect/sql/SqlClient"
 import { CatalogRepo } from "../src/catalog/CatalogRepo.ts"
 import { toVector } from "../src/db/Database.ts"
 import { Embedder } from "../src/embeddings/Embedder.ts"
-import { CardVectors } from "../src/search/CardVectors.ts"
+import { CardVectors, searchVector } from "../src/search/CardVectors.ts"
 import { makeState } from "../src/jobs/generator.ts"
 import { describedWords, searchWords, type MarketQuery } from "../src/search/query.ts"
 import { SearchService } from "../src/search/SearchService.ts"
@@ -122,7 +122,7 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("the larg
         SELECT ls.listing_id FROM listing_search ls JOIN cards c ON c.id = ls.card_id
         WHERE ls.terms @@ 'x:*'::tsquery
         ORDER BY row_number() OVER (PARTITION BY ls.card_id ORDER BY ls.listed_at DESC, ls.listing_id) > 1,
-                 c.search_vector <=> ${toVector(vector!)}::vector, ls.listed_at DESC, ls.listing_id
+                 c.search_vector <#> ${toVector(searchVector(vector!))}::vector, ls.listed_at DESC, ls.listing_id
         LIMIT 400`).map((r) => r.listingId)
       expect(definition.length).toBe(400)
 

@@ -658,6 +658,27 @@ const searchOutbox = Effect.gen(function* () {
     REFERENCING NEW TABLE AS new_rows FOR EACH STATEMENT EXECUTE FUNCTION search_outbox_words()`
 })
 
+/**
+ * Card search vectors become whole numbers, as CardVectors.searchVector makes
+ * them from now on: each scaled to length 2048 and rounded. Best match then
+ * orders by their dot product with the query's, which Postgres and OpenSearch
+ * compute exactly, so a near tie cannot fall one way in one engine and the
+ * other way in the other. This converts the vectors already written.
+ */
+const wholeSearchVectors = Effect.gen(function* () {
+  const sql = yield* SqlClient
+  yield* sql`
+    WITH n AS (
+      SELECT id, sqrt((SELECT sum(x::float8 * x::float8) FROM unnest(search_vector::real[]) AS x)) AS length
+      FROM cards WHERE search_vector IS NOT NULL
+    )
+    UPDATE cards c SET search_vector = (
+      SELECT array_agg(round(u.x::float8 / n.length * 2048)::real ORDER BY u.i)::vector
+      FROM unnest(c.search_vector::real[]) WITH ORDINALITY AS u(x, i)
+    )
+    FROM n WHERE c.id = n.id AND n.length > 0`
+})
+
 export const migrations = {
   "0001_init": init,
   "0002_agent": agent,
@@ -668,5 +689,6 @@ export const migrations = {
   "0007_search_understandings": searchUnderstandings,
   "0008_card_search_vectors": cardSearchVectors,
   "0009_card_fits": cardFits,
-  "0010_search_outbox": searchOutbox
+  "0010_search_outbox": searchOutbox,
+  "0011_whole_search_vectors": wholeSearchVectors
 }

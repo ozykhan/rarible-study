@@ -3,6 +3,7 @@ import { Cache, Effect, Exit, Layer } from "effect"
 import { SqlClient } from "effect/sql/SqlClient"
 import { toTextArray } from "../../db/Database.ts"
 import { Embedder } from "../../embeddings/Embedder.ts"
+import { searchVector } from "../CardVectors.ts"
 import {
   defaultSort,
   describedWords,
@@ -59,14 +60,18 @@ const CARD_BATCH = 200
 const WINDOW = 10_000
 
 /**
- * A card's score in Best match: 1 + cosine similarity to the query vector, so
- * a perfect match is 2 and the cosine distance pgvector orders by is 2 minus
- * the score. A card with no vector yet scores 0, and ranks last, as a null
- * distance does in Postgres. (A vector pointing exactly away from the query
- * would score 0 too; text embeddings never do.)
+ * A card's score in Best match: its vector's dot product with the query's,
+ * plus 2^23 so that no score is negative. Search vectors are whole numbers of
+ * length 2048 (searchVector), so the dot product is a whole number between
+ * minus and plus 2048 squared, and the score a whole number below 2^24: a
+ * float holds it exactly, and the engine sums it exactly whatever order its
+ * vector instructions add in. The distance pgvector's <#> orders by is 2^23
+ * minus the score, the same number to the last digit. A card with no vector
+ * yet scores 0 and ranks last, as a null distance does in Postgres.
  */
-const VECTOR_SCORE = "doc['search_vector'].size() == 0 ? 0 : 1 + cosineSimilarity(params.v, doc['search_vector'])"
-const distance = (score: number) => (score === 0 ? Number.POSITIVE_INFINITY : 2 - score)
+const SCORE_OFFSET = 2 ** 23
+export const VECTOR_SCORE = `doc['search_vector'].size() == 0 ? 0 : ${SCORE_OFFSET} + innerProduct(params.v, doc['search_vector'])`
+export const distance = (score: number) => (score === 0 ? Number.POSITIVE_INFINITY : SCORE_OFFSET - score)
 
 /**
  * pg_trgm's similarity, worked out in the engine: the bool query scores a
@@ -118,6 +123,10 @@ interface First {
   readonly listedAt: number
 }
 
+/** The first round's order: closest card first, then newest listing, then listing id. Cards with no vector are all at Infinity, and Infinity minus Infinity is NaN, which counts as a tie. */
+const firstOrder = (a: First, b: First) =>
+  a.d - b.d || b.listedAt - a.listedAt || (a.listingId < b.listingId ? -1 : a.listingId > b.listingId ? 1 : 0)
+
 export const SearchServiceOpenSearch = Layer.effect(
   SearchService,
   Effect.gen(function* () {
@@ -152,7 +161,7 @@ export const SearchServiceOpenSearch = Layer.effect(
     const queryVectors = yield* Cache.makeWith(
       (text: string) =>
         embedder.embed([text], "query").pipe(
-          Effect.map((vs) => vs[0] ?? []),
+          Effect.map((vs) => searchVector(vs[0] ?? [])),
           Effect.withSpan("SearchService.queryVector")
         ),
       { capacity: QUERY_VECTORS.capacity, timeToLive: (exit) => (Exit.isSuccess(exit) ? QUERY_VECTORS.timeToLive : 0) }
@@ -306,9 +315,11 @@ export const SearchServiceOpenSearch = Layer.effect(
       const firsts: Array<First> = []
       let after: ReadonlyArray<unknown> | null = null
       let size = Math.min(WINDOW, Math.max(CARD_BATCH, end))
-      let lastScore = Number.NaN
-      // Cards with no vector all score 0 and are ordered by their listings, so that group is never split between batches.
-      while (firsts.length < end || lastScore === 0) {
+      let lastD = Number.NaN
+      // Cards that tie are ordered by their listings, so cards are read until the one that ends the page is closer
+      // than the last card read: any card not read yet could tie with it. (Cards with no vector yet all tie.)
+      const cutoff = () => [...firsts].sort(firstOrder)[end - 1]?.d
+      while (firsts.length < end || cutoff() === lastD) {
         const res = yield* os.search(indexes.cards, {
           size,
           track_total_hits: false,
@@ -320,7 +331,7 @@ export const SearchServiceOpenSearch = Layer.effect(
         const hits: ReadonlyArray<Hit> = res.hits.hits
         if (hits.length === 0) break
         after = hits[hits.length - 1]!.sort ?? null
-        lastScore = hits[hits.length - 1]!._score ?? 0
+        lastD = distance(hits[hits.length - 1]!._score ?? 0)
         const cards = hits.map((h) => ({ id: h._id, d: distance(h._score ?? 0), count: 0 }))
         ranked.push(...cards)
         // Per card: how many listings match, and the newest of them. (Collapsing the hits on the card instead was slower.)
@@ -351,7 +362,7 @@ export const SearchServiceOpenSearch = Layer.effect(
         if (hits.length < size) break
         size = Math.min(WINDOW, size * 4)
       }
-      firsts.sort((a, b) => a.d - b.d || b.listedAt - a.listedAt || (a.listingId < b.listingId ? -1 : a.listingId > b.listingId ? 1 : 0))
+      firsts.sort(firstOrder)
       const page = firsts.slice(o.offset, end).map((f) => f.listingId)
       if (firsts.length >= end) return page
 

@@ -8,9 +8,11 @@ import { describe, expect, layer } from "@effect/vitest"
 import { Context, Effect, Layer } from "effect"
 import { SqlClient } from "effect/sql/SqlClient"
 import { CatalogRepo } from "../src/catalog/CatalogRepo.ts"
-import { CardVectors } from "../src/search/CardVectors.ts"
+import { toVector } from "../src/db/Database.ts"
+import { hashEmbed } from "../src/embeddings/Embedder.ts"
+import { CardVectors, searchVector } from "../src/search/CardVectors.ts"
 import { OpenSearch, OpenSearchLive, trigrams } from "../src/search/opensearch/OpenSearch.ts"
-import { SearchServiceOpenSearch } from "../src/search/opensearch/SearchServiceOpenSearch.ts"
+import { distance, SearchServiceOpenSearch, VECTOR_SCORE } from "../src/search/opensearch/SearchServiceOpenSearch.ts"
 import { SearchSync, SearchSyncLive } from "../src/search/opensearch/SearchSync.ts"
 import { FIT_VERSION, fitKey, type MarketQuery, type MarketSort } from "../src/search/query.ts"
 import { SearchService, SearchServicePg } from "../src/search/SearchService.ts"
@@ -155,6 +157,23 @@ describe.skipIf(!enabled)("market search on OpenSearch", () => {
         ;({ pg, os } = yield* engines)
         yield* same(pg, os, everyKind)
         expect(yield* os.stats).toEqual(yield* pg.stats)
+
+        // Each card's distance to a query is the same number in both engines, to the last digit, so cards that
+        // tie in one tie in the other: no near tie can fall one way here and the other way on another machine.
+        const engine = yield* OpenSearch
+        for (const text of ["water holo", "dragon that guards a frozen treasure", "glowing sea creature"]) {
+          const v = searchVector(hashEmbed(text))
+          const inPg = yield* sql<{ readonly id: string; readonly d: number }>`
+            SELECT id, (search_vector <#> ${toVector(v)}::vector)::float8 AS d FROM cards ORDER BY id`
+          const res = yield* engine.search(engine.indexes.cards, {
+            size: 100,
+            query: { script_score: { query: { match_all: {} }, script: { source: VECTOR_SCORE, params: { v } } } }
+          })
+          const inOs = Object.fromEntries(res.hits.hits.map((h) => [h._id, distance(h._score ?? 0)]))
+          // Postgres negates a zero dot product into -0, which orders as 0.
+          expect(inPg.map((r) => [r.id, inOs[r.id]]), text).toEqual(inPg.map((r) => [r.id, r.d + 0]))
+          expect(inPg.every((r) => Number.isInteger(r.d))).toBe(true)
+        }
 
         // A description a model judged: only the cards it said fit match, on both, and both offer the same cards to judge.
         const fit = "guards a frozen treasure"
