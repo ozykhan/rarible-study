@@ -36,8 +36,25 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      # For the test that checks OpenSearch answers market searches as Postgres does.
+      opensearch:
+        image: opensearchproject/opensearch:3.9.0
+        env:
+          discovery.type: single-node
+          DISABLE_SECURITY_PLUGIN: "true"
+          DISABLE_INSTALL_DEMO_CONFIG: "true"
+          cluster.routing.allocation.disk.threshold_enabled: "false"
+          OPENSEARCH_JAVA_OPTS: -Xms1g -Xmx1g
+        ports:
+          - 9200:9200
+        options: >-
+          --health-cmd "curl -fs localhost:9200/_cluster/health || exit 1"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
     env:
       DATABASE_URL: postgres://slabwatch:slabwatch@localhost:5432/slabwatch
+      OPENSEARCH_URL: http://localhost:9200
       EMBEDDER: hash
     steps:
       - uses: actions/checkout@v4

@@ -1,11 +1,10 @@
 import { Edition, Finish, Grader, graderNames } from "@slabwatch/domain"
 import { Context, Effect, Layer, Schema } from "effect"
 import { SqlClient } from "effect/sql/SqlClient"
-import type { SqlError } from "effect/sql/SqlError"
 import { Llm, type Usage } from "../llm/Llm.ts"
 import { TAG_IDS, TAG_VOCAB_VERSION, TAGS, tagById } from "../tags/vocabulary.ts"
 import { describeSearch, descriptionWords, isStopword, parseSearch, searchText, searchWords, type ParsedSearch } from "./query.ts"
-import { SearchService } from "./SearchService.ts"
+import { SearchService, type SearchError } from "./SearchService.ts"
 
 /**
  * The query step of described search. Code reads what it can (query.ts);
@@ -149,7 +148,7 @@ export class SearchUnderstanding extends Context.Service<
      * about to be called (a cache miss): a rate limit goes there, and its
      * failure means "busy".
      */
-    readonly understand: <E, R>(q: string, beforeModel: Effect.Effect<void, E, R>) => Effect.Effect<Understanding, SqlError, R>
+    readonly understand: <E, R>(q: string, beforeModel: Effect.Effect<void, E, R>) => Effect.Effect<Understanding, SearchError, R>
   }
 >()("slabwatch/SearchUnderstanding") {}
 

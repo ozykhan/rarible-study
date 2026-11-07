@@ -3,8 +3,8 @@ import { Effect } from "effect"
 import { SqlClient } from "effect/sql/SqlClient"
 import { ReposLive } from "../layers.ts"
 import { LoggingLive } from "../logging.ts"
-import type { MarketQuery } from "../search/query.ts"
 import { SearchService, STATS_TTL } from "../search/SearchService.ts"
+import { BENCH_SEARCHES as searches, benchQuery as query, percentile } from "./benchSearches.ts"
 
 /**
  * Times market searches against whatever database DATABASE_URL and DB_SCHEMA
@@ -13,39 +13,10 @@ import { SearchService, STATS_TTL } from "../search/SearchService.ts"
  *
  *   pnpm bench:search            20 runs of each search, then 50 at once
  *   BENCH_RUNS=50 pnpm bench:search
+ *
+ * SEARCH_ENGINE=opensearch times the copy in OpenSearch instead; pnpm
+ * bench:engines runs both side by side and checks they agree.
  */
-const searches: ReadonlyArray<readonly [string, Partial<MarketQuery>]> = [
-  ["home page (newest)", {}],
-  ["cheapest first", { sort: "price_asc" }],
-  ["highest grade first", { sort: "grade" }],
-  ["one set", { set: "X050" }],
-  ["card name", { q: "ashen wyrm" }],
-  ["half a word", { q: "wyr" }],
-  ["kind", { q: "dragon" }],
-  ["finish (a third of the market)", { q: "holo" }],
-  ["grader and grade", { q: "NVG 10" }],
-  ["kind, finish, price", { q: "dragon holo under 200" }],
-  ["set name and min grade", { q: "emberfall 9+" }],
-  ["word, cheapest first", { q: "tide", sort: "price_asc" }],
-  ["seller", { q: "@vaultkeeper" }],
-  ["typo (did you mean)", { q: "ashen wyrn" }],
-  ["described: tag", { q: "sea animal" }],
-  ["described: two tags and a finish", { q: "glowing sea creature holo" }],
-  ["described: tags, grade, price", { q: "flying fire 9+ under 300" }],
-  ["described: tag and a name word", { q: "flying owl" }],
-  ["deep page", { q: "holo", offset: 5000 }],
-  ["best match: tag", { q: "sea animal", sort: "relevance" }],
-  ["best match: tag, ranked by typed words", { q: "dragon", from: "dragon sitting on a pile of treasure", sort: "relevance" }],
-  ["best match: two tags and a finish", { q: "glowing sea creature holo", sort: "relevance" }],
-  ["best match: tags, grade, price", { q: "flying fire 9+ under 300", sort: "relevance" }],
-  ["best match: deep page", { q: "dragon", sort: "relevance", offset: 5000 }]
-]
-
-const percentile = (xs: ReadonlyArray<number>, p: number) => {
-  const s = [...xs].sort((a, b) => a - b)
-  return s[Math.min(s.length - 1, Math.floor((p / 100) * s.length))] ?? 0
-}
-
 const program = Effect.gen(function* () {
   const sql = yield* SqlClient
   const search = yield* SearchService
@@ -58,7 +29,6 @@ const program = Effect.gen(function* () {
     "| search | matches | p50 | p95 |",
     "| --- | ---: | ---: | ---: |"
   ]
-  const query = (over: Partial<MarketQuery>): MarketQuery => ({ set: null, grader: null, q: "", sort: "recent", from: "", fit: "", offset: 0, limit: 40, ...over })
   for (const [name, over] of searches) {
     const first = yield* search.search(query(over))
     const times: Array<number> = []

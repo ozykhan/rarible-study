@@ -1,5 +1,5 @@
 import type { Grader } from "@slabwatch/domain"
-import { Cache, Context, Effect, Exit, Layer } from "effect"
+import { Cache, Context, Effect, Exit, Layer, Schema } from "effect"
 import type { SqlError } from "effect/sql/SqlError"
 import { SqlClient } from "effect/sql/SqlClient"
 import type { Fragment } from "effect/sql/Statement"
@@ -23,10 +23,19 @@ import {
 
 /**
  * Market search as a service: a query in, listing ids and counts out. The web
- * route turns the ids into full listings. This version runs on Postgres over
- * listing_search (see migration 0005_search); a search engine can implement
- * the same interface later without the route changing.
+ * route turns the ids into full listings. SearchServicePg below runs on
+ * Postgres over listing_search (see migration 0005_search);
+ * opensearch/SearchServiceOpenSearch.ts answers the same questions from a copy
+ * in OpenSearch, and the route cannot tell them apart.
  */
+
+/** The search engine could not answer: it is unreachable, or it refused the request. */
+export class SearchEngineError extends Schema.TaggedError<SearchEngineError>()("SearchEngineError", {
+  message: Schema.String
+}) {}
+
+/** What a search can fail with: Postgres, or the engine when one is used. */
+export type SearchError = SqlError | SearchEngineError
 
 export interface SetRef {
   readonly id: string
@@ -106,15 +115,15 @@ export const fitText = (catalogText: string, name: string): string => {
 export class SearchService extends Context.Service<
   SearchService,
   {
-    readonly search: (query: MarketQuery) => Effect.Effect<MarketSearchResult, SqlError>
+    readonly search: (query: MarketQuery) => Effect.Effect<MarketSearchResult, SearchError>
     /**
      * The first `limit` cards a search shows best match first, ignoring any
      * judgments for its ?fit: the cards CardFit asks a model about.
      */
-    readonly fitCandidates: (query: MarketQuery, limit: number) => Effect.Effect<ReadonlyArray<FitCandidate>, SqlError>
-    readonly stats: Effect.Effect<MarketStats, SqlError>
+    readonly fitCandidates: (query: MarketQuery, limit: number) => Effect.Effect<ReadonlyArray<FitCandidate>, SearchError>
+    readonly stats: Effect.Effect<MarketStats, SearchError>
     /** The words that start some card, kind or set word, in the order given. */
-    readonly knownWords: (words: ReadonlyArray<string>) => Effect.Effect<ReadonlyArray<string>, SqlError>
+    readonly knownWords: (words: ReadonlyArray<string>) => Effect.Effect<ReadonlyArray<string>, SearchError>
     /**
      * For each word, the catalog words spelled most like it (trigram
      * similarity at least `threshold`, Postgres's 0.3 by default), closest first.
@@ -123,7 +132,7 @@ export class SearchService extends Context.Service<
       words: ReadonlyArray<string>,
       limit: number,
       threshold?: number
-    ) => Effect.Effect<Readonly<Record<string, ReadonlyArray<string>>>, SqlError>
+    ) => Effect.Effect<Readonly<Record<string, ReadonlyArray<string>>>, SearchError>
   }
 >()("slabwatch/SearchService") {}
 
@@ -148,7 +157,7 @@ export const COUNT_LIMIT = 10_000
  * ("that guards treasure") still count. No model call: the query vector comes
  * from the local embedder and is cached.
  */
-const QUERY_VECTORS = { capacity: 2000, timeToLive: "1 hour" } as const
+export const QUERY_VECTORS = { capacity: 2000, timeToLive: "1 hour" } as const
 
 /** Search words become a prefix query: 'ashen':* & 'wyrm':*. Words are letters and digits only, so they need no escaping. */
 const prefixQuery = (words: ReadonlyArray<string>) => words.map((w) => `'${w}':*`).join(" & ")

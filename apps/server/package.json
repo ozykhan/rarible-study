@@ -13,6 +13,8 @@
     "tags:run": "tsx --env-file-if-exists=../../.env src/scripts/tag-cards.ts",
     "vectors:run": "tsx --env-file-if-exists=../../.env src/scripts/card-vectors.ts",
     "bench:search": "tsx --env-file-if-exists=../../.env src/scripts/bench-search.ts",
+    "bench:engines": "tsx --env-file-if-exists=../../.env src/scripts/compare-engines.ts",
+    "search:sync": "tsx --env-file-if-exists=../../.env src/scripts/search-sync.ts",
     "generate": "tsx --env-file-if-exists=../../.env src/scripts/generate.ts",
     "start": "tsx src/main.ts",
     "typecheck": "tsc -p .",
