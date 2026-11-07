@@ -1,5 +1,9 @@
 # Slabwatch
 
+[![ci](https://github.com/ozykhan/rarible-study/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ozykhan/rarible-study/actions/workflows/ci.yml)
+[![codeql](https://github.com/ozykhan/rarible-study/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/ozykhan/rarible-study/actions/workflows/codeql.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A study project: a mock marketplace of tokenized, graded trading cards, with an optional AI agent that watches for the card you want.
 
 You browse the market and buy a slab directly, from a wallet you connect in the browser. No watch rule or agent is involved. If the card is not listed, you can describe it in plain words instead: the app turns that into a watch rule, matches new listings with code first and a model second, and lets an agent buy within limits that code enforces. Every purchase is paid with a test SPL token on Solana devnet.
@@ -441,6 +445,14 @@ I built this with Claude Code as a coding agent. I set the scope, the plan and t
 - A binder view of what a wallet has bought was cut for time. `GET /api/me/purchases` already lists it.
 - Direct buys and confirm mode sign a text and the delegate pays. Having the wallet sign the transfer itself would show the payment in the wallet's own approval screen.
 - The agent eval covers the agent's decisions; nothing yet measures the wallet flow beyond the tests above.
+
+## Security
+
+Please report vulnerabilities privately, as [SECURITY.md](SECURITY.md) describes, never in a public issue. `main` changes only through pull requests that pass CI, and gitleaks, GitHub secret scanning, CodeQL and Dependabot all run on the repository.
+
+## Contributing
+
+This is a personal study project, so outside pull requests are not accepted. Bug reports are welcome as issues, and forks are welcome under the MIT license. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
