@@ -1,0 +1,379 @@
+{
+  "label": "run6",
+  "ranAt": "2026-11-07T21:36:06.466Z",
+  "commit": "27aaa5a",
+  "model": "claude-haiku-5-5",
+  "promptVersion": 2,
+  "catalog": "40 cards",
+  "summary": {
+    "cases": 18,
+    "passed": 18,
+    "askedWhenClear": 0,
+    "missedQuestions": 0,
+    "fields": 144,
+    "fieldsRight": 144,
+    "modelCalls": 18,
+    "costUsd": 0.004108,
+    "avgInputTokens": 1864,
+    "ms": {
+      "p50": 885,
+      "p95": 1361
+    }
+  },
+  "cases": [
+    {
+      "want": "Origin Set Cinderwing Drake, 1st edition holo, NVG 9 or better, under $2,000",
+      "why": "matching eval rule R1",
+      "pass": true,
+      "problems": [],
+      "ms": 885,
+      "draft": {
+        "setId": "OS",
+        "cardId": "OS-001",
+        "edition": "first",
+        "finish": "holo",
+        "graders": [
+          "NVG"
+        ],
+        "minGrade": 9,
+        "maxPrice": 2000,
+        "currency": "USD",
+        "softDescription": null,
+        "questions": []
+      }
+    },
+    {
+      "want": "Emberfall Ashen Wyrm holo, any grader, 8 or better, max $900",
+      "why": "matching eval rule R2",
+      "pass": true,
+      "problems": [],
+      "ms": 959,
+      "draft": {
+        "setId": "EF",
+        "cardId": "EF-001",
+        "edition": "any",
+        "finish": "holo",
+        "graders": [],
+        "minGrade": 8,
+        "maxPrice": 900,
+        "currency": "USD",
+        "softDescription": null,
+        "questions": []
+      }
+    },
+    {
+      "want": "Tidewild Glimmerfin reverse holo, QSG 10 only, under $500",
+      "why": "matching eval rule R3",
+      "pass": true,
+      "problems": [],
+      "ms": 979,
+      "draft": {
+        "setId": "TW",
+        "cardId": "TW-001",
+        "edition": "any",
+        "finish": "reverse_holo",
+        "graders": [
+          "QSG"
+        ],
+        "minGrade": 10,
+        "maxPrice": 500,
+        "currency": "USD",
+        "softDescription": null,
+        "questions": []
+      }
+    },
+    {
+      "want": "Any holo water creature from Tidewild, grade 8 or better, under $250",
+      "why": "matching eval rule R4",
+      "pass": true,
+      "problems": [],
+      "ms": 750,
+      "draft": {
+        "setId": "TW",
+        "cardId": null,
+        "edition": "any",
+        "finish": "holo",
+        "graders": [],
+        "minGrade": 8,
+        "maxPrice": 250,
+        "currency": "USD",
+        "softDescription": "a water creature",
+        "questions": []
+      }
+    },
+    {
+      "want": "A first edition dragon card from any set, grade 9 or better, under $1,200",
+      "why": "matching eval rule R5",
+      "pass": true,
+      "problems": [],
+      "ms": 1361,
+      "draft": {
+        "setId": null,
+        "cardId": null,
+        "edition": "first",
+        "finish": "any",
+        "graders": [],
+        "minGrade": 9,
+        "maxPrice": 1200,
+        "currency": "USD",
+        "softDescription": "a dragon",
+        "questions": []
+      }
+    },
+    {
+      "want": "Horse cards grade 7 or better under $100",
+      "why": "a kind no card name says (Kelpie Foal, Starlit Unicorn): the parser asked whether horse cards exist",
+      "pass": true,
+      "problems": [],
+      "ms": 778,
+      "draft": {
+        "setId": null,
+        "cardId": null,
+        "edition": "any",
+        "finish": "any",
+        "graders": [],
+        "minGrade": 7,
+        "maxPrice": 100,
+        "currency": "USD",
+        "softDescription": "a horse",
+        "questions": []
+      }
+    },
+    {
+      "want": "any golem, grade 8 or better, under $80",
+      "why": "a kind that card names do say",
+      "pass": true,
+      "problems": [],
+      "ms": 725,
+      "draft": {
+        "setId": null,
+        "cardId": null,
+        "edition": "any",
+        "finish": "any",
+        "graders": [],
+        "minGrade": 8,
+        "maxPrice": 80,
+        "currency": "USD",
+        "softDescription": "a golem",
+        "questions": []
+      }
+    },
+    {
+      "want": "a glowing sea creature, holo, under $300",
+      "why": "two descriptions search reads as tags",
+      "pass": true,
+      "problems": [],
+      "ms": 938,
+      "draft": {
+        "setId": null,
+        "cardId": null,
+        "edition": "any",
+        "finish": "holo",
+        "graders": [],
+        "minGrade": 1,
+        "maxPrice": 300,
+        "currency": "USD",
+        "softDescription": "a glowing sea creature",
+        "questions": []
+      }
+    },
+    {
+      "want": "unicorn cards, grade 9 or better, max $400",
+      "why": "a kind, though one card's name has the word: not that card",
+      "pass": true,
+      "problems": [],
+      "ms": 1025,
+      "draft": {
+        "setId": null,
+        "cardId": null,
+        "edition": "any",
+        "finish": "any",
+        "graders": [],
+        "minGrade": 9,
+        "maxPrice": 400,
+        "currency": "USD",
+        "softDescription": "a unicorn",
+        "questions": []
+      }
+    },
+    {
+      "want": "something that swims, holo, LCA only, under $120",
+      "why": "a description in plain words",
+      "pass": true,
+      "problems": [],
+      "ms": 1027,
+      "draft": {
+        "setId": null,
+        "cardId": null,
+        "edition": "any",
+        "finish": "holo",
+        "graders": [
+          "LCA"
+        ],
+        "minGrade": 1,
+        "maxPrice": 120,
+        "currency": "USD",
+        "softDescription": "something that swims",
+        "questions": []
+      }
+    },
+    {
+      "want": "a fire breathing dragon from Emberfall, 1st edition, under $1,000",
+      "why": "a set and a description",
+      "pass": true,
+      "problems": [],
+      "ms": 770,
+      "draft": {
+        "setId": "EF",
+        "cardId": null,
+        "edition": "first",
+        "finish": "any",
+        "graders": [],
+        "minGrade": 1,
+        "maxPrice": 1000,
+        "currency": "USD",
+        "softDescription": "a fire breathing dragon",
+        "questions": []
+      }
+    },
+    {
+      "want": "lumen moth reverse holo, NVG 10, under $200",
+      "why": "a card named in lowercase",
+      "pass": true,
+      "problems": [],
+      "ms": 872,
+      "draft": {
+        "setId": "OS",
+        "cardId": "OS-009",
+        "edition": "any",
+        "finish": "reverse_holo",
+        "graders": [
+          "NVG"
+        ],
+        "minGrade": 10,
+        "maxPrice": 200,
+        "currency": "USD",
+        "softDescription": null,
+        "questions": []
+      }
+    },
+    {
+      "want": "Frostpetal, holo, 9 or better, max $150",
+      "why": "the first word of a card's name",
+      "pass": true,
+      "problems": [],
+      "ms": 689,
+      "draft": {
+        "setId": "OS",
+        "cardId": "OS-007",
+        "edition": "any",
+        "finish": "holo",
+        "graders": [],
+        "minGrade": 9,
+        "maxPrice": 150,
+        "currency": "USD",
+        "softDescription": null,
+        "questions": []
+      }
+    },
+    {
+      "want": "Cinderwng Drake from Origin, grade 9 or better, under $600",
+      "why": "a misspelt card and half a set name",
+      "pass": true,
+      "problems": [],
+      "ms": 917,
+      "draft": {
+        "setId": "OS",
+        "cardId": "OS-001",
+        "edition": "any",
+        "finish": "any",
+        "graders": [],
+        "minGrade": 9,
+        "maxPrice": 600,
+        "currency": "USD",
+        "softDescription": null,
+        "questions": []
+      }
+    },
+    {
+      "want": "Ashen Wyrm, any grader, grade 9 or better, under ¥60,000",
+      "why": "a card priced in yen",
+      "pass": true,
+      "problems": [],
+      "ms": 770,
+      "draft": {
+        "setId": "EF",
+        "cardId": "EF-001",
+        "edition": "any",
+        "finish": "any",
+        "graders": [],
+        "minGrade": 9,
+        "maxPrice": 60000,
+        "currency": "JPY",
+        "softDescription": null,
+        "questions": []
+      }
+    },
+    {
+      "want": "Emberkit grade 10 under $90",
+      "why": "a one-word card name",
+      "pass": true,
+      "problems": [],
+      "ms": 1026,
+      "draft": {
+        "setId": "OS",
+        "cardId": "OS-008",
+        "edition": "any",
+        "finish": "any",
+        "graders": [],
+        "minGrade": 10,
+        "maxPrice": 90,
+        "currency": "USD",
+        "softDescription": null,
+        "questions": []
+      }
+    },
+    {
+      "want": "Cinderwing Drake holo, grade 9 or better, under $500",
+      "why": "the card is in two sets: ask which",
+      "pass": true,
+      "problems": [],
+      "ms": 694,
+      "draft": {
+        "setId": null,
+        "cardId": null,
+        "edition": "any",
+        "finish": "holo",
+        "graders": [],
+        "minGrade": 9,
+        "maxPrice": 500,
+        "currency": "USD",
+        "softDescription": null,
+        "questions": [
+          "\"Cinderwing Drake\" exists in Origin Set or Starward Expedition. Which one do you want?"
+        ]
+      }
+    },
+    {
+      "want": "Moonlight Unicorn, grade 9 or better, under $300",
+      "why": "a card that does not exist: ask, never swap in Starlit Unicorn",
+      "pass": true,
+      "problems": [],
+      "ms": 902,
+      "draft": {
+        "setId": null,
+        "cardId": null,
+        "edition": "any",
+        "finish": "any",
+        "graders": [],
+        "minGrade": 9,
+        "maxPrice": 300,
+        "currency": "USD",
+        "softDescription": "moonlight, nocturnal",
+        "questions": [
+          "I could not find a card called \"Moonlight Unicorn\". Can you check the name?"
+        ]
+      }
+    }
+  ]
+}

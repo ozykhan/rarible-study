@@ -35,6 +35,8 @@ Everything runs on Solana devnet with test tokens that have no value. Switch a S
 
 "Origin Set Cinderwing Drake, 1st edition holo, NVG 9 or better, under $2,000" goes to Claude Haiku 5.5 with a JSON schema as structured output. The model returns names and numbers, never ids. Code then resolves names to catalog ids with a small typo tolerance. Anything unknown or ambiguous becomes a question for the collector instead of a guess. For example, Cinderwing Drake exists in two sets, so the draft rule asks which one. A missing price is also a question, never a default.
 
+The model never sees the catalog. Under the want, [`RuleParser.ts`](apps/server/src/rules/RuleParser.ts) lists what a search of the catalog found for the want's own words: sets and cards with a name word spelled like one of them (a trigram index on card names, one index read per word, the closest 5 cards a word), and the words the market reads as a description of a card, from the same tag vocabulary market search uses. So "Horse cards grade 7 or better under $100" is shown that "horse" means horses and that no card is named after one, and becomes a watch for "a horse" with no question; the watch then finds Kelpie Foal by its catalog text. The prompt is the same size for 40 cards or 20,000, and it says never to ask whether a card, set or kind of creature exists: a list of names cannot show that Kelpie Foal is a horse. Names are resolved in SQL against the catalog in the database, by exact name, a small typo, or a name's first words ("Kelpie"). A card name that only describes ("horse") becomes a description, as search would read it.
+
 ## How matching works
 
 Each rule runs a listing through four stages. A stage can only keep a listing or make its verdict stricter.
@@ -319,6 +321,20 @@ Both runs use Claude Haiku 5.5 and bge-small embeddings on the same eval set. Ex
 
 `pnpm eval -- v1 --offline` checks the plumbing with no model calls, and CI runs it on every push.
 
+### Drafting watch rules
+
+`pnpm eval:parse` sends 18 labelled wants through the parser the app uses: the five rules above, kinds of creature ("Horse cards", "any golem", "unicorn cards"), plain descriptions, cards named in lowercase, by their first word or misspelt, a price in yen, a card in two sets, and a card that does not exist. A case passes when every field is right and the draft asks a question exactly when a careful reader would. `--large` runs the same wants against the 20,040-card catalog, which keeps the four hand-written sets and their ids.
+
+| Run | Prompt | Catalog | Cases passed | Asked when clear | Missed questions | ms, p50 / p95 | Cost |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| prompt1 | 1, the catalog's names | 40 cards | 14 of 18 | 3 | 0 | 909 / 2,541 | $0.0040 |
+| run5 | 2, facts for the words | 40 cards | 18 of 18 | 0 | 0 | 867 / 1,726 | $0.0041 |
+| run6 | 2 | 40 cards | 18 of 18 | 0 | 0 | 885 / 1,361 | $0.0041 |
+| run7 | 2 | 20,040 cards | 18 of 18 | 0 | 0 | 884 / 2,060 | $0.0043 |
+| run8 | 2 | 20,040 cards | 18 of 18 | 0 | 0 | 919 / 1,946 | $0.0043 |
+
+Every run is in [`evals/results/rule-parsing.md`](evals/results/rule-parsing.md). With the catalog's names in the prompt, the parser asked whether horse cards exist, whether "any golem" meant all three golems, and whether "unicorn cards" meant only Starlit Unicorn, and it turned "Moonlight Unicorn", which does not exist, into Starlit Unicorn without asking. The cases and the prompt were written together, so this shows the change fixes what it was meant to fix, not how often a collector's want is drafted right.
+
 ### Reading described searches
 
 `pnpm eval:search` sends each of 51 labelled searches through the same reading the market uses, one at a time, against the hand-written catalog, then sends them all again to check the cache. A case passes when it is routed as labelled (code alone, or the model) and the reading has exactly the labelled names, grades, editions, finishes, graders and price, every labelled tag, and no other tag. An extra tag counts as a failure because every filter must match, so it hides cards; a case can list extras that hide nothing.
@@ -398,7 +414,7 @@ Outside a terminal the backend logs one JSON object per line, in the shape Railw
 ## Guardrails
 
 - The model can veto a match but never approve one that code rejected.
-- Catalog ids come from code, never from the model.
+- Catalog ids come from code, never from the model. The rule parser sees what a catalog search found for the want's words, never the catalog.
 - Purchases are checked in code against the rule's budget, the daily cap and the caller's rule-id allow-list, and checked again under a lock right before payment.
 - A direct buy is checked in code against red flags and the wallet's daily cap, and only the buyer's own signature can pay for it.
 - The MCP endpoint needs a bearer token, and tokens are stored only as hashes.
@@ -427,6 +443,7 @@ pnpm --filter @slabwatch/web dev   # marketplace on :3000
 pnpm test
 pnpm eval                   # v1 eval, needs the API key
 pnpm eval:search            # reads 51 labelled described searches, needs the API key (about $0.003)
+pnpm eval:parse             # drafts 18 labelled watch rules, needs the API key (about $0.004; --large for 20,040 cards)
 pnpm db:seed:large          # optional: 20,040 cards and a million listings, for search at scale
 pnpm bench:search           # times market searches against the database
 pnpm tags:run               # tags every card that needs it, through the Message Batches API (needs the API key)

@@ -23,6 +23,7 @@
     "eval:search": "pnpm --filter @slabwatch/evals eval:search",
     "eval:rank": "pnpm --filter @slabwatch/evals eval:rank",
     "eval:fit": "pnpm --filter @slabwatch/evals eval:fit",
+    "eval:parse": "pnpm --filter @slabwatch/evals eval:parse",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test"
   },

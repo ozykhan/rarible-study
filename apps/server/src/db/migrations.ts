@@ -700,6 +700,17 @@ const agentChat = Effect.gen(function* () {
   yield* sql`CREATE INDEX match_decisions_rule_created_idx ON match_decisions (rule_id, created_at DESC)`
 })
 
+/**
+ * Looking up the card a collector names when drafting a watch: a trigram
+ * index on lowercased card names serves "a name spelled like this" (%) and
+ * "a name with a word spelled like this" (<%), so the rule parser asks the
+ * database about the words it was given instead of holding the catalog.
+ */
+const cardNames = Effect.gen(function* () {
+  const sql = yield* SqlClient
+  yield* sql`CREATE INDEX cards_name_trgm_idx ON cards USING gin (lower(name) gin_trgm_ops)`
+})
+
 export const migrations = {
   "0001_init": init,
   "0002_agent": agent,
@@ -712,5 +723,6 @@ export const migrations = {
   "0009_card_fits": cardFits,
   "0010_search_outbox": searchOutbox,
   "0011_whole_search_vectors": wholeSearchVectors,
-  "0012_agent_chat": agentChat
+  "0012_agent_chat": agentChat,
+  "0013_card_names": cardNames
 }

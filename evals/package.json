@@ -9,7 +9,8 @@
     "eval:agent": "tsx --env-file-if-exists=../.env src/agentInjection.ts",
     "eval:search": "tsx --env-file-if-exists=../.env src/searchUnderstanding.ts",
     "eval:rank": "tsx --env-file-if-exists=../.env src/searchRanking.ts",
-    "eval:fit": "tsx --env-file-if-exists=../.env src/searchFit.ts"
+    "eval:fit": "tsx --env-file-if-exists=../.env src/searchFit.ts",
+    "eval:parse": "tsx --env-file-if-exists=../.env src/ruleParsing.ts"
   },
   "dependencies": {
     "@slabwatch/domain": "workspace:*",

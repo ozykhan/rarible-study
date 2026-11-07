@@ -21,6 +21,22 @@ export interface CardFacts {
   readonly catalogText: string
 }
 
+export interface SetName {
+  readonly id: string
+  readonly code: string
+  readonly name: string
+}
+
+export interface CardName {
+  readonly id: string
+  readonly setId: string
+  readonly setName: string
+  readonly name: string
+}
+
+/** How many cards or sets a name lookup returns at most. */
+export const NAME_CANDIDATES = 20
+
 interface ListingRowDb {
   readonly listingId: string
   readonly vaultItemId: string
@@ -114,6 +130,30 @@ export class CatalogRepo extends Context.Service<
     readonly hardCandidates: (hard: HardCriteria) => Effect.Effect<ReadonlyArray<ListingView>, SqlError>
     readonly marketFacts: (listingIds: ReadonlyArray<string>) => Effect.Effect<ReadonlyArray<MarketFacts>, SqlError>
     readonly cardFacts: (cardIds: ReadonlyArray<string>) => Effect.Effect<ReadonlyArray<CardFacts>, SqlError>
+    /**
+     * Sets whose name or code is spelled like `name` (trigram similarity),
+     * closest first: what a collector's set name could mean.
+     */
+    readonly setsNamed: (name: string) => Effect.Effect<ReadonlyArray<SetName>, SqlError>
+    /**
+     * Cards whose whole name is spelled like `name`, closest first, within
+     * one set when `setId` is given: what a collector's card name could mean.
+     * At most NAME_CANDIDATES, from the trigram index on card names.
+     */
+    readonly cardsNamed: (name: string, setId: string | null) => Effect.Effect<ReadonlyArray<CardName>, SqlError>
+    /** Sets with a name word spelled like one of `words`, or whose code is one of them. */
+    readonly setsLike: (words: ReadonlyArray<string>) => Effect.Effect<ReadonlyArray<SetName>, SqlError>
+    /**
+     * Cards with a name word spelled like one of `words`, the closest
+     * `perWord` for each word, in the order of the words: what the words of a
+     * want could name. Each word reads the trigram index on its own.
+     */
+    readonly cardsLike: (words: ReadonlyArray<string>, perWord: number) => Effect.Effect<ReadonlyArray<CardName>, SqlError>
+    /** A set and a card by id, or null for each one that does not exist. */
+    readonly namesById: (ids: {
+      readonly setId: string | null
+      readonly cardId: string | null
+    }) => Effect.Effect<{ readonly set: SetName | null; readonly card: CardName | null }, SqlError>
     /** Cosine similarity of a query vector to each listing's text, or to its catalog card. */
     readonly similarities: (
       query: ReadonlyArray<number>,
@@ -326,6 +366,68 @@ export const CatalogRepoLive = Layer.effect(
       return yield* sql<CardFacts>`SELECT id AS card_id, kinds, catalog_text FROM cards WHERE id IN ${sql.in(cardIds)}`
     })
 
+    // Names are compared lowercased, as the trigram index on cards (migration 0013) stores them.
+    const setsNamed = Effect.fn("CatalogRepo.setsNamed")(function* (name: string) {
+      const q = name.toLowerCase().trim()
+      if (q.length === 0) return []
+      // Sets number in the hundreds even in a big market: a scan is fine.
+      return yield* sql<SetName>`
+        SELECT id, code, name FROM sets
+        WHERE lower(name) % ${q} OR lower(code) = ${q}
+        ORDER BY lower(code) = ${q} DESC, similarity(lower(name), ${q}) DESC, id
+        LIMIT ${NAME_CANDIDATES}`
+    })
+
+    const cardsNamed = Effect.fn("CatalogRepo.cardsNamed")(function* (name: string, setId: string | null) {
+      const q = name.toLowerCase().trim()
+      if (q.length === 0) return []
+      return yield* sql<CardName>`
+        SELECT c.id, c.set_id, s.name AS set_name, c.name
+        FROM cards c JOIN sets s ON s.id = c.set_id
+        WHERE lower(c.name) % ${q} ${setId === null ? sql`` : sql`AND c.set_id = ${setId}`}
+        ORDER BY similarity(lower(c.name), ${q}) DESC, c.id
+        LIMIT ${NAME_CANDIDATES}`
+    })
+
+    // w <% name: some word of the name is spelled like w (pg_trgm's word similarity, cutoff 0.6).
+    const setsLike = Effect.fn("CatalogRepo.setsLike")(function* (words: ReadonlyArray<string>) {
+      if (words.length === 0) return []
+      return yield* sql<SetName>`
+        SELECT id, code, name FROM sets
+        WHERE EXISTS (SELECT 1 FROM unnest(${toTextArray(words)}::text[]) AS w WHERE w <% lower(name) OR w = lower(code))
+        ORDER BY id LIMIT ${NAME_CANDIDATES}`
+    })
+
+    const cardsLike = Effect.fn("CatalogRepo.cardsLike")(function* (words: ReadonlyArray<string>, perWord: number) {
+      if (words.length === 0) return []
+      // One index read per word, so a common word costs its own few rows, not a scan of every card.
+      return yield* sql<CardName>`
+        SELECT m.id, m.set_id, s.name AS set_name, m.name
+        FROM unnest(${toTextArray(words)}::text[]) WITH ORDINALITY AS w(word, at)
+        CROSS JOIN LATERAL (
+          SELECT c.id, c.set_id, c.name, word_similarity(w.word, lower(c.name)) AS score
+          FROM cards c WHERE w.word <% lower(c.name)
+          ORDER BY score DESC, c.id LIMIT ${perWord}
+        ) m
+        JOIN sets s ON s.id = m.set_id
+        GROUP BY m.id, m.set_id, s.name, m.name
+        ORDER BY min(w.at), max(m.score) DESC, m.id`
+    })
+
+    const namesById = Effect.fn("CatalogRepo.namesById")(function* (ids: {
+      readonly setId: string | null
+      readonly cardId: string | null
+    }) {
+      const sets = ids.setId === null ? [] : yield* sql<SetName>`SELECT id, code, name FROM sets WHERE id = ${ids.setId}`
+      const cards =
+        ids.cardId === null
+          ? []
+          : yield* sql<CardName>`
+              SELECT c.id, c.set_id, s.name AS set_name, c.name
+              FROM cards c JOIN sets s ON s.id = c.set_id WHERE c.id = ${ids.cardId}`
+      return { set: sets[0] ?? null, card: cards[0] ?? null }
+    })
+
     const search = Effect.fn("CatalogRepo.search")(function* (
       f: SearchFilters,
       queryVector: ReadonlyArray<number> | null,
@@ -406,6 +508,11 @@ export const CatalogRepoLive = Layer.effect(
       hardCandidates,
       marketFacts,
       cardFacts,
+      setsNamed,
+      cardsNamed,
+      setsLike,
+      cardsLike,
+      namesById,
       similarities,
       priceHistory
     })

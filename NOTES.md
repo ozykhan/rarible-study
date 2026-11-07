@@ -176,7 +176,7 @@ The market search moved from code over every listing in memory to Postgres behin
 
 ### Open
 
-- The want parser's prompt lists every hand-written card, which does not scale to 20,040 cards. The query step planned for search by description replaces it.
+- The want parser's prompt lists every hand-written card, which does not scale to 20,040 cards. The query step planned for search by description replaces it. (Done in [Drafting watches](#drafting-watches).)
 - `GET /api/catalog` and the home page's Browse by set still show the four hand-written sets.
 
 
@@ -366,3 +366,31 @@ The agent page's Talk to the agent panel was a read-only log under a chat title:
 - The chat cannot change a watch. A tool that drafts the change into Change this watch, for the collector to check and save, would match the design's chat box.
 - No eval yet for the chat: injected seller text read through `get_listing` during a chat, and questions that try to pull it off the marketplace.
 - Answers come back whole; streaming would show the first words sooner.
+
+
+## Drafting watches
+
+"Horse cards grade 7 or better under $100" drafted with the question "No horse-type card appears in the catalog; should any horse card match?", while market search found Kelpie Foal and Starlit Unicorn. The parser's prompt listed the 40 hand-written cards by name, and no name says horse. Search reads the tag `#horse` the tagger gave both cards.
+
+### Decisions
+
+- **No catalog in the prompt.** The message carries what a search of the catalog found for the want's own words: sets and cards with a name word spelled like one of them, and the words the market reads as a description, from the tag vocabulary search uses. This is the same move the search reader made: bounded by the want, not by the catalog.
+- **Never ask whether something exists.** The prompt says so, and says why: a card's name rarely says what it is. The watch already checks descriptions against every card's catalog text, so a want for a kind no card has yet is a watch that waits.
+- **Look names up in the database.** Resolution used the seed module in memory, which knows the 40 hand-written cards and nothing a bigger catalog adds. It now asks Postgres: a trigram index on lowercased card names (migration 0013) serves both "a name spelled like this" (`%`) and "a name with a word spelled like this" (`<%`), one index read per word, about 9 ms per lookup on 20,040 cards. The existing exact, then typo rule runs on those candidates, plus a name's first words ("Kelpie" for Kelpie Foal), and two that tie still become a question. `POST /rules` checks ids against the database too.
+- **A word of a set's name is not looked up among cards.** On the large catalog "Emberfall" also listed five Emberfang cards, and the model put "Emberfall" in the description instead of the set.
+- **A card name that only describes becomes a description.** If the model still returns "horse" as a card, code reads it as search would (only tag words) and adds it to the description instead of asking about a card called horse.
+
+### Things the eval caught
+
+- The catalog list did worse than the false question: it turned "Moonlight Unicorn", which does not exist, into Starlit Unicorn without asking, and asked whether "any golem" meant all three golems.
+- "Kelpie" was first labelled a card. The model read it as a kind (a kelpie is a mythical water horse, and the horse tag says so), which is a fair reading, so the case became "Frostpetal".
+- Showing a description as `"moonlight" (nocturnal)` got copied into the description word for word; it now reads `"moonlight" means nocturnal`, and the prompt says to leave out the words of a name already returned.
+- On the large catalog, "Moonlight Unicorn" came back as the description "a moonlight unicorn" in both runs, so nothing asked about it. The prompt now says a name the search did not find is still a name.
+- With the real embedder and the judge, the horse watch on the seed market matched the three Kelpie Foal listings among 103 that pass grade and price, and nothing else (one of the three is needs review). Starlit Unicorn has no listing at grade 7 under $100 in the seed.
+
+### Open
+
+- The matcher sends a soft rule's 20 listings closest to the description, by seller text, to the judge. With a million listings, "horse, grade 7, under $100" passes the hard filter on tens of thousands, and horses can fall outside the 20. The tag filter search uses (`#horse` or the word) could narrow the candidates first, so the watch and the market agree at scale too.
+- Watch summaries (`/me`, the agent page) and `GET /api/catalog` still name sets and cards from the seed module, so a card only the database has shows its id.
+- The draft could say how many listings search finds for it right now, with a link, so the collector sees the two agree before saving.
+

@@ -382,8 +382,7 @@ export const WebApiRoutes = HttpRouter.addAll(
           return yield* new ApiError({ message: "describe what you want in 3 to 500 characters", status: 400 })
         }
         yield* limited("costly", wallet)
-        const draft = yield* parser.parse(text)
-        return { draft, setName: setName(draft.hard.setId), cardName: cardName(draft.hard.cardId) }
+        return yield* parser.parse(text)
       })
     )
 
@@ -394,11 +393,13 @@ export const WebApiRoutes = HttpRouter.addAll(
         const wallet = yield* session
         const input = yield* body(NewRule)
         const { hard, budget } = input
-        if (hard.setId !== null && !sets.some((s) => s.id === hard.setId)) {
+        // The catalog in the database, as the parser and search see it, not the hand-written seed.
+        const named = yield* catalog.namesById({ setId: hard.setId, cardId: hard.cardId })
+        if (hard.setId !== null && named.set === null) {
           return yield* new ApiError({ message: "unknown set", status: 400 })
         }
-        const card = hard.cardId === null ? null : cards.find((c) => c.id === hard.cardId)
-        if (card === undefined || (card !== null && hard.setId !== null && card.setId !== hard.setId)) {
+        const card = named.card
+        if ((hard.cardId !== null && card === null) || (card !== null && hard.setId !== null && card.setId !== hard.setId)) {
           return yield* new ApiError({ message: "unknown card for that set", status: 400 })
         }
         if (hard.maxPrice.currency !== budget.currency) {
