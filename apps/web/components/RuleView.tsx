@@ -1,15 +1,15 @@
 "use client"
 
-import Link from "next/link"
 import type { CSSProperties, FormEvent, ReactNode } from "react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { api } from "@/lib/api"
 import { ago, cardArt, GRADERS, setTheme } from "@/lib/art"
-import { explorerTx, label, money, toMinor, variant } from "@/lib/format"
+import { explorerTx, label, money, toMinor } from "@/lib/format"
 import { outcomeText, signAndPay } from "@/lib/purchase"
 import type { AgentRun, Decision, Purchase, RuleDetail, SigningRequest, Status } from "@/lib/types"
 import { useAction } from "@/lib/useAction"
-import { Badge, Button, Led, Panel, Pill, type PillTone } from "./ui"
+import { FoundForYou } from "./FoundForYou"
+import { Button, Led, Panel, Pill, type PillTone } from "./ui"
 
 const PURCHASE_TONE: Partial<Record<Purchase["status"], PillTone>> = { executed: "ok", refused: "bad", failed: "bad" }
 
@@ -57,7 +57,7 @@ const until = (iso: string) =>
  * collector can do with it: sign a waiting purchase, buy a match, ask the
  * agent about one, chat with the agent about the watch, turn buying without
  * asking on or off, pause or resume. The /agent page shows it in two places,
- * RuleView and RuleChat. The chat has its own busy state and error, so a
+ * RuleHead and RuleBody, and RuleChat. The chat has its own busy state and error, so a
  * question on its way does not hold up the buttons on the watch.
  */
 export function useRule(p: { token: string; ruleId: string | null; signText: (message: string) => Promise<string>; onChange: () => void }) {
@@ -171,125 +171,98 @@ export interface ChatControls {
 export type RuleState = ReturnType<typeof useRule>
 
 /**
- * The selected watch in the middle of /agent: the watch and its conditions
- * with Pause or Resume, Found for you (purchases waiting for a signature,
- * matches, and listings to review), Checked and skipped with the reasons,
- * Buy without asking, and the purchases. Styles: styles/desk.css.
+ * The selected watch at the top of /agent, beside the watches: what it wants
+ * and its state as pills, Pause or Resume, and its conditions. It is as tall
+ * as its text; the list of watches beside it takes its height.
+ * Styles: styles/desk.css (.rule-head, .rule-facts).
  */
-export function RuleView({ state, status }: { state: RuleState; status: Status }) {
+export function RuleHead({ state }: { state: RuleState }) {
   const { detail, busy } = state
-  const [allSkipped, setAllSkipped] = useState(false)
-  if (detail === null) return <Panel className="muted">Loading the watch…</Panel>
+  if (detail === null) return <Panel className="rule muted">Loading the watch…</Panel>
 
   const { rule } = detail
   const h = rule.hard
-  const bought = new Set(detail.purchases.filter((p) => p.status === "executed").map((p) => p.listingId))
-  const found = detail.decisions.filter((d) => d.verdict !== "reject")
-  const skipped = detail.decisions.filter((d) => d.verdict === "reject")
-  const pending = detail.purchases.filter((p) => p.status === "proposed")
-  const canTrade = !status.readOnly
   const auto = detail.approvals[0]
   const judged = detail.decisions.length
 
   return (
-    <>
-      <Panel className="rule">
-        <header className="rule-head">
-          <div>
-            <p className="eyebrow">Watch</p>
-            <h2>{rule.rawWant}</h2>
-            <div className="pills">
-              <Pill tone={rule.status === "active" ? "ok" : null}>
-                <Led on={rule.status === "active"} />
-                {STATUS_WORD[rule.status]}
-              </Pill>
-              <Pill tone={auto ? "warn" : null}>
-                {auto
-                  ? `buys without asking, up to ${money({ amountMinor: auto.dailyCapUsdCents, currency: "USD" })} a day until ${until(auto.expiresAt)}`
-                  : "asks before buying"}
-              </Pill>
-              <Pill>
-                {judged >= 60 ? "60+" : judged} listing{judged === 1 ? "" : "s"} judged
-              </Pill>
-            </div>
+    <Panel className="rule">
+      <header className="rule-head">
+        <div>
+          <p className="eyebrow">Watch</p>
+          <h2>{rule.rawWant}</h2>
+          <div className="pills">
+            <Pill tone={rule.status === "active" ? "ok" : null}>
+              <Led on={rule.status === "active"} />
+              {STATUS_WORD[rule.status]}
+            </Pill>
+            <Pill tone={auto ? "warn" : null}>
+              {auto
+                ? `buys without asking, up to ${money({ amountMinor: auto.dailyCapUsdCents, currency: "USD" })} a day until ${until(auto.expiresAt)}`
+                : "asks before buying"}
+            </Pill>
+            <Pill>
+              {judged >= 60 ? "60+" : judged} listing{judged === 1 ? "" : "s"} judged
+            </Pill>
           </div>
-          {rule.status === "active" ? (
-            <Button variant="secondary" onClick={() => state.setStatus("paused")} disabled={busy !== null}>
-              Pause
-            </Button>
-          ) : (
-            <Button variant="secondary" onClick={() => state.setStatus("active")} disabled={busy !== null}>
-              Resume
-            </Button>
-          )}
-        </header>
-        <dl className="facts rule-facts">
-          <dt>Card</dt>
-          <dd>{rule.cardName ?? "any card"}</dd>
-          <dt>Set</dt>
-          <dd>{rule.setName ?? "any set"}</dd>
-          <dt>Edition</dt>
-          <dd>{label(h.edition)}</dd>
-          <dt>Finish</dt>
-          <dd>{label(h.finish)}</dd>
-          <dt>Grade</dt>
-          <dd>
-            {h.minGrade} or better, {h.graders.length ? h.graders.map((g) => GRADERS[g] ?? g).join(", ") : "any grader"}
-          </dd>
-          <dt>Top price</dt>
-          <dd>{money(h.maxPrice)}</dd>
-          <dt>Budget</dt>
-          <dd>{money(rule.budget)}</dd>
-          {rule.softDescription && (
-            <>
-              <dt>Also wants</dt>
-              <dd>{rule.softDescription}</dd>
-            </>
-          )}
-        </dl>
-        {state.note && <p className="note">{state.note}</p>}
-        {state.error && <p className="error">{state.error}</p>}
-      </Panel>
-
-      <Panel className="rule-found">
-        <div className="panel-head">
-          <h2>Found for you</h2>
-          <span className="muted small">Matches, and listings the agent wants you to look at</span>
         </div>
-        {pending.length > 0 && (
-          <div className="pending">
-            <h3>Waiting for your signature</h3>
-            {pending.map((p) => (
-              <PurchaseRow key={p.id} p={p}>
-                <Button onClick={() => state.sign(p.id)} disabled={busy !== null || !canTrade}>
-                  {busy === `sign:${p.id}` ? "Waiting for the wallet…" : "Sign and pay"}
-                </Button>
-              </PurchaseRow>
-            ))}
-          </div>
+        {rule.status === "active" ? (
+          <Button variant="secondary" onClick={() => state.setStatus("paused")} disabled={busy !== null}>
+            Pause
+          </Button>
+        ) : (
+          <Button variant="secondary" onClick={() => state.setStatus("active")} disabled={busy !== null}>
+            Resume
+          </Button>
         )}
-        {found.length === 0 && pending.length === 0 && (
-          <p className="empty small">Nothing matches yet. New listings arrive about once a minute, and each one is checked as it arrives.</p>
+      </header>
+      <dl className="facts rule-facts">
+        <dt>Card</dt>
+        <dd>{rule.cardName ?? "any card"}</dd>
+        <dt>Set</dt>
+        <dd>{rule.setName ?? "any set"}</dd>
+        <dt>Edition</dt>
+        <dd>{label(h.edition)}</dd>
+        <dt>Finish</dt>
+        <dd>{label(h.finish)}</dd>
+        <dt>Grade</dt>
+        <dd>
+          {h.minGrade} or better, {h.graders.length ? h.graders.map((g) => GRADERS[g] ?? g).join(", ") : "any grader"}
+        </dd>
+        <dt>Top price</dt>
+        <dd>{money(h.maxPrice)}</dd>
+        <dt>Budget</dt>
+        <dd>{money(rule.budget)}</dd>
+        {rule.softDescription && (
+          <>
+            <dt>Also wants</dt>
+            <dd>{rule.softDescription}</dd>
+          </>
         )}
-        {found.map((d) => (
-          <DecisionRow key={d.listingId} d={d}>
-            {d.verdict === "needs_review" && <Pill tone="warn">needs your review</Pill>}
-            {d.listing?.status === "active" && !bought.has(d.listingId) && (
-              <>
-                <Button onClick={() => state.buy(d.listingId)} disabled={busy !== null || !canTrade}>
-                  {busy === `buy:${d.listingId}` ? "Waiting for the wallet…" : "Buy now"}
-                </Button>
-                {status.modelConfigured && (
-                  <Button variant="secondary" onClick={() => state.askAgent(d.listingId)} disabled={busy !== null}>
-                    {busy === `agent:${d.listingId}` ? "The agent is checking…" : "Ask the agent"}
-                  </Button>
-                )}
-              </>
-            )}
-            {bought.has(d.listingId) && <Pill tone="ok">bought</Pill>}
-          </DecisionRow>
-        ))}
-      </Panel>
+      </dl>
+    </Panel>
+  )
+}
+
+/**
+ * Under the watch on /agent: the result of the last action, Found for you
+ * (FoundForYou), Checked and skipped with the reasons, Buy without asking,
+ * and the purchases. Styles: styles/desk.css.
+ */
+export function RuleBody({ state, status }: { state: RuleState; status: Status }) {
+  const { detail } = state
+  const [allSkipped, setAllSkipped] = useState(false)
+  if (detail === null) return null
+
+  const skipped = detail.decisions.filter((d) => d.verdict === "reject")
+  const canTrade = !status.readOnly
+
+  return (
+    <>
+      {state.note && <p className="note">{state.note}</p>}
+      {state.error && <p className="error">{state.error}</p>}
+
+      <FoundForYou state={state} status={status} />
 
       <Panel className="rule-skipped">
         <div className="panel-head">
@@ -377,10 +350,12 @@ function RuleAuto({ state, canTrade }: { state: RuleState; canTrade: boolean }) 
  * the agent answers. In the chat the agent has read tools only (listings and
  * past sales): it cannot buy or change the watch. Each turn is stored as an
  * agent run, so the log is the server's record, not the page's. The log
- * scrolls on its own and keeps the newest line in view. Styles:
- * styles/desk.css (.chat).
+ * scrolls on its own and keeps the newest line in view. On /agent it sits in
+ * a popup, and `onMinimize` adds the button that shrinks it. Styles:
+ * styles/desk.css (.chat, .chat-popup).
  */
-export function RuleChat({ detail, status, chat }: { detail: RuleDetail | null; status: Status; chat: ChatControls }) {
+export function RuleChat(props: { detail: RuleDetail | null; status: Status; chat: ChatControls; onMinimize?: () => void }) {
+  const { detail, status, chat } = props
   const runs = detail === null ? [] : [...detail.runs].reverse()
   const [text, setText] = useState("")
   const log = useRef<HTMLDivElement>(null)
@@ -405,9 +380,18 @@ export function RuleChat({ detail, status, chat }: { detail: RuleDetail | null; 
 
   return (
     <Panel className="chat">
-      <div className="panel-head">
-        <h2>Talk to the agent</h2>
-        <Pill>this watch</Pill>
+      <div className="panel-head chat-head">
+        <h2 id="chat-title">
+          <Led on={status.modelConfigured} />
+          Talk to the agent
+        </h2>
+        {props.onMinimize && (
+          <button type="button" className="btn-close" aria-label="Minimize the chat" onClick={props.onMinimize}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        )}
       </div>
       {detail === null ? (
         <p className="muted small">Loading…</p>
@@ -534,56 +518,6 @@ function ChatTurn({ r }: { r: AgentRun }) {
         </li>
       )}
     </>
-  )
-}
-
-/**
- * A listing the matcher judged: thumbnail in its set's tone, the card with its
- * grade and price, the meta line, the seller's own words as plain text in a
- * well, the reasons, and the actions. The card's name opens the listing page.
- */
-export function DecisionRow({ d, children }: { d: Decision; children?: ReactNode }) {
-  const l = d.listing
-  return (
-    <div className="listing" style={l ? ({ "--tone": setTheme(l)?.tone } as CSSProperties) : undefined}>
-      {l ? <img className="thumb" src={cardArt(l)} alt="" loading="lazy" width={64} height={89} /> : <span className="thumb" />}
-      <div>
-        <div className="listing-main">
-          <div>
-            <div className="decision-title">
-              {l ? <Link href={`/listing/${encodeURIComponent(l.listingId)}`}>{l.cardName}</Link> : <strong>{d.listingId}</strong>}
-              {l && (
-                <Badge>
-                  {l.grader} {l.grade}
-                </Badge>
-              )}
-            </div>
-            {l && (
-              <div className="muted small">
-                {l.setName} #{l.cardNumber} · {variant(l)} · cert {l.certNumber} · @{l.sellerHandle} · {ago(l.listedAt)}
-                {l.status !== "active" && ` · ${l.status}`}
-              </div>
-            )}
-          </div>
-          <div className="price">{l ? money(l.price) : ""}</div>
-        </div>
-        {l && (
-          <p className="seller-text small">
-            {l.title}
-            {"\n"}
-            {l.description}
-          </p>
-        )}
-        {d.reasons.length > 0 && (
-          <ul className="reasons small">
-            {d.reasons.slice(0, 4).map((r) => (
-              <li key={r}>{r}</li>
-            ))}
-          </ul>
-        )}
-        {children && <div className="row">{children}</div>}
-      </div>
-    </div>
   )
 }
 

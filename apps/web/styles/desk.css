@@ -1,11 +1,12 @@
 /*
- * /agent: the page head, then three columns. The rail holds the watches
- * (RuleList), the wallet (WalletPanel) and what the agent may do
- * (AgentLimits); the middle holds the selected watch (RuleView); the chat
- * column holds the watch as a conversation (RuleChat) and the form that
- * changes it (NewRule). Under 1200px the chat column moves under the watch;
- * under 900px everything stacks in markup order: watches, watch, chat,
- * wallet, limits. Also the panel contents shared with NewRule and the
+ * /agent: the page head, then the desk in two columns. The top row holds the
+ * watches (RuleList) beside the selected watch (RuleHead), the same height:
+ * the watch is as tall as its text, and the list fills that height and
+ * scrolls. Under them, the rail (AgentLimits, WalletPanel) beside what the
+ * watch found and skipped (RuleBody, with FoundForYou). Talk to the agent
+ * (RuleChat) is a popup at the bottom right, and Manage your watches
+ * (ManageWatches) a dialog. Under 900px everything stacks: watches, watch,
+ * found, then the rail. Also the panel contents shared with NewRule and the
  * listing page: .row, .facts, .seller-text.
  */
 
@@ -43,36 +44,55 @@
   color: var(--ink-soft);
 }
 
-/* The rail's panels sit in rows beside the watch; the last row takes up the rest of its height. */
 .agent-desk {
   display: grid;
-  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr) minmax(300px, 360px);
-  grid-template-rows: auto auto 1fr;
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
   grid-template-areas:
-    "list center chat"
-    "wallet center chat"
-    "limits center chat";
-  column-gap: var(--space-4);
+    "list watch"
+    "rail center";
+  gap: var(--space-3) var(--space-4);
   align-items: start;
 }
+/* The list takes the row's height from the watch beside it and scrolls inside it. */
 .agent-list {
   grid-area: list;
+  align-self: stretch;
+  position: relative;
+  min-height: 220px;
 }
-.agent-wallet {
-  grid-area: wallet;
+.agent-list > .rules {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
 }
-.agent-limits {
-  grid-area: limits;
+.agent-list .rule-list {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding-right: var(--space-1-5);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-control) transparent;
+}
+.agent-watch {
+  grid-area: watch;
+  min-width: 0;
+}
+.agent-watch > .panel {
+  margin: 0;
+}
+.agent-rail {
+  grid-area: rail;
+  min-width: 0;
 }
 .agent-center {
   grid-area: center;
   min-width: 0;
 }
-.agent-chat {
-  grid-area: chat;
-  min-width: 0;
-}
-.agent-wallet .facts dd {
+.agent-rail .facts dd {
   text-align: right;
 }
 
@@ -138,7 +158,7 @@
   border: 1px solid color-mix(in srgb, var(--warn) 25%, transparent);
 }
 
-/* ---------- RuleView ---------- */
+/* ---------- RuleHead: the selected watch ---------- */
 
 .rule-head {
   display: flex;
@@ -169,40 +189,6 @@
   border-top: 1px solid var(--line);
 }
 
-/* Found for you: purchases waiting for a signature, in a warn tint, above the matches. */
-.pending {
-  margin-bottom: var(--space-3);
-  padding: var(--space-3);
-  background: color-mix(in srgb, var(--warn) 5%, transparent);
-  border: 1px solid color-mix(in srgb, var(--warn) 55%, transparent);
-  border-radius: var(--radius-lg);
-}
-.pending .purchase:last-child {
-  margin-bottom: 0;
-}
-.rule-found .empty {
-  padding: var(--space-6) 0;
-}
-
-/* DecisionRow: a listing the matcher judged, with its thumbnail, price, seller text and reasons. */
-.listing {
-  display: grid;
-  grid-template-columns: 64px minmax(0, 1fr);
-  gap: var(--space-3-5);
-  margin-bottom: var(--space-2);
-  padding: var(--space-3);
-  background: var(--surface-subtle);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-}
-.thumb {
-  width: 64px;
-  aspect-ratio: 63 / 88;
-  object-fit: cover;
-  border-radius: var(--radius-thumb);
-  border: 2px solid var(--tone, var(--line-strong));
-  background: var(--surface-thumb);
-}
 /* PurchaseRow and an agent run. */
 .purchase,
 .run {
@@ -210,30 +196,6 @@
   padding: var(--space-2-5) var(--space-3);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-}
-.listing-main {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-/* The card's name opens its listing page; the grade badge sits beside it. */
-.decision-title {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-0-5);
-  font-weight: var(--weight-semibold);
-}
-.decision-title a {
-  color: var(--ink);
-  text-decoration: none;
-}
-.decision-title a:hover {
-  text-decoration: underline;
-}
-.listing .price {
-  font-size: var(--text-lg);
 }
 /* Seller text is untrusted, so it is shown as plain preformatted text in a well. */
 .seller-text {
@@ -244,11 +206,6 @@
   background: var(--surface-sunken);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-}
-.reasons {
-  margin: var(--space-1) 0;
-  padding-left: var(--space-4-5);
-  color: var(--muted);
 }
 .quote {
   margin: var(--space-1) 0 0;
@@ -428,30 +385,384 @@
   gap: var(--space-0-5);
   min-width: 0;
 }
-.rules .row {
-  margin-bottom: 0;
+/* Manage your watches: underlined accent text with an open icon, no border and no hover fill. */
+.manage-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0;
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  color: var(--accent);
+  background: none;
+  border: none;
+}
+.manage-link span {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
-@media (max-width: 1199px) {
-  .agent-desk {
-    grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
-    grid-template-rows: auto auto 1fr auto;
-    grid-template-areas:
-      "list center"
-      "wallet center"
-      "limits center"
-      "limits chat";
-  }
+/* ---------- FoundForYou: the found cards in a row that scrolls sideways ---------- */
+
+.found-heading {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+.found-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.found-count {
+  flex: 1 1 auto;
+}
+.found-arrows {
+  display: flex;
+  gap: var(--space-2);
+}
+/* A round arrow that scrolls the row; it greys out at the row's end. */
+.btn-arrow {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  color: var(--ink-soft);
+  background: transparent;
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius-pill);
+  transition: border-color var(--duration-fast) var(--ease);
+}
+.btn-arrow:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--line-active);
+}
+.btn-arrow:disabled {
+  color: var(--faint);
+  border-color: var(--line-strong);
+}
+.found-track {
+  display: flex;
+  gap: var(--space-3);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  padding-bottom: var(--space-3);
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+.found-track:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--space-0-5);
+}
+.found .empty {
+  padding: var(--space-8) 0;
+}
+
+/* FoundCard: a slab on a backdrop in its set's tone, then badge, name, meta, reason, price and actions. */
+.found-card {
+  flex: 0 0 240px;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--duration-base) var(--ease);
+}
+.found-card:hover {
+  border-color: var(--line-hover);
+}
+.found-media {
+  position: relative;
+  padding: var(--space-6) 14% var(--space-4-5);
+  background:
+    radial-gradient(120% 75% at 50% 0%, color-mix(in srgb, var(--tone, var(--set-unknown)) 22%, transparent), transparent 72%),
+    var(--surface-sunken);
+  border-bottom: 1px solid var(--line);
+}
+.found-kind {
+  position: absolute;
+  top: var(--space-2-5);
+  left: var(--space-2-5);
+  z-index: 1;
+}
+.found-kind .pill {
+  background: var(--surface-inset);
+}
+.found-placeholder {
+  display: block;
+  aspect-ratio: 0.62;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface-thumb);
+}
+.found-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+  padding: var(--space-3-5) var(--space-4) var(--space-4);
+}
+.found-body .badge {
+  margin: 0;
+}
+/* Two classes, so the card's name wins over a panel's uppercase h3 label. */
+.found-card .found-title {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-snug);
+  line-height: 1.3;
+  text-transform: none;
+  color: var(--ink);
+}
+.found-title a {
+  color: inherit;
+  text-decoration: none;
+}
+.found-title a:hover {
+  text-decoration: underline;
+}
+.found-meta,
+.found-reason,
+.found-foot {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+.found-meta {
+  color: var(--muted);
+}
+.found-reason {
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+/* A listing to review: why, in the warn tint. */
+.found-warn {
+  padding: var(--space-2) var(--space-2-5);
+  background: color-mix(in srgb, var(--warn) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warn) 55%, transparent);
+  border-radius: var(--radius-md);
+}
+/* The seller's words stay short in a card, so one long listing does not stretch the row. */
+.found-body .seller-text {
+  margin: 0;
+  max-height: 4.6em;
+  overflow-y: auto;
+}
+.found-price {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-2);
+}
+.found-under,
+.found-foot {
+  font-family: var(--mono);
+  font-size: var(--text-xs);
+  color: var(--faint);
+}
+.found-under {
+  white-space: nowrap;
+}
+.found-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding-top: var(--space-1);
+}
+
+/* ---------- Talk to the agent: RuleChat as a popup over the page, or its button ---------- */
+
+.chat-popup {
+  position: fixed;
+  right: var(--gutter);
+  bottom: calc(var(--statusbar-height) + var(--space-4));
+  z-index: var(--z-chat);
+  width: 400px;
+  max-width: calc(100vw - 2 * var(--gutter));
+  height: min(560px, calc(100dvh - var(--header-height) - var(--statusbar-height) - var(--space-8)));
+  display: flex;
+}
+.chat-popup > .chat {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  background: var(--surface-raised);
+  border-color: var(--line-strong);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+}
+.chat-popup .chat-log {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+.chat-head {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+.chat-head h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.chat-head .led {
+  margin: 0;
+}
+.chat-launcher {
+  position: fixed;
+  right: var(--gutter);
+  bottom: calc(var(--statusbar-height) + var(--space-4));
+  z-index: var(--z-chat);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 48px;
+  padding: 0 var(--space-5) 0 var(--space-4);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+  background: var(--surface-raised);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+}
+.chat-launcher svg {
+  color: var(--accent);
+}
+.chat-launcher:hover {
+  border-color: var(--line-active);
+}
+/* Room under the page's last panel, so the popup's button never covers it. */
+.agent-page.section {
+  padding-bottom: var(--space-22);
+}
+
+/* ---------- ManageWatches: a dialog over /agent ---------- */
+
+.manage-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-dialog);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: var(--glass-header);
+  backdrop-filter: blur(var(--blur-sm));
+}
+.manage {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 720px;
+  max-height: calc(100dvh - 2 * var(--space-4));
+  background: var(--surface-raised);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-xl);
+}
+.manage-head,
+.manage-foot {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-5);
+}
+.manage-head {
+  border-bottom: 1px solid var(--line);
+}
+.manage-head h2 {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-bold);
+}
+.manage-head .mono {
+  flex: 1;
+}
+.manage-foot {
+  justify-content: space-between;
+  padding-right: var(--space-5);
+  border-top: 1px solid var(--line);
+}
+.manage-foot .muted {
+  flex: 1 1 300px;
+}
+.manage-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-5);
+}
+.manage-body > .panel {
+  margin-bottom: var(--space-2);
+}
+.manage-changing {
+  margin: 0 0 var(--space-3);
+}
+.manage-list {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+}
+.manage-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--line);
+}
+.manage-row .led {
+  margin: 0;
+}
+.manage-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-5);
+  font-size: var(--text-md);
+}
+.manage-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
 }
 
 @media (max-width: 900px) {
   .agent-desk {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: none;
-    grid-template-areas: "list" "center" "chat" "wallet" "limits";
+    grid-template-areas: "list" "watch" "center" "rail";
+  }
+  .agent-list {
+    min-height: 0;
+  }
+  .agent-list > .rules {
+    position: static;
+    margin-bottom: 0;
+  }
+  .agent-list .rule-list {
+    max-height: 320px;
   }
   .rule-facts {
     grid-template-columns: max-content minmax(0, 1fr);
+  }
+  .manage-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .manage-actions {
+    grid-column: 2;
+    justify-content: flex-start;
   }
 }
 
@@ -468,5 +779,24 @@
   }
   .agent-lede {
     font-size: var(--text-md);
+  }
+  .found-card {
+    flex-basis: 200px;
+  }
+  .found-track {
+    gap: var(--space-2);
+  }
+  .manage-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .manage {
+    max-width: none;
+    max-height: 92dvh;
+    border-width: 1px 0 0;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  }
+  .manage-body {
+    padding: var(--space-4);
   }
 }
