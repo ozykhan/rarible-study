@@ -110,7 +110,17 @@ export interface FitCandidate {
  */
 export const fitText = (catalogText: string, name: string): string => {
   const at = catalogText.indexOf(`${name}. `)
-  return (at === -1 ? catalogText : catalogText.slice(at + name.length + 2)).replace(/\s*Rarity: [a-z ]+\./i, "").trim()
+  return withoutRarity(at === -1 ? catalogText : catalogText.slice(at + name.length + 2)).trim()
+}
+
+/**
+ * Drops the first "Rarity: ..." clause and the whitespace before it. Trimming
+ * in code, not with a leading \s* in the pattern, keeps a long run of spaces
+ * from making the match quadratic.
+ */
+const withoutRarity = (text: string): string => {
+  const rarity = /Rarity: [a-z ]+\./i.exec(text)
+  return rarity === null ? text : text.slice(0, rarity.index).trimEnd() + text.slice(rarity.index + rarity[0].length)
 }
 
 export class SearchService extends Context.Service<

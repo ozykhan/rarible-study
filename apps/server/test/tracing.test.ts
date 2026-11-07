@@ -102,6 +102,10 @@ describe("tracing", () => {
     expect(specific?.protocol).toBe("http/json")
     expect(specific?.serviceName).toBe("backend")
 
+    expect(resolveOtlp({ ...noEnv, endpoint: "https://otel.example///" })?.tracesUrl).toBe(
+      "https://otel.example/v1/traces"
+    )
+
     const withEndpoint = { ...noEnv, endpoint: "https://otel.example" }
     expect(resolveOtlp({ ...withEndpoint, disabled: true })).toBeNull()
     expect(resolveOtlp({ ...withEndpoint, exporter: "none" })).toBeNull()

@@ -15,6 +15,8 @@ describe("judging a card against a description", () => {
     expect(fitText(`Ember Peaks #004 Crystalborn Drake. ${text} Rarity: ultra rare.`, "Crystalborn Drake")).toBe(text)
     // Text in another shape is read whole, without its rarity.
     expect(fitText("Something else entirely. Rarity: rare.", "Crystalborn Drake")).toBe("Something else entirely.")
+    // Lore after the rarity clause keeps one space, as before.
+    expect(fitText("Crystalborn Drake. Hums. Rarity: rare. Now with more lore.", "Crystalborn Drake")).toBe("Hums. Now with more lore.")
   })
 
   it("takes words only from the card's own text", () => {
