@@ -187,7 +187,7 @@ describe.skipIf(!enabled)("market search on OpenSearch", () => {
 
         const vocab = (yield* sql<{ readonly term: string }>`SELECT term FROM search_vocab`).map((r) => r.term)
         yield* sameWords(pg, os, wordProbes(vocab))
-      }))
+      }), 60_000)
 
     it.effect("keeps the copy in step through the outbox, and records nothing once stopped", () =>
       Effect.gen(function* () {
@@ -233,6 +233,6 @@ describe.skipIf(!enabled)("market search on OpenSearch", () => {
         yield* sync.stopRecording
         yield* sql`UPDATE listings SET status = 'withdrawn' WHERE id = 'G-900001'`
         expect(yield* sync.pending).toBe(0)
-      }))
+      }), 60_000)
   })
 })
