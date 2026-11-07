@@ -202,9 +202,12 @@ export interface Purchase {
 export interface AgentRun {
   readonly id: string
   readonly listingId: string | null
+  /** new_match, manual (Ask the agent on a match), eval, or chat (a message in Talk to the agent). */
   readonly trigger: string
   readonly status: string
   readonly outcome: string | null
+  /** For a chat turn, what the collector wrote. */
+  readonly question: string | null
   readonly modelCalls: number
   readonly toolCalls: number
   readonly startedAt: string

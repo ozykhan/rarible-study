@@ -679,6 +679,27 @@ const wholeSearchVectors = Effect.gen(function* () {
     FROM n WHERE c.id = n.id AND n.length > 0`
 })
 
+/**
+ * Chat with the agent about one watch. A chat turn is an agent run with
+ * trigger 'chat' and the collector's question; the agent's answer is its
+ * final text. final_text is kept on every run from now on, so the watch's
+ * log reads one short column instead of each run's whole transcript (older
+ * runs fall back to the transcript). The indexes serve "this watch's latest
+ * runs", which the agent page asks for every few seconds, and "this watch's
+ * latest decisions", which each chat turn reads.
+ */
+const agentChat = Effect.gen(function* () {
+  const sql = yield* SqlClient
+  yield* sql`
+    ALTER TABLE agent_runs
+      DROP CONSTRAINT agent_runs_trigger_check,
+      ADD CONSTRAINT agent_runs_trigger_check CHECK (trigger IN ('new_match', 'manual', 'eval', 'chat')),
+      ADD COLUMN question text,
+      ADD COLUMN final_text text`
+  yield* sql`CREATE INDEX agent_runs_rule_started_idx ON agent_runs (rule_id, started_at DESC)`
+  yield* sql`CREATE INDEX match_decisions_rule_created_idx ON match_decisions (rule_id, created_at DESC)`
+})
+
 export const migrations = {
   "0001_init": init,
   "0002_agent": agent,
@@ -690,5 +711,6 @@ export const migrations = {
   "0008_card_search_vectors": cardSearchVectors,
   "0009_card_fits": cardFits,
   "0010_search_outbox": searchOutbox,
-  "0011_whole_search_vectors": wholeSearchVectors
+  "0011_whole_search_vectors": wholeSearchVectors,
+  "0012_agent_chat": agentChat
 }

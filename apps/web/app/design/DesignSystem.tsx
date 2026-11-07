@@ -13,7 +13,7 @@ import { ListingTile } from "@/components/ListingTile"
 import { Logo } from "@/components/Logo"
 import { AgentLimits } from "@/components/AgentLimits"
 import { RuleList } from "@/components/RuleList"
-import { DecisionRow, PurchaseRow, RuleChat, SkippedRow } from "@/components/RuleView"
+import { type ChatControls, DecisionRow, PurchaseRow, RuleChat, SkippedRow } from "@/components/RuleView"
 import { Slab, type SlabCard } from "@/components/Slab"
 import { SetCard } from "@/components/Sets"
 import { StatusBar } from "@/components/StatusBar"
@@ -224,7 +224,7 @@ const SKIPPED: ReadonlyArray<Decision> = [
   { ...DECISION, listingId: "SAMPLE-4", verdict: "reject", decidedAt: minutesAgo(40), reasons: ["Price far below market: a red flag."], listing: LISTINGS[3]! }
 ]
 
-/** A watch with one agent run, as RuleChat shows it. */
+/** A watch with one agent run and one chat turn, as RuleChat shows them. */
 const DETAIL: RuleDetail = {
   rule: RULES[0]!,
   approvals: [],
@@ -239,11 +239,27 @@ const DETAIL: RuleDetail = {
       outcome: "proposed",
       modelCalls: 3,
       toolCalls: 4,
+      question: null,
       startedAt: minutesAgo(4),
       finalText: "It matches every condition and the price is under your limit. I proposed the buy; it waits for your signature."
+    },
+    {
+      id: "run2",
+      listingId: null,
+      trigger: "chat",
+      status: "done",
+      outcome: "answered",
+      modelCalls: 2,
+      toolCalls: 1,
+      question: "Is that a fair price?",
+      startedAt: minutesAgo(2),
+      finalText: "Yes. The last five sales of this exact grade had a median of 702.00, so 689.00 is a little under it."
     }
   ]
 }
+
+/** The chat box with nothing on its way, as the design page shows it. */
+const CHAT: ChatControls = { ask: async () => false, asked: null, error: null }
 
 const STATUS: Status = {
   network: "devnet",
@@ -558,7 +574,7 @@ export function DesignSystem() {
                   ))}
                 </ul>
               </Panel>
-              <RuleChat detail={DETAIL} status={STATUS} />
+              <RuleChat detail={DETAIL} status={STATUS} chat={CHAT} />
               <Panel title="New watch">
                 <div className="questions">
                   <strong>Before you save, the parser asks:</strong>

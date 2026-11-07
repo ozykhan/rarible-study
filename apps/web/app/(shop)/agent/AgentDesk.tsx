@@ -149,7 +149,7 @@ export function AgentDesk() {
           <div className="agent-chat">
             {!creating && current ? (
               <>
-                <RuleChat detail={rule.detail} status={status} />
+                <RuleChat key={current.id} detail={rule.detail} status={status} chat={rule.chat} />
                 <NewRule
                   key={current.id}
                   token={token}

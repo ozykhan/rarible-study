@@ -4,7 +4,7 @@ import { address, isAddress } from "@solana/kit"
 import { Effect, Option, Schema } from "effect"
 import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/http"
 import { SqlClient } from "effect/sql/SqlClient"
-import { Agent } from "../agent/Agent.ts"
+import { Agent, CHAT_MAX_CHARS, lastAgentText } from "../agent/Agent.ts"
 import { CatalogRepo } from "../catalog/CatalogRepo.ts"
 import { AppConfig } from "../config.ts"
 import { Embedder } from "../embeddings/Embedder.ts"
@@ -31,6 +31,8 @@ export class ApiError extends Schema.TaggedError<ApiError>()("ApiError", {
 }) {}
 
 const MAX_ACTIVE_RULES = 5
+/** Agent runs on a watch's page, chat turns included, newest first. */
+const RUNS_SHOWN = 40
 const MAX_ALLOWANCE_USD = 100_000
 
 /** JSON with bigints as strings: token amounts are u64 on chain. */
@@ -123,22 +125,6 @@ const NewRule = Schema.Struct({
 
 const Signed = Schema.Struct({ nonce: Schema.String, signature: Schema.String })
 
-/** The last thing the agent said in a run, from the stored transcript. */
-const lastAgentText = (transcript: unknown): string => {
-  if (!Array.isArray(transcript)) return ""
-  for (let i = transcript.length - 1; i >= 0; i--) {
-    const m = transcript[i] as { role?: string; content?: unknown }
-    if (m.role !== "assistant" || !Array.isArray(m.content)) continue
-    const text = m.content
-      .filter((b: { type?: string }) => b.type === "text")
-      .map((b: { text?: string }) => b.text ?? "")
-      .join("\n")
-      .trim()
-    if (text.length > 0) return text
-  }
-  return ""
-}
-
 /**
  * The JSON API the web app calls. A session comes from a wallet
  * signature; everything a collector does after that is checked against the
@@ -167,9 +153,10 @@ export const WebApiRoutes = HttpRouter.addAll(
 
     const general = Effect.flatMap(clientIp, (ip) => limits.hit(`all:ip:${ip}`, 600, 600))
 
-    const limited = (kind: "costly" | "chain", wallet: string | null) =>
+    /** Chat messages have buckets of their own, so a long chat does not use up drafting and described searches. */
+    const limited = (kind: "costly" | "chat" | "chain", wallet: string | null) =>
       Effect.gen(function* () {
-        const perHour = kind === "costly" ? config.costlyRequestsPerHour : 20
+        const perHour = kind === "chain" ? 20 : config.costlyRequestsPerHour
         const ip = yield* clientIp
         yield* limits.hit(`${kind}:ip:${ip}`, perHour, 3600)
         if (wallet !== null) yield* limits.hit(`${kind}:wallet:${wallet}`, perHour, 3600)
@@ -447,25 +434,29 @@ export const WebApiRoutes = HttpRouter.addAll(
         const approvals = yield* sql<{ readonly id: string; readonly dailyCapUsdCents: number; readonly expiresAt: Date }>`
           SELECT id, daily_cap_usd_cents::float8 AS daily_cap_usd_cents, expires_at FROM rule_approvals
           WHERE rule_id = ${id} AND revoked_at IS NULL AND expires_at > now() ORDER BY created_at DESC`
+        // The transcript is read only for runs saved before final_text was kept.
         const runs = yield* sql<{
           readonly id: string
           readonly listingId: string | null
           readonly trigger: string
           readonly status: string
           readonly outcome: string | null
+          readonly question: string | null
           readonly modelCalls: number
           readonly toolCalls: number
           readonly startedAt: Date
+          readonly finalText: string | null
           readonly transcript: unknown
         }>`
-          SELECT id, listing_id, trigger, status, outcome, model_calls, tool_calls, started_at, transcript
-          FROM agent_runs WHERE rule_id = ${id} ORDER BY started_at DESC LIMIT 20`
+          SELECT id, listing_id, trigger, status, outcome, question, model_calls, tool_calls, started_at, final_text,
+                 CASE WHEN final_text IS NULL THEN transcript END AS transcript
+          FROM agent_runs WHERE rule_id = ${id} ORDER BY started_at DESC LIMIT ${RUNS_SHOWN}`
         return {
           rule: ruleSummary(stored),
           approvals,
           decisions: yield* latestDecisions(id),
           purchases: yield* purchases.listForRule(id),
-          runs: runs.map(({ transcript, ...r }) => ({ ...r, finalText: lastAgentText(transcript) }))
+          runs: runs.map(({ transcript, finalText, ...r }) => ({ ...r, finalText: finalText ?? lastAgentText(transcript) }))
         }
       })
     )
@@ -533,6 +524,32 @@ export const WebApiRoutes = HttpRouter.addAll(
         }
         yield* limited("costly", wallet)
         return yield* agent.run({ ruleId: stored.rule.id, listingId, trigger: "manual" })
+      })
+    )
+
+    /**
+     * The chat about one watch: the collector's message, answered by the
+     * agent with read-only tools. The answer is stored as a run with trigger
+     * "chat", so GET /rules/:id shows it with the question. Messages are
+     * limited per IP and per wallet in their own buckets, and every model
+     * call in one counts against the spend cap.
+     */
+    const chat = route(
+      "POST",
+      "/rules/:id/chat",
+      Effect.gen(function* () {
+        const wallet = yield* session
+        const stored = yield* ownedRule(wallet, yield* param("id"))
+        const { message } = yield* body(Schema.Struct({ message: Schema.String }))
+        const text = message.trim()
+        if (text.length === 0 || text.length > CHAT_MAX_CHARS) {
+          return yield* new ApiError({ message: `a message is 1 to ${CHAT_MAX_CHARS} characters`, status: 400 })
+        }
+        if (config.anthropicApiKey === null) {
+          return yield* new ApiError({ message: "no model API key is configured on this server", status: 503 })
+        }
+        yield* limited("chat", wallet)
+        return yield* agent.chat({ ruleId: stored.rule.id, message: text })
       })
     )
 
@@ -684,6 +701,7 @@ export const WebApiRoutes = HttpRouter.addAll(
       autoFinish,
       autoRevoke,
       askAgent,
+      chat,
       propose,
       proposeDirect,
       myPurchases,
