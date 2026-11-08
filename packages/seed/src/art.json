@@ -1,13 +1,13 @@
 {
   "DS-001": {
     "file": "cards/DS-001.webp",
-    "sha256": "e6d2a7ee6fc7ef3a1ed312edcfc7299ba8f15bb4391c25d8d62c94ccce7d2142",
+    "sha256": "253f5503ebe994c841c0eb5cbe08ad7d5b79b6871b24ccf5646105ac0d16e4b2",
     "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
     "seed": 2149982461,
     "steps": 4,
     "width": 768,
     "height": 1056,
-    "prompt": "A sand-colored dragon that swims under the dunes and surfaces at noon. Setting: wind-carved sand dunes and sandstone ruins under a blazing white sun, warm ochre and gold. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+    "prompt": "A long sand-colored dragon bursting up out of a sand dune in a spray of sand, half of its serpent body still under the sand. Setting: wind-carved sand dunes and sandstone ruins under a blazing white sun, warm ochre and gold. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
   },
   "DS-002": {
     "file": "cards/DS-002.webp",
@@ -291,13 +291,13 @@
   },
   "FV-010": {
     "file": "cards/FV-010.webp",
-    "sha256": "5433fbb1694d7970e8319e55b493c7da410d18a440e84f62d2485f6bf82e8c1b",
+    "sha256": "d4e46eede827ddcd99a26f99ab9e9196206e5fb71a5d94d6c72a5e4e10eb9b01",
     "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
     "seed": 4206643047,
     "steps": 4,
     "width": 768,
     "height": 1056,
-    "prompt": "A woolly giant with a crown of icicles hanging from its tusks. Setting: a frozen glacier field under a green and violet aurora, blue-white snow and ice. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+    "prompt": "A woolly mammoth with a long trunk and huge curved tusks, shaggy white fur, icicles hanging from its tusks. Setting: a frozen glacier field under a green and violet aurora, blue-white snow and ice. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
   },
   "HR-001": {
     "file": "cards/HR-001.webp",
@@ -441,13 +441,13 @@
   },
   "OS-005": {
     "file": "cards/OS-005.webp",
-    "sha256": "95d6df00728c790288b9bca33c54f80ab1455744069dc3341b09937c78e7e332",
+    "sha256": "cc576fec26da904997af8437c595aa17edbb98c32abdbc8dd5bb6fe2d595bd92",
     "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
     "seed": 3051983503,
     "steps": 4,
     "width": 768,
     "height": 1056,
-    "prompt": "A hulking mossy stone golem patched with rusted iron armor plates. Setting: a lush green meadow at the edge of an old forest in golden afternoon light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+    "prompt": "A hulking construct like a squat statue, its body mossy boulders bolted together with rusted iron plates, a blank helmet-shaped head with two glowing eye slits. Setting: a lush green meadow at the edge of an old forest in golden afternoon light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
   },
   "OS-006": {
     "file": "cards/OS-006.webp",
@@ -611,13 +611,13 @@
   },
   "SK-002": {
     "file": "cards/SK-002.webp",
-    "sha256": "e6a1028d47652fdd138d2c759644da7e1cfe6fdd6ab5ca264416064f72f7e09f",
+    "sha256": "dbe0282be530c1ce3eb07648b2ce8b652b3ecb2e88d23ad36bcd73f899f342ca",
     "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
     "seed": 558264378,
     "steps": 4,
     "width": 768,
     "height": 1056,
-    "prompt": "A griffin that rides the leading edge of every thunderstorm. Setting: floating islands above a sea of clouds, waterfalls spilling into the clouds, bright golden sunlight. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+    "prompt": "A griffin with the head, wings and front talons of a golden eagle and the body and tail of a lion, wings spread, lightning behind it. Setting: floating islands above a sea of clouds, waterfalls spilling into the clouds, bright golden sunlight. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
   },
   "SK-003": {
     "file": "cards/SK-003.webp",
@@ -641,13 +641,13 @@
   },
   "SK-005": {
     "file": "cards/SK-005.webp",
-    "sha256": "a630089568f1fd0fe141ec80fbd34ad83d86b7b6cf5c079dd0b52d6e73320db2",
+    "sha256": "5a0dc9319b6eadbcd3eaa85074b6ba4135a960ee6622e103b09d35a66bdc8c0b",
     "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
     "seed": 4268522118,
     "steps": 4,
     "width": 768,
     "height": 1056,
-    "prompt": "A brass golem that breathes the wind that keeps the isles afloat. Setting: floating islands above a sea of clouds, waterfalls spilling into the clouds, bright golden sunlight. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+    "prompt": "A brass machine golem with a round furnace belly, pipes and bellows on its back puffing wind, riveted plates and a blank face of two glowing portholes. Setting: floating islands above a sea of clouds, waterfalls spilling into the clouds, bright golden sunlight. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
   },
   "SK-006": {
     "file": "cards/SK-006.webp",
