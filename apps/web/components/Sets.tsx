@@ -5,10 +5,13 @@ import { dusd } from "@/lib/format"
 import type { Listing, MarketStats } from "@/lib/types"
 import { Section } from "./ui"
 
+/** The home page shows one row: the four newest sets. The market's set tabs list them all. */
+const HOME_SETS = SETS.slice(-4)
+
 /**
- * Browse by set on the home page: the fictional sets as banner cards
- * with how many of each are listed and the lowest price. Each card links to
- * the market filtered by its set. Styles: styles/sets.css.
+ * Browse by set on the home page: one row of banner cards for the newest
+ * sets, with how many of each are listed and the lowest price. Each card links
+ * to the market filtered by its set. Styles: styles/sets.css.
  */
 export function Sets(props: { listings: ReadonlyArray<Listing> | null; stats: MarketStats | null }) {
   const count = (id: string) => props.stats?.sets[id]?.count ?? props.listings?.filter((l) => setTheme(l)?.id === id).length
@@ -19,12 +22,12 @@ export function Sets(props: { listings: ReadonlyArray<Listing> | null; stats: Ma
       title="Browse by set"
       aside={
         <Link className="section-link" href="/market">
-          All sets
+          All {SETS.length} sets
         </Link>
       }
     >
       <div className="set-grid">
-        {SETS.map((s) => (
+        {HOME_SETS.map((s) => (
           <SetCard key={s.id} set={s} count={count(s.id)} floorUnits={floor(s.id)} href={`/market?set=${s.id}`} />
         ))}
       </div>
