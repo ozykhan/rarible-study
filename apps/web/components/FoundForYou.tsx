@@ -1,13 +1,14 @@
 "use client"
 
 import Link from "next/link"
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react"
 import { ago, setTheme } from "@/lib/art"
+import { cx } from "@/lib/cx"
 import { explorerTx, money, variant } from "@/lib/format"
 import type { Listing, Money, Purchase, RuleDetail, Status } from "@/lib/types"
 import type { RuleState } from "./RuleView"
 import { Slab } from "./Slab"
-import { Badge, Button, Panel, Pill, type PillTone, SearchIcon } from "./ui"
+import { Badge, Button, CloseIcon, Panel, Pill, type PillTone, SearchIcon } from "./ui"
 
 /** Why a card is in Found for you: a purchase waiting for the collector's signature, a match, or a listing to look at. */
 export type FoundKind = "waiting" | "match" | "review"
@@ -84,11 +85,33 @@ const KIND: Record<FoundKind, { readonly word: string; readonly tone: PillTone |
   review: { word: "needs your review", tone: "warn" }
 }
 
-/** "$40.00 under your top price", when the listing and the watch price in the same currency. */
+/**
+ * How far the price is from the watch's top price, as two short lines beside the price ("$40.00" over
+ * "under top"), when the listing and the watch price in the same currency.
+ */
 const underTop = (price: Money | null, top: Money) => {
   if (price === null || price.currency !== top.currency) return null
   const diff = top.amountMinor - price.amountMinor
-  return diff >= 0 ? `${money({ amountMinor: diff, currency: top.currency })} under top` : "over your top price"
+  return { amount: money({ amountMinor: Math.abs(diff), currency: top.currency }), word: diff >= 0 ? "under top" : "over top" }
+}
+
+/** A warning triangle, for a listing the judge wants you to look at. */
+function WarnIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" strokeLinejoin="round" />
+      <path d="M12 9v4M12 17h.01" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+/** A speech bubble, for what the seller wrote. */
+function NoteIcon({ size = 17 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" strokeLinejoin="round" />
+    </svg>
+  )
 }
 
 /** The words a search runs over: card, set, grader and grade, seller, why it is here, price and listing id. */
@@ -103,24 +126,65 @@ const haystack = (i: FoundItem) => {
 /**
  * One card in Found for you: its slab on a backdrop in the set's tone, why it
  * is here as a pill, the grade badge, name and meta, the reason, the price
- * against the watch's top price, and the actions passed in as children. A
- * listing to review also shows its red flags and the seller's own words as
- * plain text in a well. The name opens the listing page. Styles:
- * styles/desk.css (.found-card).
+ * with how far it is from the watch's top price beside it, when it was listed
+ * and its cert, and the actions passed in as children. The actions sit in the
+ * card's bottom corners, the first (Sign and pay) on the left and the second
+ * (Ask the agent) on the right, so neither moves the other. A listing to
+ * review shows a warning symbol and a seller-note symbol in the bottom corners
+ * of the art instead of its reasons and the seller's words; each opens a popup
+ * over the card, one at a time, and Escape or its close button shuts it. The
+ * name opens the listing page. Styles: styles/desk.css (.found-card).
  */
 export function FoundCard({ item, top, children }: { item: FoundItem; top: Money; children?: ReactNode }) {
+  const [open, setOpen] = useState<"flag" | "note" | null>(null)
   const l = item.listing
   const kind = KIND[item.kind]
   const under = underTop(item.price, top)
+  const review = item.kind === "review" && item.bought === null
+  const note = review && l !== null
+  const flagged = item.reasons.slice(0, 2).join(" ") || "The judge wants you to look at this one."
   const reason =
     item.reasons[0] ?? (item.kind === "waiting" ? "This buy waits for your signature." : "Every field of the watch passes.")
+  const toggle = (which: "flag" | "note") => setOpen(open === which ? null : which)
+  const closeOnEscape = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Escape") setOpen(null)
+  }
   return (
-    <article className="found-card" style={l ? ({ "--tone": setTheme(l)?.tone } as CSSProperties) : undefined}>
+    <article
+      className={cx("found-card", children !== undefined && children !== null && children !== false && "has-actions")}
+      style={l ? ({ "--tone": setTheme(l)?.tone } as CSSProperties) : undefined}
+    >
       <div className="found-media">
         <span className="found-kind">
           {item.bought ? <Pill tone="ok">bought</Pill> : <Pill tone={kind.tone}>{kind.word}</Pill>}
         </span>
         {l ? <Slab card={l} /> : <span className="found-placeholder" aria-hidden="true" />}
+        {note && (
+          <button
+            type="button"
+            className="found-symbol found-symbol-note"
+            aria-label="What the seller wrote"
+            aria-expanded={open === "note"}
+            onClick={() => toggle("note")}
+          >
+            <span>
+              <NoteIcon />
+            </span>
+          </button>
+        )}
+        {review && (
+          <button
+            type="button"
+            className="found-symbol found-symbol-flag"
+            aria-label="Why this listing needs your review"
+            aria-expanded={open === "flag"}
+            onClick={() => toggle("flag")}
+          >
+            <span>
+              <WarnIcon />
+            </span>
+          </button>
+        )}
       </div>
       <div className="found-body">
         {l && (
@@ -136,31 +200,57 @@ export function FoundCard({ item, top, children }: { item: FoundItem; top: Money
             {l.setName} #{l.cardNumber} · {variant(l)} · @{l.sellerHandle}
           </p>
         )}
-        {item.kind === "review" ? (
-          <>
-            <p className="found-reason found-warn">{item.reasons.slice(0, 2).join(" ") || "The judge wants you to look at this one."}</p>
-            {l && (
-              <p className="seller-text small">
-                {l.title}
-                {"\n"}
-                {l.description}
-              </p>
-            )}
-          </>
-        ) : (
-          <p className="found-reason">{reason}</p>
-        )}
+        {!review && <p className="found-reason">{reason}</p>}
         <div className="found-price">
           <span className="price">{item.price ? money(item.price) : ""}</span>
-          {under && <span className="found-under">{under}</span>}
+          {under && (
+            <span className="found-under">
+              <span>{under.amount}</span>
+              <span>{under.word}</span>
+            </span>
+          )}
         </div>
-        {children && <div className="found-actions">{children}</div>}
         {l && (
           <p className="found-foot">
-            {l.status === "active" ? `listed ${ago(l.listedAt)}` : l.status} · cert {l.certNumber}
+            <span>{l.status === "active" ? `listed ${ago(l.listedAt)}` : l.status}</span>
+            <span>cert {l.certNumber}</span>
           </p>
         )}
       </div>
+      {children && <div className="found-actions">{children}</div>}
+      {open === "flag" && (
+        <div className="found-pop found-pop-flag" role="dialog" aria-label="Why this listing needs your review" onKeyDown={closeOnEscape}>
+          <div className="found-pop-head">
+            <strong>
+              <WarnIcon size={16} />
+              Needs your review
+            </strong>
+            <button type="button" className="found-pop-close" aria-label="Close" onClick={() => setOpen(null)} autoFocus>
+              <CloseIcon />
+            </button>
+          </div>
+          <p className="small">{flagged}</p>
+        </div>
+      )}
+      {open === "note" && l && (
+        <div className="found-pop" role="dialog" aria-label="What the seller wrote" onKeyDown={closeOnEscape}>
+          <div className="found-pop-head">
+            <strong>
+              <NoteIcon size={16} />
+              The seller wrote
+            </strong>
+            <button type="button" className="found-pop-close" aria-label="Close" onClick={() => setOpen(null)} autoFocus>
+              <CloseIcon />
+            </button>
+          </div>
+          <p className="seller-text small">
+            {l.title}
+            {"\n"}
+            {l.description}
+          </p>
+          <p className="muted small">Shown as the seller wrote it. Slabwatch does not check it.</p>
+        </div>
+      )}
     </article>
   )
 }
