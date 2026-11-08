@@ -463,9 +463,10 @@
 }
 
 /*
- * FoundCard: a slab on a backdrop in its set's tone, then badge, name, meta, reason, price and foot.
- * The actions sit in the card's bottom corners, and a listing to review has a warning symbol and a
- * seller-note symbol in the art's bottom corners, each opening a popup over the card.
+ * FoundCard: why it is here as a band on top, then a slab on a backdrop in its set's tone, then badge,
+ * name, meta, reason, price and foot. The actions sit over the bottom of the art, shown on hover,
+ * focus or a tap, as on a market tile. A listing to review has a seller-note symbol and a warning
+ * symbol in the art's bottom corners, each opening a popup over the art.
  */
 .found-card {
   position: relative;
@@ -490,14 +491,30 @@
     var(--surface-sunken);
   border-bottom: 1px solid var(--line);
 }
-.found-kind {
-  position: absolute;
-  top: var(--space-2-5);
-  left: var(--space-2-5);
-  z-index: 1;
-}
-.found-kind .pill {
+/* Why the card is here, as a band across its top in the state's tone. */
+.found-hat {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: var(--space-1-5) var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--ink-soft);
   background: var(--surface-inset);
+  border-bottom: 1px solid var(--line);
+}
+.found-hat.hat-ok {
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 10%, var(--surface-inset));
+  border-bottom-color: color-mix(in srgb, var(--ok) 35%, transparent);
+}
+.found-hat.hat-warn {
+  color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 10%, var(--surface-inset));
+  border-bottom-color: color-mix(in srgb, var(--warn) 35%, transparent);
 }
 .found-placeholder {
   display: block;
@@ -575,43 +592,95 @@
   flex-direction: column;
   gap: var(--space-0-5);
 }
-/* Room under the foot for the actions, which are pinned to the card's bottom corners. */
-.found-card.has-actions .found-body {
-  padding-bottom: calc(var(--space-4) + 37px + var(--space-3));
+.found-tx {
+  align-self: flex-start;
 }
+
+/* The tap target over the art. Only touch screens get it; elsewhere hover and focus do the job. */
+.found-reveal {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+.found-reveal:focus-visible {
+  outline-offset: -2px;
+}
+@media (hover: none) {
+  .found-reveal {
+    display: block;
+  }
+  /* A full-size touch target. */
+  .found-actions .btn {
+    min-height: 44px;
+  }
+}
+/* Sign and pay over Ask the agent, centred along the bottom of the art between the two symbols. */
 .found-actions {
   position: absolute;
-  left: var(--space-3-5);
-  right: var(--space-3-5);
-  bottom: var(--space-4);
-  z-index: 1;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
+  left: 50%;
+  bottom: calc(var(--space-1) + 4px);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   gap: var(--space-1-5);
-  min-height: 37px;
+  opacity: 0;
+  transform: translate(-50%, 6px);
+  pointer-events: none;
+  transition:
+    opacity var(--duration-base) var(--ease),
+    transform var(--duration-base) var(--ease);
 }
-.found-actions > :first-child {
-  justify-self: start;
+.found-card:focus-within .found-actions,
+.found-card.revealed .found-actions {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  pointer-events: auto;
+}
+@media (hover: hover) {
+  .found-card:hover .found-actions {
+    opacity: 1;
+    transform: translate(-50%, 0);
+    pointer-events: auto;
+  }
+}
+/* An open popup has the art to itself. */
+.found-card.pop-open .found-actions {
+  opacity: 0;
+  pointer-events: none;
+}
+.found-actions .btn {
   white-space: nowrap;
 }
-/* The second action, Ask the agent, is a small link in the bottom right that never pushes the first. */
-.found-actions > :nth-child(2) {
-  justify-self: end;
-  max-width: 100%;
-  padding: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: var(--text-xs);
-  font-weight: var(--weight-medium);
+/* Ask the agent keeps its outline over the art, on a solid fill so it reads. */
+.found-actions .btn-secondary {
+  background: var(--surface-inset);
+}
+.found-actions .btn-secondary:hover:not(:disabled) {
+  background: var(--surface-solid);
+}
+@media (prefers-reduced-motion: reduce) {
+  .found-actions {
+    transition: none;
+  }
+}
+/* Taller touch buttons, or a narrow card: the buttons sit above the symbols' row instead of between them. */
+@media (hover: none), (max-width: 700px) {
+  .found-actions {
+    bottom: calc(var(--space-1) + 44px + var(--space-1-5));
+  }
 }
 
 /* The symbols in the art's bottom corners: the seller's note on the left, the warning on the right. */
 .found-symbol {
   position: absolute;
   bottom: var(--space-1);
-  z-index: 1;
+  z-index: 3;
   display: grid;
   place-items: center;
   width: 44px;
@@ -651,7 +720,10 @@
 .found-symbol-flag:hover > span {
   background: color-mix(in srgb, var(--warn) 26%, var(--surface-inset));
 }
-/* A popup over the whole card: the row scrolls sideways, so anything sticking out would be cut off. */
+/*
+ * A popup over the art, under the band. The symbols stay on top of it: the same symbol closes it, the
+ * other switches to its popup. Its foot leaves room for them.
+ */
 .found-pop {
   position: absolute;
   inset: 0;
@@ -659,11 +731,10 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2-5);
-  padding: var(--space-4);
+  padding: var(--space-4) var(--space-4) calc(var(--space-1) + 44px + var(--space-2));
   overflow-y: auto;
   background: var(--surface-raised);
   border: 1px solid var(--line-control);
-  border-radius: var(--radius-lg);
 }
 .found-pop-flag {
   border-color: color-mix(in srgb, var(--warn) 55%, transparent);
@@ -677,36 +748,15 @@
 .found-pop .muted.small {
   color: var(--muted);
 }
-.found-pop-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-.found-pop-head strong {
+.found-pop-title {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
   font-size: var(--text-md);
   color: var(--ink-soft);
 }
-.found-pop-flag .found-pop-head strong {
+.found-pop-flag .found-pop-title {
   color: var(--warn);
-}
-.found-pop-close {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  margin: -10px -10px -10px 0;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--muted);
-}
-.found-pop-close:hover {
-  color: var(--ink);
 }
 
 /* ---------- Talk to the agent: RuleChat as a popup over the page, or its button ---------- */
@@ -912,17 +962,6 @@
   }
   .found-card {
     flex-basis: 200px;
-  }
-  /* Too narrow for both side by side: Ask the agent goes on its own line above, Sign and pay stays put. */
-  .found-actions {
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-1);
-  }
-  .found-actions > :nth-child(2) {
-    grid-row: 1;
-  }
-  .found-card.has-actions .found-body {
-    padding-bottom: calc(var(--space-4) + 37px + var(--space-1) + 18px + var(--space-3));
   }
   .found-track {
     gap: var(--space-2);

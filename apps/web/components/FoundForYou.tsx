@@ -124,41 +124,80 @@ const haystack = (i: FoundItem) => {
 }
 
 /**
- * One card in Found for you: its slab on a backdrop in the set's tone, why it
- * is here as a pill, the grade badge, name and meta, the reason, the price
- * with how far it is from the watch's top price beside it, when it was listed
- * and its cert, and the actions passed in as children. The actions sit in the
- * card's bottom corners, the first (Sign and pay) on the left and the second
- * (Ask the agent) on the right, so neither moves the other. A listing to
- * review shows a warning symbol and a seller-note symbol in the bottom corners
- * of the art instead of its reasons and the seller's words; each opens a popup
- * over the card, one at a time, and Escape or its close button shuts it. The
+ * One card in Found for you. Why it is here sits on top of the card as a band
+ * in its tone (waiting for you, match, needs your review, bought). Under it the
+ * slab on a backdrop in the set's tone, then the grade badge, name and meta,
+ * the reason, the price with how far it is from the watch's top price beside
+ * it, and when it was listed over its cert; a bought card links its devnet
+ * transfer there. The actions passed in as children (Sign and pay, Ask the
+ * agent) sit over the bottom of the art, as Buy now does on a market tile:
+ * shown on hover and when anything in the card has keyboard focus, and on touch
+ * screens after a tap on the art. A listing to review shows a warning symbol
+ * and a seller-note symbol in the art's bottom corners instead of its reasons
+ * and the seller's words. Each opens a popup over the art, one at a time, and
+ * the same symbol (or Escape) closes it; the symbols stay on top of it. The
  * name opens the listing page. Styles: styles/desk.css (.found-card).
  */
 export function FoundCard({ item, top, children }: { item: FoundItem; top: Money; children?: ReactNode }) {
   const [open, setOpen] = useState<"flag" | "note" | null>(null)
+  const [revealed, setRevealed] = useState(false)
   const l = item.listing
   const kind = KIND[item.kind]
+  const hat = item.bought ? { word: "bought", tone: "ok" as const } : kind
   const under = underTop(item.price, top)
   const review = item.kind === "review" && item.bought === null
   const note = review && l !== null
+  const hasActions = children !== undefined && children !== null && children !== false
   const flagged = item.reasons.slice(0, 2).join(" ") || "The judge wants you to look at this one."
   const reason =
     item.reasons[0] ?? (item.kind === "waiting" ? "This buy waits for your signature." : "Every field of the watch passes.")
+  const tx = item.bought?.txSignature && !item.bought.txSignature.startsWith("simulated:") ? item.bought.txSignature : null
   const toggle = (which: "flag" | "note") => setOpen(open === which ? null : which)
-  const closeOnEscape = (e: KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === "Escape") setOpen(null)
+  const closeOnEscape = (e: KeyboardEvent<HTMLElement>) => {
+    if (e.key === "Escape" && open !== null) setOpen(null)
   }
   return (
     <article
-      className={cx("found-card", children !== undefined && children !== null && children !== false && "has-actions")}
+      className={cx("found-card", revealed && "revealed", open !== null && "pop-open")}
       style={l ? ({ "--tone": setTheme(l)?.tone } as CSSProperties) : undefined}
+      onKeyDown={closeOnEscape}
     >
+      <div className={cx("found-hat", hat.tone && `hat-${hat.tone}`)}>{hat.word}</div>
       <div className="found-media">
-        <span className="found-kind">
-          {item.bought ? <Pill tone="ok">bought</Pill> : <Pill tone={kind.tone}>{kind.word}</Pill>}
-        </span>
         {l ? <Slab card={l} /> : <span className="found-placeholder" aria-hidden="true" />}
+        {hasActions && (
+          <button
+            type="button"
+            className="found-reveal"
+            aria-label={`Show buying options for ${l?.cardName ?? item.listingId}`}
+            aria-expanded={revealed}
+            onClick={() => setRevealed(!revealed)}
+          />
+        )}
+        {hasActions && <div className="found-actions">{children}</div>}
+        {open === "flag" && (
+          <div className="found-pop found-pop-flag" role="dialog" aria-label="Why this listing needs your review">
+            <strong className="found-pop-title">
+              <WarnIcon size={16} />
+              Needs your review
+            </strong>
+            <p className="small">{flagged}</p>
+          </div>
+        )}
+        {open === "note" && l && (
+          <div className="found-pop" role="dialog" aria-label="What the seller wrote">
+            <strong className="found-pop-title">
+              <NoteIcon size={16} />
+              The seller wrote
+            </strong>
+            <p className="seller-text small">
+              {l.title}
+              {"\n"}
+              {l.description}
+            </p>
+            <p className="muted small">Shown as the seller wrote it. Slabwatch does not check it.</p>
+          </div>
+        )}
         {note && (
           <button
             type="button"
@@ -216,41 +255,12 @@ export function FoundCard({ item, top, children }: { item: FoundItem; top: Money
             <span>cert {l.certNumber}</span>
           </p>
         )}
+        {tx && (
+          <a className="found-tx small" href={explorerTx(tx)} target="_blank" rel="noreferrer">
+            transfer on devnet
+          </a>
+        )}
       </div>
-      {children && <div className="found-actions">{children}</div>}
-      {open === "flag" && (
-        <div className="found-pop found-pop-flag" role="dialog" aria-label="Why this listing needs your review" onKeyDown={closeOnEscape}>
-          <div className="found-pop-head">
-            <strong>
-              <WarnIcon size={16} />
-              Needs your review
-            </strong>
-            <button type="button" className="found-pop-close" aria-label="Close" onClick={() => setOpen(null)} autoFocus>
-              <CloseIcon />
-            </button>
-          </div>
-          <p className="small">{flagged}</p>
-        </div>
-      )}
-      {open === "note" && l && (
-        <div className="found-pop" role="dialog" aria-label="What the seller wrote" onKeyDown={closeOnEscape}>
-          <div className="found-pop-head">
-            <strong>
-              <NoteIcon size={16} />
-              The seller wrote
-            </strong>
-            <button type="button" className="found-pop-close" aria-label="Close" onClick={() => setOpen(null)} autoFocus>
-              <CloseIcon />
-            </button>
-          </div>
-          <p className="seller-text small">
-            {l.title}
-            {"\n"}
-            {l.description}
-          </p>
-          <p className="muted small">Shown as the seller wrote it. Slabwatch does not check it.</p>
-        </div>
-      )}
     </article>
   )
 }
@@ -363,13 +373,7 @@ export function FoundForYou({ state, status }: { state: RuleState; status: Statu
           <div className="found-track" ref={track} onScroll={measure} role="region" aria-label="Found for you" tabIndex={0}>
             {shown.map((i) => (
               <FoundCard key={i.key} item={i} top={top}>
-                {i.bought ? (
-                  i.bought.txSignature && !i.bought.txSignature.startsWith("simulated:") ? (
-                    <a className="small" href={explorerTx(i.bought.txSignature)} target="_blank" rel="noreferrer">
-                      transfer on devnet
-                    </a>
-                  ) : null
-                ) : open(i) ? (
+                {open(i) ? (
                   <FoundActions item={i} state={state} busy={busy} canTrade={canTrade} canAsk={status.modelConfigured} />
                 ) : null}
               </FoundCard>
@@ -392,7 +396,7 @@ function FoundActions(p: { item: FoundItem; state: RuleState; busy: string | nul
         {busy === key ? "Waiting for the wallet…" : "Sign and pay"}
       </Button>
       {p.canAsk && item.waiting === null && (
-        <Button variant="link" onClick={() => state.askAgent(item.listingId)} disabled={busy !== null}>
+        <Button variant="secondary" onClick={() => state.askAgent(item.listingId)} disabled={busy !== null}>
           {busy === `agent:${item.listingId}` ? "The agent is checking…" : "Ask the agent"}
         </Button>
       )}
