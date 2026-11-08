@@ -1,5 +1,5 @@
 import type { HardCriteria, ListingView, Money } from "@slabwatch/domain"
-import { catalogText, handWritten, type Catalog, type LabelledListing, type SaleRow, type SellerRow } from "@slabwatch/seed"
+import { artPath, catalogText, handWritten, type Catalog, type LabelledListing, type SaleRow, type SellerRow } from "@slabwatch/seed"
 import { Context, Effect, Layer } from "effect"
 import type { SqlError } from "effect/sql/SqlError"
 import { SqlClient } from "effect/sql/SqlClient"
@@ -51,6 +51,7 @@ interface ListingRowDb {
   readonly cardId: string
   readonly cardNumber: string
   readonly cardName: string
+  readonly artPath: string | null
   readonly edition: ListingView["edition"]
   readonly finish: ListingView["finish"]
   readonly grader: ListingView["grader"]
@@ -74,6 +75,7 @@ const toView = (r: ListingRowDb): ListingView => ({
   cardId: r.cardId,
   cardNumber: r.cardNumber,
   cardName: r.cardName,
+  artPath: r.artPath,
   edition: r.edition,
   finish: r.finish,
   grader: r.grader,
@@ -110,6 +112,10 @@ export class CatalogRepo extends Context.Service<
       sellers: ReadonlyArray<SellerRow>,
       catalog?: Catalog
     ) => Effect.Effect<void, SqlError | EmbedError>
+    /** Points cards at their art; returns the ids whose path changed. */
+    readonly setArtPaths: (
+      paths: ReadonlyArray<{ readonly cardId: string; readonly artPath: string | null }>
+    ) => Effect.Effect<ReadonlyArray<string>, SqlError>
     readonly insertSales: (sales: ReadonlyArray<SaleRow>) => Effect.Effect<void, SqlError>
     readonly insertListings: (
       listings: ReadonlyArray<LabelledListing>,
@@ -178,7 +184,7 @@ export class CatalogRepo extends Context.Service<
 
 const selectView = (sql: SqlClient) => sql`
   SELECT l.id AS listing_id, l.vault_item_id, c.set_id, s.name AS set_name, c.id AS card_id,
-         c.number AS card_number, c.name AS card_name, v.edition, v.finish, v.grader,
+         c.number AS card_number, c.name AS card_name, c.art_path, v.edition, v.finish, v.grader,
          v.grade::float8 AS grade, v.cert_number, l.price_minor::float8 AS price_minor, l.currency,
          l.seller_id, se.handle AS seller_handle, l.title, l.description, l.status,
          to_char(l.listed_at AT TIME ZONE 'utc', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS listed_at
@@ -214,8 +220,8 @@ export const CatalogRepoLive = Layer.effect(
         const vectors = yield* embedder.embed(texts, "document")
         // kinds go in as one text per card ("dragon,water"): unnest cannot take a ragged 2-D array.
         yield* sql`
-          INSERT INTO cards (id, set_id, number, name, rarity, kinds, catalog_text, embedding)
-          SELECT id, set_id, number, name, rarity, string_to_array(kinds, ','), catalog_text, embedding
+          INSERT INTO cards (id, set_id, number, name, rarity, kinds, catalog_text, embedding, art_path)
+          SELECT id, set_id, number, name, rarity, string_to_array(kinds, ','), catalog_text, embedding, art_path
           FROM unnest(
             ${toTextArray(rows.map((c) => c.id))}::text[],
             ${toTextArray(rows.map((c) => c.setId))}::text[],
@@ -224,8 +230,9 @@ export const CatalogRepoLive = Layer.effect(
             ${toTextArray(rows.map((c) => c.rarity))}::text[],
             ${toTextArray(rows.map((c) => c.kinds.join(",")))}::text[],
             ${toTextArray(texts)}::text[],
-            ${toTextArray(rows.map((_, j) => toVector(vectors[j] ?? [])))}::vector[]
-          ) AS t(id, set_id, number, name, rarity, kinds, catalog_text, embedding)
+            ${toTextArray(rows.map((_, j) => toVector(vectors[j] ?? [])))}::vector[],
+            ${toTextArray(rows.map((c) => artPath(c.id)))}::text[]
+          ) AS t(id, set_id, number, name, rarity, kinds, catalog_text, embedding, art_path)
           ON CONFLICT (id) DO NOTHING`
       }
       for (let i = 0; i < sellers.length; i += chunk) {
@@ -235,6 +242,19 @@ export const CatalogRepoLive = Layer.effect(
           SELECT * FROM unnest(${toTextArray(rows.map((s) => s.id))}::text[], ${toTextArray(rows.map((s) => s.handle))}::text[])
           ON CONFLICT (id) DO NOTHING`
       }
+    })
+
+    const setArtPaths = Effect.fn("CatalogRepo.setArtPaths")(function* (
+      paths: ReadonlyArray<{ readonly cardId: string; readonly artPath: string | null }>
+    ) {
+      if (paths.length === 0) return []
+      const rows = yield* sql<{ readonly id: string }>`
+        UPDATE cards c SET art_path = t.art_path
+        FROM unnest(${toTextArray(paths.map((p) => p.cardId))}::text[], ${toTextArray(paths.map((p) => p.artPath))}::text[])
+          AS t(id, art_path)
+        WHERE c.id = t.id AND c.art_path IS DISTINCT FROM t.art_path
+        RETURNING c.id`
+      return rows.map((r) => r.id)
     })
 
     const insertSales = Effect.fn("CatalogRepo.insertSales")(function* (sales: ReadonlyArray<SaleRow>) {
@@ -504,6 +524,7 @@ export const CatalogRepoLive = Layer.effect(
     return CatalogRepo.of({
       search,
       insertCatalog,
+      setArtPaths,
       insertSales,
       insertListings,
       insertBulkListings,

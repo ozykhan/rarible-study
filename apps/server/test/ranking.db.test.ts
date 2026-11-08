@@ -1,3 +1,4 @@
+import { cards } from "@slabwatch/seed"
 import { expect, layer } from "@effect/vitest"
 import { Effect } from "effect"
 import { SqlClient } from "effect/sql/SqlClient"
@@ -27,8 +28,8 @@ layer(TestLive, { timeout: "60 seconds" })("best match", (it) => {
     Effect.gen(function* () {
       const sql = yield* SqlClient
       const vectors = yield* CardVectors
-      expect(yield* vectors.queued).toBe(40)
-      expect(yield* vectors.refresh(1000)).toEqual({ cards: 40, written: 40 })
+      expect(yield* vectors.queued).toBe(cards.length)
+      expect(yield* vectors.refresh(1000)).toEqual({ cards: cards.length, written: cards.length })
       expect(yield* vectors.queued).toBe(0)
 
       const before = (yield* sql<{ readonly v: string }>`SELECT search_vector::text AS v FROM cards WHERE id = 'TW-001'`)[0]!.v

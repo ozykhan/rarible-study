@@ -72,6 +72,8 @@ export interface Listing {
   readonly setName: string
   readonly cardName: string
   readonly cardNumber: string
+  /** Where the card's art is served, or null when it has none. */
+  readonly artPath?: string | null
   readonly edition: string
   readonly finish: string
   readonly grader: string

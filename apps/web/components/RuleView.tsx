@@ -3,7 +3,7 @@
 import type { CSSProperties, FormEvent, ReactNode } from "react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { api } from "@/lib/api"
-import { ago, cardArt, GRADERS, setTheme } from "@/lib/art"
+import { ago, artFor, GRADERS, setTheme } from "@/lib/art"
 import { explorerTx, label, money, toMinor } from "@/lib/format"
 import { outcomeText, signAndPay } from "@/lib/purchase"
 import type { AgentRun, Decision, Purchase, RuleDetail, SigningRequest, Status } from "@/lib/types"
@@ -524,9 +524,14 @@ function ChatTurn({ r }: { r: AgentRun }) {
 /** A skipped listing in one line: a small thumbnail, the card with grade and price, the first reason, and when it was listed. */
 export function SkippedRow({ d }: { d: Decision }) {
   const l = d.listing
+  const art = l ? artFor(l) : null
   return (
     <li className="skip" style={l ? ({ "--tone": setTheme(l)?.tone } as CSSProperties) : undefined}>
-      {l ? <img className="thumb thumb-sm" src={cardArt(l)} alt="" loading="lazy" width={28} height={39} /> : <span className="thumb thumb-sm" />}
+      {art !== null ? (
+        <img className="thumb thumb-sm" src={art} alt="" loading="lazy" width={28} height={39} />
+      ) : (
+        <span className="thumb thumb-sm" />
+      )}
       <div className="skip-text">
         <span>
           {l ? l.cardName : d.listingId}{" "}

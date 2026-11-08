@@ -1,4 +1,4 @@
-import { cardById, sellers, setById, toUsdCents } from "@slabwatch/seed"
+import { cardById, sellers, setById, sets, toUsdCents } from "@slabwatch/seed"
 import { expect, layer } from "@effect/vitest"
 import { Effect } from "effect"
 import { SqlClient } from "effect/sql/SqlClient"
@@ -183,9 +183,10 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("market s
       const all = yield* search.search(query())
       expect(all.total).toBe(rows.length)
       expect(all.stats.count).toBe(rows.length)
-      expect(all.stats.setCount).toBe(4)
+      expect(all.stats.setCount).toBe(sets.length)
       expect(all.stats.floorUnits).toBe(Math.min(...rows.map((r) => r.usd)))
-      expect(all.sets.map((s) => s.id)).toEqual(["OS", "TW", "EF", "SE"])
+      // Oldest set first.
+      expect(all.sets.map((s) => s.id)).toEqual(["OS", "TW", "EF", "SE", "FV", "HR", "SK", "DS"])
       expect(all.sets[0]).toEqual({ id: "OS", name: "Origin Set" })
       for (const s of all.sets) expect(all.stats.sets[s.id]!.count).toBe(rows.filter((r) => r.setId === s.id).length)
     }))

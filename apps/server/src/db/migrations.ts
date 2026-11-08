@@ -711,6 +711,17 @@ const cardNames = Effect.gen(function* () {
   yield* sql`CREATE INDEX cards_name_trgm_idx ON cards USING gin (lower(name) gin_trgm_ops)`
 })
 
+/**
+ * Where each card's art is served from, written by the seed from the art
+ * manifest (packages/seed/src/art.json). Null means the card has no art, so
+ * the web app draws the frame alone instead of asking for a missing image.
+ * The path carries the image's hash, so a CDN can cache it for good.
+ */
+const cardArt = Effect.gen(function* () {
+  const sql = yield* SqlClient
+  yield* sql`ALTER TABLE cards ADD COLUMN art_path text`
+})
+
 export const migrations = {
   "0001_init": init,
   "0002_agent": agent,
@@ -724,5 +735,6 @@ export const migrations = {
   "0010_search_outbox": searchOutbox,
   "0011_whole_search_vectors": wholeSearchVectors,
   "0012_agent_chat": agentChat,
-  "0013_card_names": cardNames
+  "0013_card_names": cardNames,
+  "0014_card_art": cardArt
 }

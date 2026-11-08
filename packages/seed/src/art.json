@@ -1,0 +1,452 @@
+{
+  "EF-001": {
+    "file": "cards/EF-001.webp",
+    "sha256": "e3f97253e055a16f9cf2205db79acd378c9831e2f83481019970a0b532a2d24d",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 63526687,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Ashen Wyrm, an ancient grey dragon sleeping under cooled lava, volcanic landscape, glowing lava rivers, drifting embers and ash, orange and crimson light, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "EF-002": {
+    "file": "cards/EF-002.webp",
+    "sha256": "a673686d8f88bf638fac350534e99ff1b0e86ee59f465e6608955912aac22943",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 3916611709,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Magma Hound, a lean wolf-like hound with molten glowing paws leaving burning tracks, volcanic landscape, glowing lava rivers, drifting embers and ash, orange and crimson light, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "EF-003": {
+    "file": "cards/EF-003.webp",
+    "sha256": "2d6034f7244306d18f1ee72962e5895cbebfc35b2588aa1a98d82ee9521835f6",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 3637497972,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Cinder Salamander, a salamander bathing in campfire embers, volcanic landscape, glowing lava rivers, drifting embers and ash, orange and crimson light, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "EF-004": {
+    "file": "cards/EF-004.webp",
+    "sha256": "a64b990d5421bf819dd092de42783f8972d5472f66b48eefce63980f55bc0d1f",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 648897538,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Obsidian Golem, a golem of black volcanic glass with a hollow glowing chest, volcanic landscape, glowing lava rivers, drifting embers and ash, orange and crimson light, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "EF-005": {
+    "file": "cards/EF-005.webp",
+    "sha256": "8679bf80a89c71b649628c4ed7a9ada95d151c8877ac0d41b8fc1a5156343985",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 2116708235,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Pyre Phoenix, a phoenix of fire reborn from a single spark, volcanic landscape, glowing lava rivers, drifting embers and ash, orange and crimson light, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "EF-006": {
+    "file": "cards/EF-006.webp",
+    "sha256": "95f55da7a4e63fde318ce1b8133fe18905230b8417c5a9b3df4ffa12d104914b",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 3679451287,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "a small ghost made of curling grey smoke with two glowing ember eyes, floating over embers, volcanic landscape, glowing lava rivers, drifting embers and ash, orange and crimson light, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "EF-007": {
+    "file": "cards/EF-007.webp",
+    "sha256": "c21b004e1c6ef05b8bd4fce86d198af14e3eb1ecbf7f263cfc23040c61b17862",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 516506216,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Basalt Ram, a ram whose horns are columns of basalt rock, volcanic landscape, glowing lava rivers, drifting embers and ash, orange and crimson light, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "EF-008": {
+    "file": "cards/EF-008.webp",
+    "sha256": "1431bfa41179f878c87a815f028ec75b3b305d63ffc96543881d16f88980db11",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 50155279,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Flare Drakeling, a small red dragon sneezing little flares, volcanic landscape, glowing lava rivers, drifting embers and ash, orange and crimson light, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "EF-009": {
+    "file": "cards/EF-009.webp",
+    "sha256": "e66865f3479dd5333a2562d2a5fbd75b892d724576e9a81d1f3826058190dd91",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 3485833889,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Charcoal Beetle, a black beetle rolling a ball of glowing charcoal, volcanic landscape, glowing lava rivers, drifting embers and ash, orange and crimson light, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "EF-010": {
+    "file": "cards/EF-010.webp",
+    "sha256": "eeddfb2a93066e3d27f6ff43b39169b9ce6b017b445ebcfb699a0bc0b2f4e406",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 3699622811,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Lava Eel, a long glowing eel-like serpent creature with fins, swimming through a river of lava, volcanic landscape, glowing lava rivers, drifting embers and ash, orange and crimson light, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "OS-001": {
+    "file": "cards/OS-001.webp",
+    "sha256": "3f87275b5041fddc862263983b2738a27dbf2495cdd7e69e0cdd1aeeda433b8a",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 1606124806,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "a small fierce red dragon with ember wings shedding sparks as it dives, lush green meadow and old forest, golden afternoon light, storybook fantasy painting, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "OS-002": {
+    "file": "cards/OS-002.webp",
+    "sha256": "a890abace378f26b14ae758e7b30f4ca728d04773b880911132db7069f8a335c",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 2609796948,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Mossback Tortoise, a pond tortoise with a garden growing on its shell, lush green meadow and old forest, golden afternoon light, storybook fantasy painting, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "OS-003": {
+    "file": "cards/OS-003.webp",
+    "sha256": "20afa30b3c685d1b925c8321ce9eefa12b6a89aefaa7ee9d93e1f25b8c198976",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 1933140728,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "a small round wind creature made of swirling air and leaves with two glowing eyes, no people, lush green meadow and old forest, golden afternoon light, storybook fantasy painting, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "OS-004": {
+    "file": "cards/OS-004.webp",
+    "sha256": "086fa180812872a203b4534e1f9c457aac30f6703b6e40357f8aa0bb3cf49147",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 2621895717,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Thornmane Lion, a lion with a mane of bramble and thorns, lush green meadow and old forest, golden afternoon light, storybook fantasy painting, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "OS-005": {
+    "file": "cards/OS-005.webp",
+    "sha256": "3764c8fba68e0d96cfdbe8f0a31f5533c88eba1df0f85a93ea0d4d19311a41db",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 3051983503,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "a hulking mossy stone golem monster patched with rusted iron plates, lush green meadow and old forest, golden afternoon light, storybook fantasy painting, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "OS-006": {
+    "file": "cards/OS-006.webp",
+    "sha256": "bdee35fc7bf421584b97647554e2b9aa1a3d3d3aee14ed709674aedd38983b7b",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 1339116826,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Duskhollow Owl, an owl hunting in the last minute of sunset, lush green meadow and old forest, golden afternoon light, storybook fantasy painting, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "OS-007": {
+    "file": "cards/OS-007.webp",
+    "sha256": "fdd72680e94f20e295e81a6981f2266a59d3b1b0476e5ad317bd65d946de3913",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 327624094,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Frostpetal Fox, a white fox whose tail leaves frost flowers in the snow, lush green meadow and old forest, golden afternoon light, storybook fantasy painting, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "OS-008": {
+    "file": "cards/OS-008.webp",
+    "sha256": "6288c9f9cf92c8f0a913e67aa1c14afdaca48d624752030446fdff50e5c589e4",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 2451063866,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Emberkit, a tiny fire kitten napping on warm stones, lush green meadow and old forest, golden afternoon light, storybook fantasy painting, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "OS-009": {
+    "file": "cards/OS-009.webp",
+    "sha256": "7fc199e52ba0cd535d1cfa4d69bfe233adbfa19f1a140c138bc120f34fd0f914",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 1675147359,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Lumen Moth, a glowing moth shining in the dark night, lush green meadow and old forest, golden afternoon light, storybook fantasy painting, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "OS-010": {
+    "file": "cards/OS-010.webp",
+    "sha256": "05d2c12780f3853b9f13709b9b39eb4c0411212961cc461e8dee472147f78ccb",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 2031648505,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Verdant Wyrmling, a leaf-scaled baby dragon rooted in moss, lush green meadow and old forest, golden afternoon light, storybook fantasy painting, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "SE-001": {
+    "file": "cards/SE-001.webp",
+    "sha256": "67fa1c32b5031a549b0e9570b962ab30b065aef1af1fc045d6d944edaaa5932b",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 105338915,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Nebula Drake, a dragon with a nebula swirling inside its wings, deep space nebula with stars and small planets, violet and blue cosmic light, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "SE-002": {
+    "file": "cards/SE-002.webp",
+    "sha256": "0eb529605114f91ff38d4a3207e961bdfedac781ad6cf756b3bff132d8f598ed",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 2523300602,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Comet Hare, a hare leaving a comet tail as it runs, deep space nebula with stars and small planets, violet and blue cosmic light, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "SE-003": {
+    "file": "cards/SE-003.webp",
+    "sha256": "f1388092b700837445bf73307aac9d7737383bf1c28c08c6f0091ce15f1717b7",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 2189954670,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Orbit Owl, an owl circling a glowing moon, deep space nebula with stars and small planets, violet and blue cosmic light, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "SE-004": {
+    "file": "cards/SE-004.webp",
+    "sha256": "dbcedcf539f944a90934932d3f63a6015b5af6f13a36300f68546cb8cc6b0ce3",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 1509306834,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Void Ray, a manta ray spirit gliding through space, deep space nebula with stars and small planets, violet and blue cosmic light, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "SE-005": {
+    "file": "cards/SE-005.webp",
+    "sha256": "d76c4f74e303a10d857e373e0dcc1a8596fce13f13b2846c0106cefca97ba137",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 3782062654,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Starlit Unicorn, a white unicorn whose horn points at a bright star, deep space nebula with stars and small planets, violet and blue cosmic light, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "SE-006": {
+    "file": "cards/SE-006.webp",
+    "sha256": "9f83f42d422e9abaa0bd0ad6b9fb13497b8e0d8c2a4d8a9d68d5dfb5f94e7142",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 1910029421,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Meteor Golem, a golem built from a fallen meteorite, deep space nebula with stars and small planets, violet and blue cosmic light, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "SE-007": {
+    "file": "cards/SE-007.webp",
+    "sha256": "c6dc77af9b1234f5752d62cd95710cd584aea15872cd75b192a6fd04e1b513e8",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 1226212221,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Aurora Moth, a large moth with fuzzy body and wide wings rippling like the northern lights, deep space nebula with stars and small planets, violet and blue cosmic light, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "SE-008": {
+    "file": "cards/SE-008.webp",
+    "sha256": "c7bb40ff205d496f0968c11204efda4827b8a4082db4e80789079f622b874e26",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 2197223128,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Lunar Jellyfish, a glowing jellyfish spirit drifting between stars, deep space nebula with stars and small planets, violet and blue cosmic light, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "SE-009": {
+    "file": "cards/SE-009.webp",
+    "sha256": "2fbd7fc6f4f7794bddaca96cbdcdc75d630927a25cf8d189a15c94e0b705c33a",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 1311271925,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Solar Lion, a lion whose mane burns like the sun's corona, deep space nebula with stars and small planets, violet and blue cosmic light, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "SE-010": {
+    "file": "cards/SE-010.webp",
+    "sha256": "a5b471167df433bb3ec05b4e24194927172d939eca274aa94b9a16bfb95092c3",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 3422400818,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "a small dragon with glowing ember wings flying through a starfield, deep space nebula with stars and small planets, violet and blue cosmic light, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "TW-001": {
+    "file": "cards/TW-001.webp",
+    "sha256": "2b50a4f2f374743e2d01080a91f512890cae693137b96f572cc505b5b7feb686",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 1941961721,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "a glowing goldfish-like reef fish with long flowing fins, close-up, side view, underwater coral reef and moonlit lagoon, teal and turquoise water, glowing bioluminescence, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "TW-002": {
+    "file": "cards/TW-002.webp",
+    "sha256": "e9f8e333d2478842870ca05beea7363c751d8795c48eff9cde2ba52c9e910ba9",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 1139546329,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Reefguard Crab, a crab guarding coral with oversized claws, underwater coral reef and moonlit lagoon, teal and turquoise water, glowing bioluminescence, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "TW-003": {
+    "file": "cards/TW-003.webp",
+    "sha256": "c9a1bb2ada485f306a3c8d993bc1632d95f7fa9205965a23dec8ee9cf1ff3967",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 3217088267,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Abyssal Leviathan, a huge sea serpent dragon with a long scaly body, fanged jaws and glowing eyes, in the dark deep ocean, underwater coral reef and moonlit lagoon, teal and turquoise water, glowing bioluminescence, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "TW-004": {
+    "file": "cards/TW-004.webp",
+    "sha256": "6e2a6be162e0e704847e33296b9c68c244ebbab2cf8c6b00dfd7a5b23dd649cb",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 3798810424,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Kelpie Foal, a young water horse with a mane of kelp, underwater coral reef and moonlit lagoon, teal and turquoise water, glowing bioluminescence, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "TW-005": {
+    "file": "cards/TW-005.webp",
+    "sha256": "b644c9761da72b18b8615b93dc836e31847f0ee4bbf87929f064715668424918",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 4184229442,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Stormcaller Heron, a heron calling thunder over a stormy marsh, underwater coral reef and moonlit lagoon, teal and turquoise water, glowing bioluminescence, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "TW-006": {
+    "file": "cards/TW-006.webp",
+    "sha256": "1cf2e0235854265f98aa226f1c238990085b308243e0ba7ecef42b64881539c6",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 3936357645,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Coralbloom, a flowering coral opening at high tide, underwater coral reef and moonlit lagoon, teal and turquoise water, glowing bioluminescence, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "TW-007": {
+    "file": "cards/TW-007.webp",
+    "sha256": "8dda42c55b053284c58d47dfde1e63cbb752495d61e46bdc0614ce9062a1216e",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 3635603994,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Tidewyrm, a blue-scaled sea dragon with fins swimming up toward the surface, underwater coral reef and moonlit lagoon, teal and turquoise water, glowing bioluminescence, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "TW-008": {
+    "file": "cards/TW-008.webp",
+    "sha256": "04d9fdab6716f16aec15acaf92917cae2a7af336aceb55ba2cc5ddbf34755320",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 2398150513,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Shellback Hermit, a cute hermit crab in a big spiral shell decorated with bottle caps, on the sandy sea floor, underwater coral reef and moonlit lagoon, teal and turquoise water, glowing bioluminescence, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "TW-009": {
+    "file": "cards/TW-009.webp",
+    "sha256": "61c823df2eaabf3f35b8e6b89236ac24f821df9c7d547769c58478584e4329bf",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 2327695351,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "a cute little creature with a body of driftwood, seaweed hair and two big glowing eyes, underwater coral reef and moonlit lagoon, teal and turquoise water, glowing bioluminescence, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "TW-010": {
+    "file": "cards/TW-010.webp",
+    "sha256": "b6e46315ee467b2560d9967f6a6ad63c29cfdf2cb39b5b89af297ed0c8eea43a",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 940398361,
+    "steps": 6,
+    "width": 512,
+    "height": 704,
+    "prompt": "Pearl Otter, a playful otter juggling pearls on its belly, underwater coral reef and moonlit lagoon, teal and turquoise water, glowing bioluminescence, fantasy creature illustration, highly detailed digital painting, vibrant colors, dramatic lighting, centered subject, sharp focus"
+  },
+  "hero": {
+    "file": "hero.webp",
+    "sha256": "a0ca37462501c0059c5f862e98f63105b65752e6d2333181f47952d9d7b02756",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 2926344657,
+    "steps": 6,
+    "width": 896,
+    "height": 512,
+    "prompt": "dark cinematic studio, floating black volcanic rocks, glowing iridescent rainbow light ribbons swirling, reflections on a wet black floor, moody, high contrast, deep shadows, product photography backdrop"
+  },
+  "set-EF": {
+    "file": "sets/EF.webp",
+    "sha256": "a6a006b0ad6e41adadfa4210e6af45577bb1e0dfd40b3479d0aa39cafade73c0",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 2882895942,
+    "steps": 6,
+    "width": 768,
+    "height": 432,
+    "prompt": "a wide fantasy volcanic landscape, rivers of lava, ash clouds, a dragon silhouette on a ridge, crimson glow, epic matte painting"
+  },
+  "set-OS": {
+    "file": "sets/OS.webp",
+    "sha256": "0e3f34a0aa2fa37e0d7f4edd4524830dea6c2d0ecd727ff70b86aa82b1a27ecf",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 12440518,
+    "steps": 6,
+    "width": 768,
+    "height": 432,
+    "prompt": "a wide fantasy landscape, rolling green hills, ancient forest, a small dragon flying far away, golden hour, epic matte painting"
+  },
+  "set-SE": {
+    "file": "sets/SE.webp",
+    "sha256": "24bb7dd3c6a9fed3309979de243a8224ed899bbdbb0a62fdac4679fa5543ff88",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 534674834,
+    "steps": 6,
+    "width": 768,
+    "height": 432,
+    "prompt": "a wide cosmic vista, colorful nebula, ringed planet, shooting comet, violet and blue light, epic matte painting"
+  },
+  "set-TW": {
+    "file": "sets/TW.webp",
+    "sha256": "571cb403b35a107ee344d561e37392e0167ca8272100ca0533b25f7befe966d6",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 3145591432,
+    "steps": 6,
+    "width": 768,
+    "height": 432,
+    "prompt": "a wide fantasy seascape, glowing coral reef under a moonlit lagoon, sea serpent silhouette, teal light rays, epic matte painting"
+  }
+}

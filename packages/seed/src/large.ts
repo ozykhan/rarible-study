@@ -8,8 +8,8 @@ import { makeRng, type Rng } from "./rng.ts"
  * realistic size. Everything is invented and deterministic: the same options
  * give the same sets, cards, sellers and listings on every machine.
  *
- * The four hand-written sets come first and keep their ids, so every link,
- * test and eval that names them still works.
+ * The hand-written sets come first and keep their ids, so every link, test
+ * and eval that names them still works.
  */
 
 const nouns: Record<CreatureKind, ReadonlyArray<string>> = {
@@ -92,12 +92,14 @@ export const generateLargeCatalog = (options: LargeCatalogOptions = {}): Catalog
   const setCount = options.sets ?? 200
   const perSet = options.cardsPerSet ?? 100
   const names = shuffle(rng, setWords.flatMap((w) => setNouns.map((n) => `${w} ${n}`)))
+  // Generated sets come out after the hand-written ones, so they sort after them too.
+  const firstYear = Math.max(...handWritten.sets.map((s) => s.releaseYear)) + 1
   if (setCount > names.length) throw new Error(`at most ${names.length} generated sets`)
   const newSets: Array<SetSpec> = []
   const newCards: Array<CardSpec> = []
   for (let i = 0; i < setCount; i++) {
     const id = `X${String(i + 1).padStart(3, "0")}`
-    newSets.push({ id, code: id, name: names[i] ?? id, releaseYear: 2005 + (i % 21) })
+    newSets.push({ id, code: id, name: names[i] ?? id, releaseYear: firstYear + (i % 21) })
     for (let n = 1; n <= perSet; n++) {
       const kind = rng.pick(kinds)
       const noun = rng.pick(nouns[kind])

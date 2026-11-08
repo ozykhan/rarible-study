@@ -44,6 +44,8 @@ export const ListingView = Schema.Struct({
   cardId: Schema.String,
   cardNumber: Schema.String,
   cardName: Schema.String,
+  /** Where the web app serves the card's art, or null when the card has none. */
+  artPath: Schema.NullOr(Schema.String),
   edition: Edition,
   finish: Finish,
   grader: Grader,

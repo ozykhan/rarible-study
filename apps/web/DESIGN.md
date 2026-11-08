@@ -60,7 +60,7 @@ All names below are CSS custom properties on `:root` in `styles/tokens.css`. Use
 | Text | `--ink` #fff, `--ink-soft` #d4d4d8, `--muted` #a1a1aa, `--faint` #85858e, `--off` #52525b | Headings and body; nav, lede, seller text; secondary; tertiary, 4.5:1 on every surface; an LED that is off, never text |
 | Accent | `--accent` #e4ff3a, `--accent-ink` #0b0b0c, `--accent-2` #7cf3c9 | The one accent; text on it; the second stop of the logo gradient only |
 | Status | `--ok` #4ade80, `--warn` #facc15, `--bad` #f87171 | Pills, chips, LEDs, errors. Warn also marks "devnet", "read-only" and prices not in USD |
-| Set tones | `--set-OS` #8fd16a, `--set-TW` #3fd0d4, `--set-EF` #ff7a3d, `--set-SE` #a98bff, `--set-unknown` #9aa1ab | Origin Set, Tidewild, Emberfall, Starward Expedition. See Set tone below |
+| Set tones | `--set-OS` #8fd16a, `--set-TW` #3fd0d4, `--set-EF` #ff7a3d, `--set-SE` #a98bff, `--set-FV` #a8dcff, `--set-HR` #e98bd6, `--set-SK` #ffd166, `--set-DS` #d9a066, `--set-unknown` #9aa1ab | Origin Set, Tidewild, Emberfall, Starward Expedition, Frostveil, Hollowroot, Skyreach Isles, Dunesong. See Set tone below |
 | Grader labels | `--grader-<NVG\|QSG\|LCA>-stripe`, `-label`, `-ink` | The colored stripe, label fill and label text on a slab |
 | Slab | `--slab-fill`, `--slab-edge`, `--slab-window`, `--card-ink`, `--card-badge` | The acrylic case, its rim, the card well, text printed on the card, the "1st" stamp |
 | Gradients | `--gradient-ring`, `--gradient-holo` | The iridescent rim of the ring button; the holo sheen on cards |

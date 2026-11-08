@@ -6,10 +6,10 @@ describe("the large test market", () => {
   const catalog = generateLargeCatalog()
   const sellers = generateSellers()
 
-  it("is about 20,000 cards in 204 sets, the hand-written four first and unchanged", () => {
-    expect(catalog.sets.length).toBe(204)
-    expect(catalog.cards.length).toBe(20_040)
-    expect(catalog.sets.slice(0, 4)).toEqual(handWritten.sets)
+  it("is about 20,000 generated cards in 200 sets, the hand-written ones first and unchanged", () => {
+    expect(catalog.sets.length).toBe(handWritten.sets.length + 200)
+    expect(catalog.cards.length).toBe(handWritten.cards.length + 20_000)
+    expect(catalog.sets.slice(0, handWritten.sets.length)).toEqual(handWritten.sets)
     expect(catalog.cards.slice(0, handWritten.cards.length)).toEqual(handWritten.cards)
     expect(new Set(catalog.cards.map((c) => c.id)).size).toBe(catalog.cards.length)
     expect(new Set(catalog.sets.map((s) => s.name)).size).toBe(catalog.sets.length)

@@ -51,7 +51,7 @@ const COLOR_GROUPS: ReadonlyArray<[string, ReadonlyArray<string>]> = [
   ["Lines", ["--line", "--line-strong", "--line-control", "--line-glass", "--line-hover", "--line-active"]],
   ["Text", ["--ink", "--ink-soft", "--muted", "--faint", "--off"]],
   ["Accent and status", ["--accent", "--accent-ink", "--accent-2", "--ok", "--warn", "--bad"]],
-  ["Set tones", ["--set-OS", "--set-TW", "--set-EF", "--set-SE", "--set-unknown"]],
+  ["Set tones", ["--set-OS", "--set-TW", "--set-EF", "--set-SE", "--set-FV", "--set-HR", "--set-SK", "--set-DS", "--set-unknown"]],
   [
     "Grader labels",
     [

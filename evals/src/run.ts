@@ -14,7 +14,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { NodeRuntime } from "@effect/platform-node"
-import { generateSales, sellers } from "@slabwatch/seed"
+import { cards, generateSales, sellers } from "@slabwatch/seed"
 import {
   AppConfig,
   AppLive,
@@ -58,7 +58,7 @@ const program = Effect.gen(function* () {
   const llm = yield* Llm
 
   yield* catalog.insertCatalog(sellers)
-  yield* catalog.insertSales(generateSales(20261105))
+  yield* catalog.insertSales(generateSales(20261105, cards))
   yield* catalog.insertListings(evalListings.map((e) => e.labelled))
   for (const { rule } of evalRules) {
     const softEmbedding =

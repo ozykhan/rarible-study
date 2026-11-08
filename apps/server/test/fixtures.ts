@@ -10,6 +10,7 @@ export const listing = (over: Partial<ListingView> = {}): ListingView => ({
   cardId: "OS-001",
   cardNumber: "001",
   cardName: "Cinderwing Drake",
+  artPath: null,
   edition: "first",
   finish: "holo",
   grader: "NVG",
