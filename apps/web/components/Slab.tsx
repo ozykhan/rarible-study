@@ -1,11 +1,11 @@
 import type { CSSProperties } from "react"
-import { cardArt, gradeWord, setTheme, UNKNOWN_TONE } from "@/lib/art"
+import { artFor, gradeWord, setTheme, UNKNOWN_TONE } from "@/lib/art"
 import { label } from "@/lib/format"
 import type { Listing } from "@/lib/types"
 
 export type SlabCard = Pick<
   Listing,
-  "setName" | "cardName" | "cardNumber" | "edition" | "finish" | "grader" | "grade" | "setId" | "cardId"
+  "setName" | "cardName" | "cardNumber" | "edition" | "finish" | "grader" | "grade" | "setId" | "cardId" | "artPath"
 >
 
 /**
@@ -16,6 +16,7 @@ export type SlabCard = Pick<
  */
 export function Slab({ card, className = "", eager = false }: { card: SlabCard; className?: string; eager?: boolean }) {
   const theme = setTheme(card)
+  const art = artFor(card)
   const style = { "--tone": theme?.tone ?? UNKNOWN_TONE } as CSSProperties
   return (
     <div className={`slab grader-${card.grader} ${className}`} style={style} aria-hidden="true">
@@ -40,15 +41,17 @@ export function Slab({ card, className = "", eager = false }: { card: SlabCard; 
         </div>
         <div className="slab-window">
           <div className={`tcg finish-${card.finish}`}>
-            <img
-              src={cardArt(card)}
-              alt=""
-              loading={eager ? "eager" : "lazy"}
-              decoding="async"
-              width={384}
-              height={528}
-              onError={(e) => (e.currentTarget.style.visibility = "hidden")}
-            />
+            {art !== null && (
+              <img
+                src={art}
+                alt=""
+                loading={eager ? "eager" : "lazy"}
+                decoding="async"
+                width={384}
+                height={528}
+                onError={(e) => (e.currentTarget.style.visibility = "hidden")}
+              />
+            )}
             <div className="tcg-name">{card.cardName}</div>
             <div className="tcg-foot">
               <span>{theme?.id ?? ""}</span>

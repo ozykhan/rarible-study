@@ -1,4 +1,4 @@
-import { generateBulkListings, generateLargeCatalog, generateSellers, toUsdCents, type CardSpec, type Catalog } from "@slabwatch/seed"
+import { generateBulkListings, generateLargeCatalog, generateSellers, handWritten, toUsdCents, type CardSpec, type Catalog } from "@slabwatch/seed"
 import { expect, layer } from "@effect/vitest"
 import { Effect } from "effect"
 import { SqlClient } from "effect/sql/SqlClient"
@@ -34,7 +34,8 @@ const cardWords = (c: CardSpec, cat: Catalog) => {
 // A small slice of the large catalog: the same code path as a million listings, fast enough for CI.
 const catalog = generateLargeCatalog({ sets: 3, cardsPerSet: 30 })
 const sellers = generateSellers(40)
-const bulk = [...generateBulkListings({ count: 16_000, chunk: 4000, catalog, sellers })]
+// 22,000 listings put about 11,600 on the 90 generated cards, past the count cap.
+const bulk = [...generateBulkListings({ count: 22_000, chunk: 5500, catalog, sellers })]
 
 layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("the large test market", (it) => {
   it.effect("loads in bulk and searches like the seed", () =>
@@ -46,12 +47,12 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("the larg
       const listings = bulk.flat()
       const active = seed.listings.length + listings.length
 
-      // Generated sets become tabs after the hand-written four, in catalog order.
+      // Generated sets become tabs after the hand-written ones, in catalog order.
       const all = yield* search.search(query())
       expect(all.total).toBe(active)
-      expect(all.stats.setCount).toBe(7)
-      expect(all.sets.slice(0, 4).map((s) => s.id)).toEqual(["OS", "TW", "EF", "SE"])
-      expect(all.sets.slice(4).map((s) => s.id).sort()).toEqual(["X001", "X002", "X003"])
+      expect(all.stats.setCount).toBe(handWritten.sets.length + 3)
+      expect(all.sets.slice(0, handWritten.sets.length).map((s) => s.id)).toEqual(handWritten.sets.map((s) => s.id))
+      expect(all.sets.slice(handWritten.sets.length).map((s) => s.id).sort()).toEqual(["X001", "X002", "X003"])
       const x2 = catalog.setById("X002")
       expect(all.sets.find((s) => s.id === "X002")?.name).toBe(x2.name)
 
@@ -78,7 +79,7 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("the larg
       const broad = yield* search.search(query({ q: "under 100000" }))
       expect(broad).toMatchObject({ exact: false, total: 10_000, counts: { all: 10_000, sets: {} } })
       expect(broad.ids.length).toBe(100)
-      expect(broad.sets.length).toBe(7)
+      expect(broad.sets.length).toBe(handWritten.sets.length + 3)
       // One set under the cap still gets its exact number.
       const listings = [...seed.listings, ...bulk.flat()]
       const inX001 = listings.filter(
@@ -114,7 +115,7 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("the larg
       const search = yield* SearchService
       const embedder = yield* Embedder
       yield* (yield* CardVectors).refresh(1000)
-      // "x" starts every generated set code: the generated cards' 11,000 or so listings, past the cap, over 90 cards.
+      // "x" starts every generated set code: the generated cards' 11,600 or so listings, past the cap, over 90 cards.
       const q = "x"
       const from = "a creature that hides in sunken ships"
       const [vector] = yield* embedder.embed([describedWords(from).join(" ")], "query")

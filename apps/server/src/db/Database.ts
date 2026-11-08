@@ -43,6 +43,6 @@ export const migrate = Effect.gen(function* () {
 /** Formats a vector for a pgvector parameter: '[0.1,0.2,...]'. Cast it with ::vector in SQL. */
 export const toVector = (v: ReadonlyArray<number>): string => `[${v.join(",")}]`
 
-/** Formats a string array for a text[] parameter. Cast it with ::text[] in SQL. */
-export const toTextArray = (items: ReadonlyArray<string>): string =>
-  `{${items.map((s) => `"${s.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`).join(",")}}`
+/** Formats a string array for a text[] parameter, null as NULL. Cast it with ::text[] in SQL. */
+export const toTextArray = (items: ReadonlyArray<string | null>): string =>
+  `{${items.map((s) => (s === null ? "NULL" : `"${s.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`)).join(",")}}`

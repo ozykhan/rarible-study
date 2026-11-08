@@ -3,7 +3,7 @@
  * OPENSEARCH_URL (CI starts one; locally: docker compose --profile opensearch
  * up -d); without it the file is skipped.
  */
-import { sellers } from "@slabwatch/seed"
+import { cards, sellers } from "@slabwatch/seed"
 import { describe, expect, layer } from "@effect/vitest"
 import { Context, Effect, Layer } from "effect"
 import { SqlClient } from "effect/sql/SqlClient"
@@ -143,7 +143,7 @@ describe.skipIf(!enabled)("market search on OpenSearch", () => {
         yield* sql`UPDATE cards SET tags = '{sea_creature,glows}' WHERE id IN ('TW-001', 'TW-004')`
         const run = yield* sync.copyAll
         expect(run.listings).toBe(seed.listings.filter((x) => x.listing.status === "active").length)
-        expect(run.cards).toBe(40)
+        expect(run.cards).toBe(cards.length)
 
         // No card has a vector yet: Best match ranks them all alike, and orders them by their newest listing.
         let { pg, os } = yield* engines
@@ -151,7 +151,7 @@ describe.skipIf(!enabled)("market search on OpenSearch", () => {
 
         // With vectors, by meaning. The copy picks them up from the outbox.
         yield* (yield* CardVectors).refresh(1000)
-        expect(yield* sync.pending).toBeGreaterThanOrEqual(40)
+        expect(yield* sync.pending).toBeGreaterThanOrEqual(cards.length)
         while ((yield* sync.applyChanges(25)) > 0) {}
         yield* sync.refresh
         ;({ pg, os } = yield* engines)
@@ -166,7 +166,7 @@ describe.skipIf(!enabled)("market search on OpenSearch", () => {
           const inPg = yield* sql<{ readonly id: string; readonly d: number }>`
             SELECT id, (search_vector <#> ${toVector(v)}::vector)::float8 AS d FROM cards ORDER BY id`
           const res = yield* engine.search(engine.indexes.cards, {
-            size: 100,
+            size: cards.length,
             query: { script_score: { query: { match_all: {} }, script: { source: VECTOR_SCORE, params: { v } } } }
           })
           const inOs = Object.fromEntries(res.hits.hits.map((h) => [h._id, distance(h._score ?? 0)]))

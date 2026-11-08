@@ -152,7 +152,7 @@ The response also says what the box was read as, one removable chip per filter (
 
 **Card tags.** A model reads each card's catalog text (name, set, kinds and lore) once and picks tags from a hand-written vocabulary of 53 in [`tags/vocabulary.ts`](apps/server/src/tags/vocabulary.ts): what the creature is, where it lives, its element and its traits. Structured output limits the answer to those ids. The tags are stored on the card and join its search words as `#sea_creature`, and the triggers copy them to every listing of the card, so a described search is an index lookup and never a model call. A typed word cannot reach a `#` word, and tags stay out of "did you mean". Each tag lists the words that mean it, which is how "sea animal", "marine" and "underwater" all find sea creatures. A card whose text changes goes back in the queue and keeps its old tags until new ones arrive, and tags are written only if the text is still the one the model read.
 
-The running server tags waiting cards in the background, up to 400 every 10 minutes, and stays off without a model key; the live demo's 40 cards take one call, under a cent. `pnpm tags:run` tags a whole catalog through the Message Batches API at half the price. All 20,040 cards of the large market cost $0.71: a sample of 200, then the other 19,840 in 7 minutes, 496 calls of 40 cards, about 3.5 cents per 1,000 cards. The generator knows what each generated creature is, so the run checks the tags against it: 98.4% of the 20,000 generated cards got the tag for their kind, every kind at 100% but sea creatures, where the misses are otters, turtles and eels the generator put in forests and marshes. Turning the model's thinking off halved the price but tagged a lava eel as a sea creature and missed that a lion is a cat, so thinking stays on at low effort.
+The running server tags waiting cards in the background, up to 400 every 10 minutes, and stays off without a model key; the live demo's 80 cards take two calls, under a cent. `pnpm tags:run` tags a whole catalog through the Message Batches API at half the price. All 20,040 cards of the large market cost $0.71: a sample of 200, then the other 19,840 in 7 minutes, 496 calls of 40 cards, about 3.5 cents per 1,000 cards. The generator knows what each generated creature is, so the run checks the tags against it: 98.4% of the 20,000 generated cards got the tag for their kind, every kind at 100% but sea creatures, where the misses are otters, turtles and eels the generator put in forests and marshes. Turning the model's thinking off halved the price but tagged a lava eel as a sea creature and missed that a lion is a cat, so thinking stays on at low effort.
 
 **Best match.** The market's default order for any search that reads as a tag or carries a description, and a choice in the Sort menu whenever there is a search. Name searches ("ashen wyrm") stay newest first: the shopper knows the card and wants what is new. A description alone ("something that collects junk") ranks the whole catalog.
 
@@ -178,7 +178,7 @@ The running server tags waiting cards in the background, up to 400 every 10 minu
 
 `pnpm eval:fit` measures it on the large catalog. Results are [below](#rerank-and-cut-results).
 
-**At scale.** `pnpm db:seed:large` adds a fictional catalog of 20,040 cards in 204 sets, 2,012 sellers and a million active listings; it took 138 seconds here. `pnpm bench:search` times searches through the same service. On a 4-core container with Postgres 16 at default settings, with 1,000,199 active listings and every card tagged:
+**At scale.** `pnpm db:seed:large` adds a fictional catalog of 20,000 generated cards in 200 sets on top of the hand-written ones, 2,012 sellers and a million active listings; it took 138 seconds here. The numbers in this section were measured before the second catalog drop, with 20,040 cards in 204 sets. `pnpm bench:search` times searches through the same service. On a 4-core container with Postgres 16 at default settings, with 1,000,199 active listings and every card tagged:
 
 | Search | Matches | p50 ms | p95 ms |
 | --- | ---: | ---: | ---: |
@@ -249,7 +249,7 @@ What it costs: a second system to run (a JVM that wants a few GB of memory), a s
 
 | Route | What it shows |
 | --- | --- |
-| `/` | The front page: search, the four sets, the five newest listings, how buying works, the graders, and a band that offers the agent |
+| `/` | The front page: search, the eight sets, the five newest listings, how buying works, the graders, and a band that offers the agent |
 | `/market` | Every active listing as a grid of slabs, with set tabs, grader, search, sort and paging. The filters live in the URL and run on the server: `GET /api/listings` takes `?set`, `?grader`, `?q`, `?from`, `?fit`, `?sort`, `?offset` and `?limit`. A search that reads as a tag or carries a description is sorted Best match unless `?sort` says otherwise, and the response says which order it used and whether `?fit` cut it. Pressing Enter in the search adds `?ask=1`, and a search with words nothing matches is then read by the model, which also judges the cards against any description before the page loads. Search is described [below](#how-market-search-works). Watch on a tile opens the agent in a drawer |
 | `/listing/[id]` | One listing in full, with Buy now inline and more from the same set. `GET /api/listings/:id` also answers for sold and withdrawn listings, so their pages say so |
 | `/agent` | The optional agent: your watches beside the selected watch, then Found for you (matches, listings to review and purchases waiting for a signature, as cards in a row you can search and scroll), skipped listings and purchases, and the chat with the agent as a popup at the bottom right. Every card you can still buy has Sign and pay. You can ask the agent about a listing, chat with it about the watch, or sign an auto-buy approval and revoke it later. Manage your watches adds, pauses, resumes and changes watches. A watch cannot be edited, so Change saves a new watch and pauses the old one |
@@ -258,7 +258,9 @@ Seller text is shown as plain text, since some of it is written to trick an AI b
 
 The checkout was driven in headless Chromium with a test wallet against the in-memory chain, from a fresh wallet to a paid purchase. A browser script also checked the agent page: signing a match, the auto-buy state and changing a watch.
 
-Each slab is drawn in CSS (the grader's label, the grade, a holo sheen for holo finishes) around generated card art. The art, 40 cards plus 4 set banners and the hero background, was made on CPU with [LCM Dreamshaper v7](https://huggingface.co/SimianLuo/LCM_Dreamshaper_v7) (MIT license) by [`apps/web/scripts/generate_art.py`](apps/web/scripts/generate_art.py). Its prompts describe the fictional creatures in the seed catalog.
+Each slab is drawn in CSS (the grader's label, the grade, a holo sheen for holo finishes) around generated card art. The 80 cards and 8 set banners were made on a laptop, an Apple M3 with 16 GB, by [`apps/web/scripts/generate_art.py`](apps/web/scripts/generate_art.py): [FLUX.2 klein 4B](https://huggingface.co/black-forest-labs/FLUX.2-klein-4B) (Apache 2.0) run through [mflux](https://github.com/mflux-community/mflux) (MLX, MIT), 8-bit and 4 steps: about a minute an image, all 88 in an hour and a half. Five came out as the wrong creature (a mammoth without a trunk, a griffin with a cat's head) and got a plainer description and a second run. A trial against [Z-Image Turbo](https://huggingface.co/Tongyi-MAI/Z-Image-Turbo) took twice as long and drew a plain whale for the cloud whale and a plain cactus for the cactus creature, where FLUX.2 kept the made-up traits. The hero background is from the first version, made on CPU with [LCM Dreamshaper v7](https://huggingface.co/SimianLuo/LCM_Dreamshaper_v7) (MIT).
+
+The script reads the cards from the seed package, so a card is written once, and its prompts describe a card's lore, never its invented name ("Sprite" draws a girl). Each image's prompt, seed, model and hash go into [`packages/seed/src/art.json`](packages/seed/src/art.json); a rerun skips matching records, so a long run can stop and resume. The seed gives each card its art path from that file, with the hash in the query so a CDN can cache every version for good, and a card with no art, such as every card of the large generated catalog, is drawn as a frame without asking for a missing image. The images sit in `apps/web/public/art` while there are a hundred of them; past a few hundred they belong in a storage bucket behind a CDN, and only the path changes.
 
 The design system is written down in [`apps/web/DESIGN.md`](apps/web/DESIGN.md): tokens in [`apps/web/styles/tokens.css`](apps/web/styles/tokens.css), one stylesheet per component, shared building blocks in [`apps/web/components/ui`](apps/web/components/ui), and a `/design` page that renders every token and component with sample data.
 
@@ -323,7 +325,7 @@ Both runs use Claude Haiku 5.5 and bge-small embeddings on the same eval set. Ex
 
 ### Drafting watch rules
 
-`pnpm eval:parse` sends 18 labelled wants through the parser the app uses: the five rules above, kinds of creature ("Horse cards", "any golem", "unicorn cards"), plain descriptions, cards named in lowercase, by their first word or misspelt, a price in yen, a card in two sets, and a card that does not exist. A case passes when every field is right and the draft asks a question exactly when a careful reader would. `--large` runs the same wants against the 20,040-card catalog, which keeps the four hand-written sets and their ids.
+`pnpm eval:parse` sends 18 labelled wants through the parser the app uses: the five rules above, kinds of creature ("Horse cards", "any golem", "unicorn cards"), plain descriptions, cards named in lowercase, by their first word or misspelt, a price in yen, a card in two sets, and a card that does not exist. A case passes when every field is right and the draft asks a question exactly when a careful reader would. `--large` runs the same wants against the large catalog (20,040 cards when these runs were made), which keeps the hand-written sets and their ids.
 
 | Run | Prompt | Catalog | Cases passed | Asked when clear | Missed questions | ms, p50 / p95 | Cost |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -444,7 +446,7 @@ pnpm test
 pnpm eval                   # v1 eval, needs the API key
 pnpm eval:search            # reads 51 labelled described searches, needs the API key (about $0.003)
 pnpm eval:parse             # drafts 18 labelled watch rules, needs the API key (about $0.004; --large for 20,040 cards)
-pnpm db:seed:large          # optional: 20,040 cards and a million listings, for search at scale
+pnpm db:seed:large          # optional: 20,000 more cards and a million listings, for search at scale
 pnpm bench:search           # times market searches against the database
 pnpm tags:run               # tags every card that needs it, through the Message Batches API (needs the API key)
 pnpm vectors:run            # writes every card's Best match vector with the local model, no cost
@@ -455,7 +457,7 @@ pnpm search:sync copy       # copies the search data into OpenSearch and starts 
 pnpm bench:engines          # the benchmark searches on Postgres and OpenSearch, checked against each other
 ```
 
-The large seed is for local databases only and refuses to run on Railway. Its cards have no tags until `pnpm tags:run` (about $0.71 for all of them) and no Best match vectors until `pnpm vectors:run` (about 4 minutes for 20,040 cards); `pnpm eval:rank` and `pnpm eval:fit` need both, and read the schema `bench` unless `DB_SCHEMA` names another. `TAG_NOW=1 TAG_LIMIT=200 pnpm tags:run` tags a sample with ordinary calls first, to check tags and cost. `BULK_LISTINGS=100000` loads fewer listings, and an interrupted load picks up where it stopped. To keep it apart from the demo data, run both seeds and the server with `DB_SCHEMA=large` (any name), which puts every table in that schema.
+The large seed is for local databases only and refuses to run on Railway. Its cards have no tags until `pnpm tags:run` (about $0.71 for all of them) and no Best match vectors until `pnpm vectors:run` (about 4 minutes for 20,000 cards); `pnpm eval:rank` and `pnpm eval:fit` need both, and read the schema `bench` unless `DB_SCHEMA` names another. `TAG_NOW=1 TAG_LIMIT=200 pnpm tags:run` tags a sample with ordinary calls first, to check tags and cost. `BULK_LISTINGS=100000` loads fewer listings, and an interrupted load picks up where it stopped. To keep it apart from the demo data, run both seeds and the server with `DB_SCHEMA=large` (any name), which puts every table in that schema.
 
 Payments are simulated unless you set `PAYMENTS=devnet` and a `DEVNET_SEED` (`openssl rand -hex 32`). With `SOLANA_RPC_URL=memory` the devnet code runs on an in-process VM; with the default devnet RPC the server creates the dUSD mint and the escrow account on its first boot and asks the devnet faucet for SOL for fees. If the faucet refuses (it is rate limited), the log prints the treasury address to fund at faucet.solana.com.
 
@@ -470,7 +472,7 @@ The live demo runs the backend and Postgres on Railway and the web app on Vercel
 **Railway.** One project with two services.
 
 1. Postgres from Railway's pgvector template.
-2. A service from this repo, built by Railpack with no Dockerfile. Start command `pnpm --filter @slabwatch/server start`. Pre-deploy command `pnpm --filter @slabwatch/server db:seed`, which runs the migrations and loads the seed in one locked transaction, so two deploys at once cannot load it twice. Health check on `/health`.
+2. A service from this repo, built by Railpack with no Dockerfile. Start command `pnpm --filter @slabwatch/server start`. Pre-deploy command `pnpm --filter @slabwatch/server db:seed`, which runs the migrations and loads the seed in one locked transaction, so two deploys at once cannot load it twice. The catalog grows in drops (the four launch sets, then four more); each drop seeds its own listings and price history from its own random stream and id prefixes, so a deploy with a new drop adds its cards, listings and sales next to what the database holds and changes nothing already there. Health check on `/health`.
 3. Its variables:
 
 | Variable | Value |

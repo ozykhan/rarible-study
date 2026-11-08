@@ -34,3 +34,9 @@ pnpm-debug.log*
 # Next.js writes this on every build
 apps/web/next-env.d.ts
 apps/web/AGENTS.md
+
+# Python
+__pycache__/
+
+# Art script trials (apps/web/scripts/generate_art.py --out)
+.art-trial/

@@ -15,6 +15,7 @@ const view = (e: EvalListing): ListingView => {
     cardId: c.id,
     cardNumber: c.number,
     cardName: c.name,
+    artPath: null,
     edition: v.edition,
     finish: v.finish,
     grader: v.grader,

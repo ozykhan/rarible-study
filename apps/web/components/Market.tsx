@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import type { CSSProperties } from "react"
+import { type CSSProperties, useEffect, useRef } from "react"
 import { cardId, GRADERS, SETS, UNKNOWN_TONE } from "@/lib/art"
 import { cx } from "@/lib/cx"
 import { count as fmt, dusd } from "@/lib/format"
@@ -12,9 +12,11 @@ import { ListingTile } from "./ListingTile"
 import { MarketSearch } from "./MarketSearch"
 import { Button, CloseIcon } from "./ui"
 
-/** Up to this many sets, every set is a tab. Past it the tabs get their own row and show the biggest few; the rest go in a menu. */
+/** Up to this many sets, every set is a tab. Past it the tabs show the biggest few and the rest go in a menu. */
 const MAX_TABS = 8
 const TOP_TABS = 6
+/** Past this many set tabs, the tabs get a row of their own instead of sharing it with the menus. */
+const SHARED_ROW_TABS = 4
 
 const toneOf = (id: string) => SETS.find((s) => s.id === id)?.tone ?? UNKNOWN_TONE
 
@@ -161,9 +163,21 @@ export function Market(props: {
   const count = (id: string) =>
     m.counts === null ? "…" : id === "all" ? (m.exact ? fmt(m.counts.all) : "10,000+") : m.exact ? fmt(m.counts.sets[id] ?? 0) : null
   const left = m.listings === null ? 0 : m.total - m.listings.length
-  // The four hand-written sets stand in until the server answers; they exist in every catalog.
+  // The hand-written sets stand in until the server answers; they exist in every catalog.
   const rank = (id: string) => (m.exact ? m.counts?.sets[id] : m.stats?.sets[id]?.count) ?? 0
   const { tabs, rest } = splitSets(m.sets ?? SETS, rank, f.set)
+  const tabRow = useRef<HTMLElement>(null)
+  // The tab row scrolls sideways when it does not fit; keep the picked set in view.
+  // Counts arriving change the tab widths, so look again then.
+  useEffect(() => {
+    const nav = tabRow.current
+    const active = nav?.querySelector<HTMLElement>(".tab.active")
+    if (!nav || !active) return
+    const left = active.getBoundingClientRect().left - nav.getBoundingClientRect().left + nav.scrollLeft
+    if (left < nav.scrollLeft || left + active.offsetWidth > nav.scrollLeft + nav.clientWidth) {
+      nav.scrollLeft = left - (nav.clientWidth - active.offsetWidth) / 2
+    }
+  }, [f.set, tabs.length, m.counts])
 
   return (
     <>
@@ -187,8 +201,8 @@ export function Market(props: {
 
       <section id="market" className="section market">
         <MarketSearch id="market-search" className="market-search" />
-        <div className={cx("market-bar", rest.length > 0 && "many-sets")}>
-          <nav className="tabs" aria-label="Filter by set">
+        <div className={cx("market-bar", (rest.length > 0 || tabs.length > SHARED_ROW_TABS) && "many-sets")}>
+          <nav ref={tabRow} className="tabs" aria-label="Filter by set">
             {[{ id: "all", name: "All sets" }, ...tabs].map((t) => (
               <button
                 key={t.id}

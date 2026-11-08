@@ -70,6 +70,11 @@
 /* A catalog of many sets: the tabs take the whole row and the set menu joins the selects under it. */
 .market-bar.many-sets .tabs {
   flex-basis: 100%;
+  gap: 0;
+}
+/* Tighter tabs so eight sets and All fit a laptop-wide row; narrower screens scroll it. */
+.market-bar.many-sets .tab {
+  padding-inline: var(--space-2-5);
 }
 .market-selects {
   display: flex;

@@ -25,7 +25,7 @@ import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { NodeRuntime } from "@effect/platform-node"
 import { hardChecks } from "@slabwatch/domain"
-import { generateSales, sellers } from "@slabwatch/seed"
+import { cards, generateSales, sellers } from "@slabwatch/seed"
 import {
   Agent,
   AppConfig,
@@ -86,7 +86,7 @@ const program = Effect.gen(function* () {
   const matcher = yield* Matcher
 
   yield* catalog.insertCatalog(sellers)
-  yield* catalog.insertSales(generateSales(20261105))
+  yield* catalog.insertSales(generateSales(20261105, cards))
   yield* catalog.insertListings(evalListings.map((e) => e.labelled))
   // The original rules, for the matcher verdicts. The agent acts on copies.
   for (const { rule } of evalRules) {

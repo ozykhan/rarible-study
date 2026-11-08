@@ -1,4 +1,4 @@
-import { cardById } from "@slabwatch/seed"
+import { cardById, cards } from "@slabwatch/seed"
 import { expect, layer } from "@effect/vitest"
 import { Effect } from "effect"
 import { SqlClient } from "effect/sql/SqlClient"
@@ -44,7 +44,7 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("card tag
       const tagger = yield* CardTagger
 
       // Every card waits for tags; without a model key the tagger says so instead of guessing.
-      expect(yield* tagger.queued).toBe(40)
+      expect(yield* tagger.queued).toBe(cards.length)
       expect((yield* Effect.flip(tagger.tagQueued()))._tag).toBe("LlmNotConfigured")
 
       // Before any tags, "sea animal" matches only cards whose own words start with both: none.
@@ -122,7 +122,8 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("card tag
       const tagger = yield* makeCardTagger.pipe(Effect.provideService(Llm, fake))
 
       const first = yield* tagger.tagQueued()
-      expect(first).toMatchObject({ cards: 40, calls: 1, failedCalls: 0, tagged: 38, costUsdMicros: 35 })
+      // 40 cards a call: two calls for the 80 hand-written cards.
+      expect(first).toMatchObject({ cards: cards.length, calls: 2, failedCalls: 0, tagged: cards.length - 2, costUsdMicros: 70 })
       expect(yield* tagger.queued).toBe(2)
       const rows = yield* sql<{ readonly id: string; readonly tags: ReadonlyArray<string>; readonly taggedVersion: number | null }>`
         SELECT id, tags, tagged_version FROM cards WHERE id IN ('TW-001', 'EF-002', 'EF-001', 'OS-002') ORDER BY id`

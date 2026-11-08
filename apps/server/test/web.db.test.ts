@@ -5,7 +5,7 @@
  * chain. Requests go straight into the router as web Requests.
  */
 import { expect, layer } from "@effect/vitest"
-import { toUsdCents } from "@slabwatch/seed"
+import { sets, toUsdCents } from "@slabwatch/seed"
 import {
   generateKeyPairSigner,
   getBase64EncodedWireTransaction,
@@ -189,7 +189,7 @@ layer(TestLive, { timeout: "120 seconds", excludeTestServices: true })("web api"
       // The counts cover every active listing, not only the 40 sent in full.
       expect(market["stats"]["count"]).toBeGreaterThan(listed.length)
       expect(market["stats"]["floorUnits"]).toBeLessThanOrEqual(Math.min(...listed.map((l) => l["payUnits"])))
-      expect(Object.keys(market["stats"]["sets"]).sort()).toEqual(["EF", "OS", "SE", "TW"])
+      expect(Object.keys(market["stats"]["sets"]).sort()).toEqual(sets.map((s) => s.id).sort())
       expect(market["total"]).toBe(market["stats"]["count"])
 
       // A filtered page: one set, cheapest first, paged; the tabs still count every set.

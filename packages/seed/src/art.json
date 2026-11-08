@@ -1,0 +1,892 @@
+{
+  "DS-001": {
+    "file": "cards/DS-001.webp",
+    "sha256": "253f5503ebe994c841c0eb5cbe08ad7d5b79b6871b24ccf5646105ac0d16e4b2",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 2149982461,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A long sand-colored dragon bursting up out of a sand dune in a spray of sand, half of its serpent body still under the sand. Setting: wind-carved sand dunes and sandstone ruins under a blazing white sun, warm ochre and gold. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "DS-002": {
+    "file": "cards/DS-002.webp",
+    "sha256": "e8764d8212fe0e4cce379690caf89ecda1b5053bcd64163dd6dcdb1e3d90bb7a",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 22828100,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A fennec fox that leaves three false copies of itself in the heat haze. Setting: wind-carved sand dunes and sandstone ruins under a blazing white sun, warm ochre and gold. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "DS-003": {
+    "file": "cards/DS-003.webp",
+    "sha256": "7214ff5c7ed565779802bfca67391f23e4d5eacd26a09779491ec3a0ba8eed73",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 2739250817,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A scarab with wings of fused desert glass that chime as it flies. Setting: wind-carved sand dunes and sandstone ruins under a blazing white sun, warm ochre and gold. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "DS-004": {
+    "file": "cards/DS-004.webp",
+    "sha256": "11df1da1d26ba248ac8308b213e57814d1bf6a9b3f0400904b562f6bac1c461a",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 3164161046,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "An oryx with long straight horns that can smell water a day away. Setting: wind-carved sand dunes and sandstone ruins under a blazing white sun, warm ochre and gold. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "DS-005": {
+    "file": "cards/DS-005.webp",
+    "sha256": "c293f14b231194f6fe585676afc696f7b676464e8798ca7df87ce80666ad6c23",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 2897662527,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A colossus carved into a cliff that wakes once every hundred years. Setting: wind-carved sand dunes and sandstone ruins under a blazing white sun, warm ochre and gold. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "DS-006": {
+    "file": "cards/DS-006.webp",
+    "sha256": "aa15fe664f7d7eb78279f22bf6cff571fd0938f9b0b041629bd2abc1e4748552",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 641914237,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A copper viper that hides under hot sand with only its eyes showing. Setting: wind-carved sand dunes and sandstone ruins under a blazing white sun, warm ochre and gold. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "DS-007": {
+    "file": "cards/DS-007.webp",
+    "sha256": "e3ef4e34eb9253c47aedaacfa9b96055e8a4c56f591f81fc311886ea473f3e95",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 974371542,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A round little cactus creature with stubby legs, waddling toward a patch of shade. Setting: wind-carved sand dunes and sandstone ruins under a blazing white sun, warm ochre and gold. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "DS-008": {
+    "file": "cards/DS-008.webp",
+    "sha256": "ed8a77dfb879b3f189d31325a6315e4910103a24705b10e6faef3ef8aaf57ace",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 3507017564,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A shadowy spirit inside a small swirling dust storm, with two glowing eyes. Setting: wind-carved sand dunes and sandstone ruins under a blazing white sun, warm ochre and gold. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "DS-009": {
+    "file": "cards/DS-009.webp",
+    "sha256": "71f12943dd4daaf48bc0d885fc2a464b5ae732ab6489bf6c822cf94b68f5cc70",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 977243854,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A golden koi that lives only in pools that appear after rain. Setting: wind-carved sand dunes and sandstone ruins under a blazing white sun, warm ochre and gold. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "DS-010": {
+    "file": "cards/DS-010.webp",
+    "sha256": "3efa4f92f9f1b12156c90352ba28336464d37e1a13262ade71783308d73dc24f",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 250964770,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A giant eagle-like roc bird perched on the tallest tower of a ruined desert city. Setting: wind-carved sand dunes and sandstone ruins under a blazing white sun, warm ochre and gold. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "EF-001": {
+    "file": "cards/EF-001.webp",
+    "sha256": "425501a50afbbb716113b12999654e2eed6731e04e21035a08a3e1ea55dfe474",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 63526687,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "An ancient dragon that sleeps under cooled lava. Setting: a volcanic landscape with glowing lava rivers, drifting embers and ash, orange and crimson light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "EF-002": {
+    "file": "cards/EF-002.webp",
+    "sha256": "c218d96c039e921ca1890865730653cc2ef512c45cd2443cb7e1ac15d43edc0d",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 3916611709,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A hound with molten paws that leaves glowing tracks. Setting: a volcanic landscape with glowing lava rivers, drifting embers and ash, orange and crimson light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "EF-003": {
+    "file": "cards/EF-003.webp",
+    "sha256": "9d4b1792afbd4a762cf30a3f33e51c5ebc390eee1b93d5e6768f17131bfcb554",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 3637497972,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A salamander that bathes in campfire embers. Setting: a volcanic landscape with glowing lava rivers, drifting embers and ash, orange and crimson light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "EF-004": {
+    "file": "cards/EF-004.webp",
+    "sha256": "ff20814e9f1322a842b0e5365261f7a9bb305d58861ebb7cf8a4a4bca1c99dbe",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 648897538,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A golem of volcanic glass with a hollow chest. Setting: a volcanic landscape with glowing lava rivers, drifting embers and ash, orange and crimson light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "EF-005": {
+    "file": "cards/EF-005.webp",
+    "sha256": "10826fdda358c07d9f192c4a72319c99577985d453eef078cfb988c3fc01b5ba",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 2116708235,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A phoenix that is reborn from a single spark. Setting: a volcanic landscape with glowing lava rivers, drifting embers and ash, orange and crimson light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "EF-006": {
+    "file": "cards/EF-006.webp",
+    "sha256": "42cde262ac7452529db4b4f209015da24dfcb8a22b4f1a24e693606bb5fa988f",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 2585927863,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A small ghost made of curling grey smoke with two glowing ember eyes, floating over embers. Setting: a volcanic landscape with glowing lava rivers, drifting embers and ash, orange and crimson light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "EF-007": {
+    "file": "cards/EF-007.webp",
+    "sha256": "67749f30c3ccadc9ae9378426cebb664929b09ced444f6385470416f988592ef",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 516506216,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A ram whose horns are columns of basalt. Setting: a volcanic landscape with glowing lava rivers, drifting embers and ash, orange and crimson light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "EF-008": {
+    "file": "cards/EF-008.webp",
+    "sha256": "c10dcf5027c245cb01be8911dade34120ec875d67077a507832aa8767112c102",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 50155279,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A baby dragon that sneezes small flares when startled. Setting: a volcanic landscape with glowing lava rivers, drifting embers and ash, orange and crimson light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "EF-009": {
+    "file": "cards/EF-009.webp",
+    "sha256": "3d68b46bd1427686ac98442aebf0ffb9e611313149d8108a8cb99426a198f2b5",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 3485833889,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A beetle that rolls balls of charcoal. Setting: a volcanic landscape with glowing lava rivers, drifting embers and ash, orange and crimson light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "EF-010": {
+    "file": "cards/EF-010.webp",
+    "sha256": "12ab503c0d5ef083b8075d9d85e3eaa084f1f9f811fc6e3d56cf4745c18ee703",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 3699622811,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A long glowing eel with fins, swimming through a river of lava. Setting: a volcanic landscape with glowing lava rivers, drifting embers and ash, orange and crimson light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "FV-001": {
+    "file": "cards/FV-001.webp",
+    "sha256": "b1cb4a6dce8edd03ab44ec3316f464127cee2a3796b31f883de125c93b9c5ad5",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 3611237067,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A blue-white dragon that sleeps folded inside a glacier. Setting: a frozen glacier field under a green and violet aurora, blue-white snow and ice. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "FV-002": {
+    "file": "cards/FV-002.webp",
+    "sha256": "a52621f6f77b955c9a9f57d0e47196d222513a7e99a86a21293d1fa82fab1df1",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 2152060119,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A pale wolf whose breath leaves rime on everything it passes. Setting: a frozen glacier field under a green and violet aurora, blue-white snow and ice. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "FV-003": {
+    "file": "cards/FV-003.webp",
+    "sha256": "8689caea01ea6ae1096c3ec4d299f03619276ce93644f110730382999a8fd41c",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 3066896047,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A hare that disappears into the snow by holding perfectly still. Setting: a frozen glacier field under a green and violet aurora, blue-white snow and ice. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "FV-004": {
+    "file": "cards/FV-004.webp",
+    "sha256": "b314e27d59960295e347866c16998df84e8ed413634bb101c9a4dc189cccf30d",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 892627895,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A swan whose wake paints the night sky green and violet. Setting: a frozen glacier field under a green and violet aurora, blue-white snow and ice. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "FV-005": {
+    "file": "cards/FV-005.webp",
+    "sha256": "7b25fa2580386e67fea1b51c9bca3f003d400dc80bfe03e62f026a3ca1fbc8a9",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 96518481,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A tiny spirit made of clear icicles with two glowing blue eyes, hovering over the snow. Setting: a frozen glacier field under a green and violet aurora, blue-white snow and ice. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "FV-006": {
+    "file": "cards/FV-006.webp",
+    "sha256": "36ae2c30cce511e9c8205455a073be7a5a6d9524b70e1fb582a8efeff8637d0f",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 3112111138,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A golem of packed ice with an old pine frozen in its chest. Setting: a frozen glacier field under a green and violet aurora, blue-white snow and ice. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "FV-007": {
+    "file": "cards/FV-007.webp",
+    "sha256": "b180be1369e87c54acb7c5761548d7bd9e687b1c348e572b17e23599c96f442d",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 3101390192,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A white flower that blooms only on the coldest night of the year. Setting: a frozen glacier field under a green and violet aurora, blue-white snow and ice. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "FV-008": {
+    "file": "cards/FV-008.webp",
+    "sha256": "56d9383d9169105b1e797c8f945c6b0d2347b7096d525372f1316444e184e746",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 1225617608,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A walrus whose tusks chime when it calls to the herd. Setting: a frozen glacier field under a green and violet aurora, blue-white snow and ice. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "FV-009": {
+    "file": "cards/FV-009.webp",
+    "sha256": "8c797f14bd35156b2e74ea75d38f1849a98c28b8f1afe18ba31bc15ceb617858",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 1970528254,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A finch that sheds tiny hailstones when it shakes its feathers. Setting: a frozen glacier field under a green and violet aurora, blue-white snow and ice. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "FV-010": {
+    "file": "cards/FV-010.webp",
+    "sha256": "d4e46eede827ddcd99a26f99ab9e9196206e5fb71a5d94d6c72a5e4e10eb9b01",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 4206643047,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A woolly mammoth with a long trunk and huge curved tusks, shaggy white fur, icicles hanging from its tusks. Setting: a frozen glacier field under a green and violet aurora, blue-white snow and ice. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "HR-001": {
+    "file": "cards/HR-001.webp",
+    "sha256": "009a1e60c9d5729bd1be185faad651d5d9daaa4953a3da91c77a73ff753c6efc",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 2238136880,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A dragon with shelf mushrooms along its spine that glow a faint blue. Setting: a vast underground cavern of giant glowing mushrooms and ancient roots, blue and magenta glow in the dark. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "HR-002": {
+    "file": "cards/HR-002.webp",
+    "sha256": "67fc3404edf3ad3b7ae0dad231130b026bdefc4c00d8c3f3dc1a303ddbc9497d",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 2459100860,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A beetle that carries a glowing mushroom on its back like a lantern. Setting: a vast underground cavern of giant glowing mushrooms and ancient roots, blue and magenta glow in the dark. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "HR-003": {
+    "file": "cards/HR-003.webp",
+    "sha256": "a5985abd33ca8f9ed71b9b880de10c5ab4c2ea2d841893ddc9444fa0c195f00a",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 2784084678,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A badger that digs its tunnels along the roots of the oldest trees. Setting: a vast underground cavern of giant glowing mushrooms and ancient roots, blue and magenta glow in the dark. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "HR-004": {
+    "file": "cards/HR-004.webp",
+    "sha256": "cd559b4f96e4f639936e8dd71066af498c34baf2edd5c93ecc9bd3f4eded7a15",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 1599970836,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A bat that maps the caverns by humming a single low note. Setting: a vast underground cavern of giant glowing mushrooms and ancient roots, blue and magenta glow in the dark. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "HR-005": {
+    "file": "cards/HR-005.webp",
+    "sha256": "a99322d8ebbc7771bcdb7a4f9dfb269dd23f48515dd929466d57412c79673cb8",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 1475255000,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "An axolotl with frilled, glowing gills from an underground lake. Setting: a vast underground cavern of giant glowing mushrooms and ancient roots, blue and magenta glow in the dark. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "HR-006": {
+    "file": "cards/HR-006.webp",
+    "sha256": "a229f883e892ca96ccd61b730b80528c35b5115967437d793b4a621ec605baff",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 15487222,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A golem that cracks open to show purple crystals inside. Setting: a vast underground cavern of giant glowing mushrooms and ancient roots, blue and magenta glow in the dark. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "HR-007": {
+    "file": "cards/HR-007.webp",
+    "sha256": "465fcbe0bebeee55ba53891a3f0f795954be12040e08fdedb68667ea20723bbd",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 835134241,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A pale salamander that glows in slow pulses to find its way in the dark. Setting: a vast underground cavern of giant glowing mushrooms and ancient roots, blue and magenta glow in the dark. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "HR-008": {
+    "file": "cards/HR-008.webp",
+    "sha256": "d7f30a5a476d919563516e9ec2caa244199f81095c08b70789ce645bf6d2249f",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 2371180420,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A serpent of twisted roots whose stare turns loose soil to stone. Setting: a vast underground cavern of giant glowing mushrooms and ancient roots, blue and magenta glow in the dark. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "HR-009": {
+    "file": "cards/HR-009.webp",
+    "sha256": "4bf9befb365b7619a00e1809f0f17f2f5bc0e936883fd50d6d626861cb2ad333",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 713881424,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A mantis with legs like mushroom stalks that waits without moving. Setting: a vast underground cavern of giant glowing mushrooms and ancient roots, blue and magenta glow in the dark. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "HR-010": {
+    "file": "cards/HR-010.webp",
+    "sha256": "666c232426509f1e580ef85c442798b700baf10c2ff13520cdac08b11fdbe42b",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 693224627,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A giant old mushroom with a gentle sleepy face in its stem, glowing softly. Setting: a vast underground cavern of giant glowing mushrooms and ancient roots, blue and magenta glow in the dark. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "OS-001": {
+    "file": "cards/OS-001.webp",
+    "sha256": "97fafda73d5842be5da6afe0aea445071329c17f42970e74806582a43f113063",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 1606124806,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A young dragon whose wings shed sparks when it dives. Setting: a lush green meadow at the edge of an old forest in golden afternoon light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "OS-002": {
+    "file": "cards/OS-002.webp",
+    "sha256": "45e5b1ac304872a01395d0a17abc5f8535eb62ae8333b64a92f81fae70c21e13",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 2609796948,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A pond tortoise with a garden growing on its shell. Setting: a lush green meadow at the edge of an old forest in golden afternoon light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "OS-003": {
+    "file": "cards/OS-003.webp",
+    "sha256": "de495b2712824e2d001c5f9abeecd7792b3e65d941ad98a741f0a7ab36483c82",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 1933140728,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A small round wind creature made of swirling air and leaves, with two glowing eyes. Setting: a lush green meadow at the edge of an old forest in golden afternoon light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "OS-004": {
+    "file": "cards/OS-004.webp",
+    "sha256": "a437a1f3fc2e5b1e8ad0eaf621854f5c86fc26d9be9647d74799a4ee65ec8162",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 2621895717,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A lion with a mane of bramble and a quiet roar. Setting: a lush green meadow at the edge of an old forest in golden afternoon light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "OS-005": {
+    "file": "cards/OS-005.webp",
+    "sha256": "cc576fec26da904997af8437c595aa17edbb98c32abdbc8dd5bb6fe2d595bd92",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 3051983503,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A hulking construct like a squat statue, its body mossy boulders bolted together with rusted iron plates, a blank helmet-shaped head with two glowing eye slits. Setting: a lush green meadow at the edge of an old forest in golden afternoon light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "OS-006": {
+    "file": "cards/OS-006.webp",
+    "sha256": "3d7e50bcef05b7a057d21b178e7f896bf9bebe0c4b4b11eb370a5470a6e45633",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 1339116826,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "An owl that only hunts in the last minute of sunset. Setting: a lush green meadow at the edge of an old forest in golden afternoon light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "OS-007": {
+    "file": "cards/OS-007.webp",
+    "sha256": "487b01f8e2b1e68179e932919917c0767a70cf4fb1e94e76f81c6a44243bbc7b",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 327624094,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A fox whose tail leaves frost flowers in the snow. Setting: a lush green meadow at the edge of an old forest in golden afternoon light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "OS-008": {
+    "file": "cards/OS-008.webp",
+    "sha256": "c64a08d1d2342c82e343833f378c0504c24ed43d9002c4ac57f7f37efe927ea3",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 2451063866,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A kitten-sized fire cat that naps on warm stones. Setting: a lush green meadow at the edge of an old forest in golden afternoon light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "OS-009": {
+    "file": "cards/OS-009.webp",
+    "sha256": "3a546caa2a42775dace107f6a3e1289ef3f02c8f56f4ad30aa372616b100dacb",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 1675147359,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A moth that glows brighter the darker the night. Setting: a lush green meadow at the edge of an old forest in golden afternoon light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "OS-010": {
+    "file": "cards/OS-010.webp",
+    "sha256": "fa31af79d711aee82c83e384c45184e531ba3e1e03119e775c5f772eccdc6bf1",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 2031648505,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A leaf-scaled baby dragon that roots in moss. Setting: a lush green meadow at the edge of an old forest in golden afternoon light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "SE-001": {
+    "file": "cards/SE-001.webp",
+    "sha256": "407d7d8c06e11fea13a301c859ebbbbefb49ebe1f3f6f0c1eb02c0b559eed438",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 105338915,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A dragon with a nebula swirling inside its wings. Setting: deep space with a colorful nebula, stars and small planets, violet and blue cosmic light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "SE-002": {
+    "file": "cards/SE-002.webp",
+    "sha256": "395e5da56bc47b18f4c1abba806e32ce30131469d8fe8a4c2c50ed45fbfad8cc",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 2523300602,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A hare that leaves a short comet tail when it runs. Setting: deep space with a colorful nebula, stars and small planets, violet and blue cosmic light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "SE-003": {
+    "file": "cards/SE-003.webp",
+    "sha256": "3cf389c86e89d94fe7b57bcc795cc3f816a72033ac4d450f586091afd380e272",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 2189954670,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "An owl that circles the moon once a night. Setting: deep space with a colorful nebula, stars and small planets, violet and blue cosmic light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "SE-004": {
+    "file": "cards/SE-004.webp",
+    "sha256": "7f627e4cb45fa8d74a8bbcba22b2b8623b2abc142bbb11c276d78d47185e4055",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 1509306834,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A glowing manta ray spirit gliding through space. Setting: deep space with a colorful nebula, stars and small planets, violet and blue cosmic light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "SE-005": {
+    "file": "cards/SE-005.webp",
+    "sha256": "882255d1ecec89cd0c085ec125b92aa27af95924c73764ff9724f920f4fbff37",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 3782062654,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A unicorn whose horn points to the north star. Setting: deep space with a colorful nebula, stars and small planets, violet and blue cosmic light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "SE-006": {
+    "file": "cards/SE-006.webp",
+    "sha256": "1254b163b533cbd6dc21917b43700e57fe12e93b2eab47f7ab478d91234c896f",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 1910029421,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A golem assembled from a fallen meteorite. Setting: deep space with a colorful nebula, stars and small planets, violet and blue cosmic light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "SE-007": {
+    "file": "cards/SE-007.webp",
+    "sha256": "3ae596b8f8deed79eba1760966703c1eb7773d081c6a6d09596229d2a2155a1a",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 1226212221,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A large moth with a fuzzy body and wide wings rippling like the northern lights. Setting: deep space with a colorful nebula, stars and small planets, violet and blue cosmic light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "SE-008": {
+    "file": "cards/SE-008.webp",
+    "sha256": "c324ec606d4eb01f415b0e982334feef051e7525e6f3ca60f0c68431d07dbabf",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 2197223128,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A glowing jellyfish spirit drifting between the stars. Setting: deep space with a colorful nebula, stars and small planets, violet and blue cosmic light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "SE-009": {
+    "file": "cards/SE-009.webp",
+    "sha256": "8e993aa63a8c627f0e745a2076efdd8267872e67ef2ccce5d19039488e63aa85",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 1311271925,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A lion whose mane burns like a corona. Setting: deep space with a colorful nebula, stars and small planets, violet and blue cosmic light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "SE-010": {
+    "file": "cards/SE-010.webp",
+    "sha256": "a39d0ac9885d4415e1fad231434dbcf158013613dd2e91cb4ab65a37b2f58fdc",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 3422400818,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A small dragon with glowing ember wings flying through a starfield. Setting: deep space with a colorful nebula, stars and small planets, violet and blue cosmic light. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "SK-001": {
+    "file": "cards/SK-001.webp",
+    "sha256": "2078da74e2f3e88e111728b1f292328af9b3c99a1af05064d0d49babb1df758c",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 2187233009,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A huge whale made of white cloud, swimming through a sea of clouds with rain falling from its belly. Setting: floating islands above a sea of clouds, waterfalls spilling into the clouds, bright golden sunlight. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "SK-002": {
+    "file": "cards/SK-002.webp",
+    "sha256": "dbe0282be530c1ce3eb07648b2ce8b652b3ecb2e88d23ad36bcd73f899f342ca",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 558264378,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A griffin with the head, wings and front talons of a golden eagle and the body and tail of a lion, wings spread, lightning behind it. Setting: floating islands above a sea of clouds, waterfalls spilling into the clouds, bright golden sunlight. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "SK-003": {
+    "file": "cards/SK-003.webp",
+    "sha256": "ac4cdd52fa3af735e268c370c23c00d2d763e50a8984a4dea1b05f1c631c4d7a",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 811182879,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A grey dragon that hides inside rain clouds until lightning strikes. Setting: floating islands above a sea of clouds, waterfalls spilling into the clouds, bright golden sunlight. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "SK-004": {
+    "file": "cards/SK-004.webp",
+    "sha256": "67da2c994e2f5979ac422c44ef89316ab5fd7d3f95eee683ae5f7fe7d7f1ee3f",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 148059706,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A falcon that flashes a ring of light around itself when it dives. Setting: floating islands above a sea of clouds, waterfalls spilling into the clouds, bright golden sunlight. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "SK-005": {
+    "file": "cards/SK-005.webp",
+    "sha256": "5a0dc9319b6eadbcd3eaa85074b6ba4135a960ee6622e103b09d35a66bdc8c0b",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 4268522118,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A brass machine golem with a round furnace belly, pipes and bellows on its back puffing wind, riveted plates and a blank face of two glowing portholes. Setting: floating islands above a sea of clouds, waterfalls spilling into the clouds, bright golden sunlight. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "SK-006": {
+    "file": "cards/SK-006.webp",
+    "sha256": "fc02d59e88fc992c36772607df25841363c3e94287b727947700d04217bcd802",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 13246684,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A four-winged dragonfly-like insect crackling with blue static electricity. Setting: floating islands above a sea of clouds, waterfalls spilling into the clouds, bright golden sunlight. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "SK-007": {
+    "file": "cards/SK-007.webp",
+    "sha256": "e133574535adff3f05d2d2ee853eeb6ce88ea39aa52a9453e4237e49e1865ebe",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 425632596,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A lizard that glides from isle to isle on wide, sail-like fins. Setting: floating islands above a sea of clouds, waterfalls spilling into the clouds, bright golden sunlight. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "SK-008": {
+    "file": "cards/SK-008.webp",
+    "sha256": "31faf2e13bb4a5063dd143098e691705fae87d623ee63c59c6526a97aaf8d5b7",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 4685424,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A small wisp of white cloud with a warm lantern glow at its center and two dark eyes. Setting: floating islands above a sea of clouds, waterfalls spilling into the clouds, bright golden sunlight. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "SK-009": {
+    "file": "cards/SK-009.webp",
+    "sha256": "0b5bf5945cbc996409bfea52fd04a6132eb5b8e2f7c65b0fdfb84c2b1532af26",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 1966712550,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A round fluffy dandelion seed creature with tiny eyes, drifting on the breeze. Setting: floating islands above a sea of clouds, waterfalls spilling into the clouds, bright golden sunlight. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "SK-010": {
+    "file": "cards/SK-010.webp",
+    "sha256": "3f7afc94c96688c6d97f6489bf4916fdab80af0339e3c9badd9f9a4b8a9e20a1",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 2097665575,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A goat that leaps between floating islands without looking down. Setting: floating islands above a sea of clouds, waterfalls spilling into the clouds, bright golden sunlight. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "TW-001": {
+    "file": "cards/TW-001.webp",
+    "sha256": "9b883bb23f1236a18028d54d4f1a1201d59472947bb312d9d90993ebe9e3740e",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 385150078,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "One glowing reef fish like a goldfish with long flowing fins, seen from the side. Setting: a coral reef under a moonlit lagoon, teal and turquoise water with glowing bioluminescence. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "TW-002": {
+    "file": "cards/TW-002.webp",
+    "sha256": "a5f910817f8938b579dea01b6985008807c399cba76e5e6b240886e2045f7bfd",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 1139546329,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A crab that guards coral with oversized claws. Setting: a coral reef under a moonlit lagoon, teal and turquoise water with glowing bioluminescence. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "TW-003": {
+    "file": "cards/TW-003.webp",
+    "sha256": "9e05a80d07415f0391d94b69977a23c21798d40829edd0cacb2b01b8856fdbbf",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 3217088267,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A huge sea serpent with a long scaly body, fanged jaws and glowing eyes, rising from the dark deep ocean. Setting: a coral reef under a moonlit lagoon, teal and turquoise water with glowing bioluminescence. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "TW-004": {
+    "file": "cards/TW-004.webp",
+    "sha256": "c9313a120023db4ff7b02ac7c80cea6865c994a058f81b0d3dfcde49590d656b",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 3798810424,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A young water horse with a mane of kelp. Setting: a coral reef under a moonlit lagoon, teal and turquoise water with glowing bioluminescence. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "TW-005": {
+    "file": "cards/TW-005.webp",
+    "sha256": "637db5ace63e15240366ee2031af8c437fe332bf63e774e40549e2b129e554e3",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 4184229442,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A heron that calls thunder over the marsh. Setting: a coral reef under a moonlit lagoon, teal and turquoise water with glowing bioluminescence. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "TW-006": {
+    "file": "cards/TW-006.webp",
+    "sha256": "de86c6b7cf8b2cf5e47204f4a7ed90d18b0a7408872a513b11f8dc3357095999",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 3936357645,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A flowering coral that opens only at high tide. Setting: a coral reef under a moonlit lagoon, teal and turquoise water with glowing bioluminescence. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "TW-007": {
+    "file": "cards/TW-007.webp",
+    "sha256": "0fcb82ae6a1519cfbf9723fd1e881237c2a75f15fc446ead5b8a8a7f2a502d61",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 3635603994,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A sea dragon that rides the crest of rogue waves. Setting: a coral reef under a moonlit lagoon, teal and turquoise water with glowing bioluminescence. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "TW-008": {
+    "file": "cards/TW-008.webp",
+    "sha256": "12f210a85714e75e0aa4b342f35452af488a91ec62f8fa8d84c312725a4b76b2",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 2398150513,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A hermit crab in a big spiral shell decorated with old bottle caps, on the sandy sea floor. Setting: a coral reef under a moonlit lagoon, teal and turquoise water with glowing bioluminescence. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "TW-009": {
+    "file": "cards/TW-009.webp",
+    "sha256": "dddafa249bdaf11988b180e8190cd080bf8a4f4ef6301ae15f43f027885f90c0",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 2986906568,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "A small creature with a body of driftwood, seaweed hair and two big glowing eyes. Setting: a coral reef under a moonlit lagoon, teal and turquoise water with glowing bioluminescence. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "TW-010": {
+    "file": "cards/TW-010.webp",
+    "sha256": "261aacb6918ecf8f2d70204bd6fc119e20fd788a81497fcd56df071a6142d9a5",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 940398361,
+    "steps": 4,
+    "width": 768,
+    "height": 1056,
+    "prompt": "An otter that juggles pearls on its belly. Setting: a coral reef under a moonlit lagoon, teal and turquoise water with glowing bioluminescence. Painted fantasy creature illustration in a rich storybook style: one creature as the clear subject, centered and fully in frame, soft dramatic lighting, vivid color, detailed painted background. No text, no letters, no numbers, no logos, no border or card frame, no people."
+  },
+  "hero": {
+    "file": "hero.webp",
+    "sha256": "a0ca37462501c0059c5f862e98f63105b65752e6d2333181f47952d9d7b02756",
+    "model": "SimianLuo/LCM_Dreamshaper_v7",
+    "seed": 2926344657,
+    "steps": 6,
+    "width": 896,
+    "height": 512,
+    "prompt": "dark cinematic studio, floating black volcanic rocks, glowing iridescent rainbow light ribbons swirling, reflections on a wet black floor, moody, high contrast, deep shadows, product photography backdrop"
+  },
+  "set-DS": {
+    "file": "sets/DS.webp",
+    "sha256": "a50df4a407a5c6b2ba066c36c205aa191baf78969c770dc91190e40b46b29e3c",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 654875661,
+    "steps": 4,
+    "width": 1024,
+    "height": 576,
+    "prompt": "a wide fantasy desert of tall dunes and sandstone ruins under a white sun, a giant bird silhouette far away. Epic matte painting, no creatures up close. No text, no letters, no logos, no border."
+  },
+  "set-EF": {
+    "file": "sets/EF.webp",
+    "sha256": "3887f98d2407df32c2214a35d8e9433aaefdea2f2c9bf9990f23c208b0331c3d",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 2882895942,
+    "steps": 4,
+    "width": 1024,
+    "height": 576,
+    "prompt": "a wide fantasy volcanic landscape, rivers of lava, ash clouds, a dragon silhouette on a ridge, crimson glow. Epic matte painting, no creatures up close. No text, no letters, no logos, no border."
+  },
+  "set-FV": {
+    "file": "sets/FV.webp",
+    "sha256": "75aa1516d372b247c37e8a8eb945d357aa5ce988e9fccf1d11b46be992bd32c6",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 3468247224,
+    "steps": 4,
+    "width": 1024,
+    "height": 576,
+    "prompt": "a wide fantasy landscape of glaciers and snowfields under a green and violet aurora, a swan silhouette in the sky. Epic matte painting, no creatures up close. No text, no letters, no logos, no border."
+  },
+  "set-HR": {
+    "file": "sets/HR.webp",
+    "sha256": "8169e15eabf8680eb9eb532b93adae927b149983b38ffef1c1ac2fd60d7c0d27",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 3621816394,
+    "steps": 4,
+    "width": 1024,
+    "height": 576,
+    "prompt": "a wide fantasy view of an underground cavern full of giant glowing mushrooms and ancient roots. Epic matte painting, no creatures up close. No text, no letters, no logos, no border."
+  },
+  "set-OS": {
+    "file": "sets/OS.webp",
+    "sha256": "1c13e2177dab203696b415256b1d1e2f559998b3ebcbb2ffb7fcd739b1030b90",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 12440518,
+    "steps": 4,
+    "width": 1024,
+    "height": 576,
+    "prompt": "a wide fantasy landscape, rolling green hills, ancient forest, a small dragon flying far away, golden hour. Epic matte painting, no creatures up close. No text, no letters, no logos, no border."
+  },
+  "set-SE": {
+    "file": "sets/SE.webp",
+    "sha256": "a93636bd49ef9815071413167f4114a0d9a48af51b81cfa1fc1f08092d523567",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 534674834,
+    "steps": 4,
+    "width": 1024,
+    "height": 576,
+    "prompt": "a wide cosmic vista, colorful nebula, ringed planet, shooting comet, violet and blue light. Epic matte painting, no creatures up close. No text, no letters, no logos, no border."
+  },
+  "set-SK": {
+    "file": "sets/SK.webp",
+    "sha256": "7f11228b715b941c7372a04b238bbd3e5501c516f429740e64f7acf9b4ef4f02",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 1864188848,
+    "steps": 4,
+    "width": 1024,
+    "height": 576,
+    "prompt": "a wide fantasy sky with floating islands and waterfalls pouring into a sea of clouds, a griffin silhouette in golden light. Epic matte painting, no creatures up close. No text, no letters, no logos, no border."
+  },
+  "set-TW": {
+    "file": "sets/TW.webp",
+    "sha256": "97a36e18ad955878a7e497840920b1772f798376f0512c822f12015c55c4c789",
+    "model": "black-forest-labs/FLUX.2-klein-4B, mflux 0.24.0, 8-bit",
+    "seed": 3145591432,
+    "steps": 4,
+    "width": 1024,
+    "height": 576,
+    "prompt": "a wide fantasy seascape, glowing coral reef under a moonlit lagoon, a sea serpent silhouette, teal light rays. Epic matte painting, no creatures up close. No text, no letters, no logos, no border."
+  }
+}

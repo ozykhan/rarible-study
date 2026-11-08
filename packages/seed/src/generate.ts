@@ -1,5 +1,5 @@
 import type { Currency, Edition, Finish, Grader, TrapKind } from "@slabwatch/domain"
-import { cards, handWritten, type CardSpec, type Catalog } from "./catalog.ts"
+import { drops, handWritten, makeCatalog, type CardSpec, type Catalog, type Drop } from "./catalog.ts"
 import { fromUsdCents, marketValueCents, valueCents } from "./pricing.ts"
 import { makeRng, type Rng } from "./rng.ts"
 
@@ -254,14 +254,14 @@ export const duplicateOf = (s: GeneratorState, original: LabelledListing, prefix
   }
 }
 
-/** Recent sales for every card, variant, grader and grade: the price history. */
-export const generateSales = (seed: number): ReadonlyArray<SaleRow> => {
+/** Recent sales for every given card, variant, grader and grade: the price history. */
+export const generateSales = (seed: number, cardList: ReadonlyArray<CardSpec>): ReadonlyArray<SaleRow> => {
   const rng = makeRng(seed)
   const rows: Array<SaleRow> = []
   const editions: ReadonlyArray<Edition> = ["first", "unlimited"]
   const finishes: ReadonlyArray<Finish> = ["holo", "non_holo", "reverse_holo"]
   const graders: ReadonlyArray<Grader> = ["NVG", "QSG", "LCA"]
-  for (const c of cards) {
+  for (const c of cardList) {
     for (const edition of editions) {
       for (const finish of finishes) {
         for (const grader of graders) {
@@ -286,20 +286,65 @@ export const generateSales = (seed: number): ReadonlyArray<SaleRow> => {
   return rows
 }
 
-export interface SeedData {
+/**
+ * How a drop seeds the demo market. Every drop has its own random stream and
+ * its own id prefixes, so a new drop adds rows without changing one id or
+ * word of an earlier drop's. The vault prefix is never VLT for a later drop:
+ * the live generator numbers on from the highest VLT- id.
+ */
+export interface DropSeedSpec {
+  readonly dropId: string
+  readonly seed: number
+  /** Listings before duplicates. */
+  readonly count: number
+  readonly listingPrefix: string
+  readonly vaultPrefix: string
+}
+
+export const dropSeeds: ReadonlyArray<DropSeedSpec> = [
+  { dropId: "launch", seed: 20261104, count: 192, listingPrefix: "L", vaultPrefix: "VLT" },
+  { dropId: "second", seed: 20261108, count: 192, listingPrefix: "L2", vaultPrefix: "VL2" }
+]
+
+export interface DropSeed {
+  readonly drop: Drop
+  readonly spec: DropSeedSpec
   readonly listings: ReadonlyArray<LabelledListing>
   readonly sales: ReadonlyArray<SaleRow>
 }
 
-/** The demo seed: about 200 listings, a few of them duplicates, plus price history. */
-export const generateSeed = (seed = 20261104, count = 192): SeedData => {
-  const s = makeGeneratorState(seed)
+export interface SeedData {
+  readonly listings: ReadonlyArray<LabelledListing>
+  readonly sales: ReadonlyArray<SaleRow>
+  /** The same rows, by drop, for loading a new drop into a database that already has the earlier ones. */
+  readonly drops: ReadonlyArray<DropSeed>
+}
+
+const seedDrop = (drop: Drop, spec: DropSeedSpec): DropSeed => {
+  const s = makeGeneratorState(spec.seed, 1, spec.vaultPrefix)
+  const pool: ListingPool = { catalog: makeCatalog(drop.sets, drop.cards), sellers }
   const listings: Array<LabelledListing> = []
-  for (let i = 0; i < count; i++) {
-    listings.push(generateListing(s, { prefix: "L", source: "seed", listedMinutesAgo: s.rng.int(60, 60 * 24 * 14) }))
+  for (let i = 0; i < spec.count; i++) {
+    listings.push(
+      generateListing(s, { prefix: spec.listingPrefix, source: "seed", listedMinutesAgo: s.rng.int(60, 60 * 24 * 14) }, pool)
+    )
   }
   // Duplicates: re-list a handful of vault items under another seller.
   const originals = listings.filter((x) => x.trap === "none").filter((_, i) => i % 23 === 0)
-  for (const o of originals) listings.push(duplicateOf(s, o, "L"))
-  return { listings, sales: generateSales(seed + 1) }
+  for (const o of originals) listings.push(duplicateOf(s, o, spec.listingPrefix))
+  return { drop, spec, listings, sales: generateSales(spec.seed + 1, drop.cards) }
+}
+
+/** The demo seed: about 200 listings per drop, a few of them duplicates, plus price history. */
+export const generateSeed = (): SeedData => {
+  const byDrop = drops.map((drop) => {
+    const spec = dropSeeds.find((x) => x.dropId === drop.id)
+    if (spec === undefined) throw new Error(`drop ${drop.id} has no seed spec`)
+    return seedDrop(drop, spec)
+  })
+  return {
+    listings: byDrop.flatMap((d) => d.listings),
+    sales: byDrop.flatMap((d) => d.sales),
+    drops: byDrop
+  }
 }
