@@ -6,7 +6,7 @@ import type { Listing, MarketStats } from "@/lib/types"
 import { Section } from "./ui"
 
 /**
- * Browse by set on the home page: the four fictional sets as banner cards
+ * Browse by set on the home page: the fictional sets as banner cards
  * with how many of each are listed and the lowest price. Each card links to
  * the market filtered by its set. Styles: styles/sets.css.
  */

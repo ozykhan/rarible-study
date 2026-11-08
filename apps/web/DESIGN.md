@@ -18,8 +18,8 @@ This file is the map. The values live in [`styles/tokens.css`](styles/tokens.css
 | `lib/market.ts` | `useMarket()`: one filtered, paged view of the market from the server, and the filters as the URL holds them |
 | `lib/account.tsx` | `AccountProvider` and `useAccount()`: the wallet session, backend status, listings and market stats, the signed-in wallet's rules, funds and purchases, and the one checkout dialog, shared by every route |
 | `app/(shop)/` | The marketplace routes, all inside `Shell`: `/` (home), `/market`, `/listing/[id]`, `/agent` |
-| `lib/art.ts` | The four sets (name, year, blurb, tone), grade words, grader names, art paths |
-| `public/art/` | Generated images: 40 cards, 4 set banners, the hero background |
+| `lib/art.ts` | The hand-written sets (name, year, blurb, tone), grade words, grader names, art paths |
+| `public/art/` | Generated images: 80 cards, 8 set banners, the hero background |
 | `app/design/` | The `/design` reference page, outside the shell |
 
 Plain global CSS, no CSS modules or utility framework. Class names are short and describe the thing (`.tile`, `.slab`, `.panel`, `.pill`), and modifiers are a second class (`.pill.ok`, `.tab.active`, `.btn-secondary`).
@@ -204,11 +204,11 @@ Loading: skeleton tiles in the market, "…" in counts and wallet amounts, "Load
 
 All art is generated and fictional, in `public/art/` as WebP:
 
-- `cards/<card id>.webp`, 384x528 (63:88), for the 40 cards in `packages/seed` (`OS-001` to `SE-010`). `cardArt()` in `lib/art.ts` builds the path.
+- `cards/<card id>.webp`, 384x528 (63:88), for the 80 hand-written cards in `packages/seed`. A listing carries its card's `artPath` from the API (with the image hash as `?v=`); `artFor()` in `lib/art.ts` uses it, draws the frame alone when it is null, and falls back to `cardArt()`, the path by card id, for data without the field.
 - `sets/<set id>.webp`, 768x432 (16:9), one banner per set. `setArt()` builds the path.
 - `hero.webp`, 1600x914, the hero background, darkened by gradients in `styles/hero.css`.
 
-The images were made on CPU with [LCM Dreamshaper v7](https://huggingface.co/SimianLuo/LCM_Dreamshaper_v7) (MIT license) by [`scripts/generate_art.py`](scripts/generate_art.py), one fixed seed per image. Each set has a style line (Origin Set: meadows and old forests in golden light; Tidewild: reefs and moonlit lagoons in teal; Emberfall: lava and embers in orange and crimson; Starward Expedition: nebulae in violet and blue) and each card a one-line prompt from its lore. Art is decorative (`alt=""`), and a card image that fails to load hides, leaving the tone-colored frame.
+The cards and banners were made on an Apple Silicon Mac with FLUX.2 klein 4B (Apache 2.0) through mflux by [`scripts/generate_art.py`](scripts/generate_art.py), one fixed seed per image; the hero is from the first version, made with LCM Dreamshaper v7 (MIT). Each set has a setting line (Origin Set: meadows and old forests in golden light; Tidewild: reefs and moonlit lagoons in teal; Emberfall: lava and embers in orange and crimson; Starward Expedition: nebulae in violet and blue; Frostveil: glaciers under an aurora; Hollowroot: caverns of glowing mushrooms; Skyreach Isles: floating islands over a sea of clouds; Dunesong: dunes and sandstone ruins under a white sun) and each card a prompt from its lore, never its invented name. `packages/seed/src/art.json` records every image's prompt, seed, model and hash. Art is decorative (`alt=""`), and a card image that fails to load hides, leaving the tone-colored frame.
 
 ## Content rules
 
