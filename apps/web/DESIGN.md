@@ -20,6 +20,7 @@ This file is the map. The values live in [`styles/tokens.css`](styles/tokens.css
 | `app/(shop)/` | The marketplace routes, all inside `Shell`: `/` (home), `/market`, `/listing/[id]`, `/agent` |
 | `lib/art.ts` | The four sets (name, year, blurb, tone), grade words, grader names, art paths |
 | `public/art/` | Generated images: 40 cards, 4 set banners, the hero background |
+| `app/icon.svg`, `app/favicon.ico`, `app/apple-icon.png`, `public/icons/`, `app/manifest.ts` | The browser tab and home screen icons, all made by `scripts/make_icons.py` from one drawing of the mark (rerun it after changing the mark), and the web manifest that lists the home screen ones |
 | `app/design/` | The `/design` reference page, outside the shell |
 
 Plain global CSS, no CSS modules or utility framework. Class names are short and describe the thing (`.tile`, `.slab`, `.panel`, `.pill`), and modifiers are a second class (`.pill.ok`, `.tab.active`, `.btn-secondary`).
@@ -168,7 +169,7 @@ Single-class blocks with no component: `.count` (a number in a tab), `.note` (an
 | `RuleChat` | Panel "Talk to the agent" with a `Led` (on when the server has a model key), and a minimize button when the page passes `onMinimize`: the watch as a conversation, and a chat about it. On `/agent` it starts minimized as `.chat-launcher`, a button at the bottom right; the button opens `.chat-popup`, 400px wide over the page, and minimizing goes back to the button. Your want in a `.bubble.you` on the right; each agent run in a `.bubble.agent` on the left with its outcome `Pill`, its final text and a mono meta line; each chat turn as your message and the agent's answer (a `Pill` only when there is no answer). The lines sit in `.chat-log`, which scrolls (at most 60vh or 560px, or the popup's height) and keeps the newest line in view; a message on its way shows at once with "Looking into it…". Under it `.chat-ask`: a label, a text field (500 characters) with Send, and a line saying the agent looks up listings and sales but cannot buy or change the watch. Without a model key the field is off and says why |
 | `SkippedRow` | A skipped listing in one line: a 28px thumbnail, the card with grade and price in mono, the first reason, and when it was listed in `--faint` |
 | `PurchaseRow` | A purchase: a status `Pill`, the listing, price, who asked, and a devnet explorer link once paid |
-| `Logo` | A rounded square in the accent to `--accent-2` gradient with a slab and a lens drawn in `--accent-ink` |
+| `Logo` | A rounded square in the accent to `--accent-2` gradient with a slab and a lens drawn in `--accent-ink`. The favicon is the same mark with its edges snapped to whole pixels, so it stays sharp at 16 and 32px |
 
 ## Patterns
 
