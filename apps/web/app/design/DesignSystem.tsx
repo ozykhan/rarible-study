@@ -572,7 +572,7 @@ export function DesignSystem() {
                   {FOUND.map((i) => (
                     <FoundCard key={i.key} item={i} top={RULES[0]!.hard.maxPrice}>
                       <Button>Sign and pay</Button>
-                      {i.waiting === null && <Button variant="link">Ask the agent</Button>}
+                      {i.waiting === null && <Button variant="secondary">Ask the agent</Button>}
                     </FoundCard>
                   ))}
                 </div>
