@@ -516,6 +516,24 @@
   background: color-mix(in srgb, var(--warn) 10%, var(--surface-inset));
   border-bottom-color: color-mix(in srgb, var(--warn) 35%, transparent);
 }
+/*
+ * A card that left the market (sold, or no longer listed): a quiet band and greyed art, so the missing
+ * Sign and pay reads as meant. The symbols and their popups keep their colour.
+ */
+.found-hat.hat-off {
+  color: var(--faint);
+}
+.found-card.off-market .found-media {
+  background: var(--surface-sunken);
+}
+.found-card.off-market .found-media > .slab,
+.found-card.off-market .found-placeholder {
+  filter: grayscale(1);
+  opacity: 0.45;
+}
+.found-card.off-market .found-price .price {
+  color: var(--muted);
+}
 .found-placeholder {
   display: block;
   aspect-ratio: 0.62;
