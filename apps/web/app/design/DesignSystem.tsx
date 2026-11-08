@@ -13,7 +13,7 @@ import { ListingTile } from "@/components/ListingTile"
 import { Logo } from "@/components/Logo"
 import { AgentLimits } from "@/components/AgentLimits"
 import { RuleList } from "@/components/RuleList"
-import { FoundCard, foundItems } from "@/components/FoundForYou"
+import { canBuy, FoundCard, foundItems } from "@/components/FoundForYou"
 import { type ChatControls, PurchaseRow, RuleChat, SkippedRow } from "@/components/RuleView"
 import { Slab, type SlabCard } from "@/components/Slab"
 import { SetCard } from "@/components/Sets"
@@ -259,10 +259,22 @@ const DETAIL: RuleDetail = {
   ]
 }
 
-/** Found for you's three kinds of card: a purchase waiting for a signature, a listing to review, and a match. */
+/**
+ * Found for you's kinds of card: a purchase waiting for a signature, a listing to review, a match, and
+ * last a purchase whose listing left the market, which has no Sign and pay.
+ */
 const FOUND = foundItems({
   ...DETAIL,
-  purchases: [PURCHASES[0]!],
+  purchases: [
+    {
+      ...PURCHASES[0]!,
+      id: "P0",
+      listingId: "SAMPLE-5",
+      price: { amountMinor: 15800, currency: "USD" },
+      listing: { ...listing(SLABS[3]![0], 5, 15800, "USD", "foilfox"), status: "withdrawn", payUnits: 15800, redFlags: [] }
+    },
+    PURCHASES[0]!
+  ],
   decisions: [
     DECISION,
     {
@@ -571,8 +583,12 @@ export function DesignSystem() {
                 <div className="found-track">
                   {FOUND.map((i) => (
                     <FoundCard key={i.key} item={i} top={RULES[0]!.hard.maxPrice}>
-                      <Button>Sign and pay</Button>
-                      {i.waiting === null && <Button variant="secondary">Ask the agent</Button>}
+                      {canBuy(i) && (
+                        <>
+                          <Button>Sign and pay</Button>
+                          {i.waiting === null && <Button variant="secondary">Ask the agent</Button>}
+                        </>
+                      )}
                     </FoundCard>
                   ))}
                 </div>

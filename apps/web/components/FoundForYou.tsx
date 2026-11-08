@@ -28,24 +28,25 @@ export interface FoundItem {
 }
 
 /**
- * What a card still needs from the collector: nothing once bought, or once
- * the listing is off the market. A waiting purchase whose listing did not
- * come with it stays open.
+ * Whether the collector can still buy a card: not once bought, and not once
+ * the listing is off the market (sold, or no longer listed). A waiting
+ * purchase whose listing did not come with it stays open.
  */
-const open = (i: FoundItem) => i.bought === null && (i.listing === null ? i.waiting !== null : i.listing.status === "active")
+export const canBuy = (i: FoundItem) =>
+  i.bought === null && (i.listing === null ? i.waiting !== null : i.listing.status === "active")
 
 /**
  * The cards in Found for you, in order: purchases waiting for a signature,
  * newest first, then each match and each listing to review. A listing with a
  * waiting purchase shows once, as the purchase. Cards that need nothing more
- * (bought, or off the market) go last, so a busy watch's old proposals do
+ * go last, bought before off the market, so a busy watch's old proposals do
  * not crowd out the ones you can still sign. A waiting purchase takes its
  * card from the purchase: the watch sends its 60 newest decisions, and a busy
  * watch has more purchases than that.
  */
 export function foundItems(detail: RuleDetail): ReadonlyArray<FoundItem> {
   const decisions = new Map(detail.decisions.map((d) => [d.listingId, d]))
-  const bought = new Map(detail.purchases.filter((p) => p.status === "executed").map((p) => [p.listingId, p]))
+  const executed = new Map(detail.purchases.filter((p) => p.status === "executed").map((p) => [p.listingId, p]))
   const items: FoundItem[] = []
   const shown = new Set<string>()
   for (const p of [...detail.purchases].reverse()) {
@@ -72,17 +73,36 @@ export function foundItems(detail: RuleDetail): ReadonlyArray<FoundItem> {
       kind: d.verdict === "needs_review" ? "review" : "match",
       reasons: d.reasons,
       waiting: null,
-      bought: bought.get(d.listingId) ?? null,
+      bought: executed.get(d.listingId) ?? null,
       price: d.listing?.price ?? null
     })
   }
-  return [...items.filter(open), ...items.filter((i) => !open(i))]
+  const bought = items.filter((i) => i.bought !== null)
+  const off = items.filter((i) => i.bought === null && !canBuy(i))
+  return [...items.filter(canBuy), ...bought, ...off]
 }
 
-const KIND: Record<FoundKind, { readonly word: string; readonly tone: PillTone | null }> = {
+/** The band across a card's top: its word, and its tone (none, ok, warn, or off for a card that left the market). */
+interface Band {
+  readonly word: string
+  readonly tone: PillTone | "off" | null
+}
+
+const KIND: Record<FoundKind, Band> = {
   waiting: { word: "waiting for you", tone: null },
   match: { word: "match", tone: "ok" },
   review: { word: "needs your review", tone: "warn" }
+}
+
+/**
+ * Why a card is here while it can still be bought; once it needs nothing
+ * more, what became of it: bought, sold, or no longer listed. A card off the
+ * market has no Sign and pay, and its band says why.
+ */
+const band = (i: FoundItem): Band => {
+  if (i.bought !== null) return { word: "bought", tone: "ok" }
+  if (!canBuy(i)) return { word: i.listing?.status === "sold" ? "sold" : "no longer listed", tone: "off" }
+  return KIND[i.kind]
 }
 
 /**
@@ -114,18 +134,19 @@ function NoteIcon({ size = 17 }: { size?: number }) {
   )
 }
 
-/** The words a search runs over: card, set, grader and grade, seller, why it is here, price and listing id. */
+/** The words a search runs over: card, set, grader and grade, seller, its band, price and listing id. */
 const haystack = (i: FoundItem) => {
   const l = i.listing
-  const parts = [KIND[i.kind].word, i.listingId, i.price ? money(i.price) : ""]
+  const parts = [band(i).word, i.listingId, i.price ? money(i.price) : ""]
   if (l) parts.push(l.cardName, l.setName, l.grader, `${l.grader} ${l.grade}`, String(l.grade), l.sellerHandle, `@${l.sellerHandle}`, variant(l))
-  if (i.bought) parts.push("bought")
   return parts.join(" ").toLowerCase()
 }
 
 /**
  * One card in Found for you. Why it is here sits on top of the card as a band
- * in its tone (waiting for you, match, needs your review, bought). Under it the
+ * in its tone (waiting for you, match, needs your review), or what became of
+ * it (bought; sold or no longer listed, with the art greyed out and no
+ * actions, so a missing Sign and pay reads as meant). Under it the
  * slab on a backdrop in the set's tone, then the grade badge, name and meta,
  * the reason, the price with how far it is from the watch's top price beside
  * it, and when it was listed over its cert; a bought card links its devnet
@@ -142,15 +163,18 @@ export function FoundCard({ item, top, children }: { item: FoundItem; top: Money
   const [open, setOpen] = useState<"flag" | "note" | null>(null)
   const [revealed, setRevealed] = useState(false)
   const l = item.listing
-  const kind = KIND[item.kind]
-  const hat = item.bought ? { word: "bought", tone: "ok" as const } : kind
+  const hat = band(item)
   const under = underTop(item.price, top)
-  const review = item.kind === "review" && item.bought === null
+  const review = item.kind === "review" && canBuy(item)
   const note = review && l !== null
   const hasActions = children !== undefined && children !== null && children !== false
   const flagged = item.reasons.slice(0, 2).join(" ") || "The judge wants you to look at this one."
   const reason =
-    item.reasons[0] ?? (item.kind === "waiting" ? "This buy waits for your signature." : "Every field of the watch passes.")
+    hat.tone === "off"
+      ? l?.status === "sold"
+        ? "This listing has sold."
+        : "This listing is no longer on the market."
+      : (item.reasons[0] ?? (item.kind === "waiting" ? "This buy waits for your signature." : "Every field of the watch passes."))
   const tx = item.bought?.txSignature && !item.bought.txSignature.startsWith("simulated:") ? item.bought.txSignature : null
   const toggle = (which: "flag" | "note") => setOpen(open === which ? null : which)
   const closeOnEscape = (e: KeyboardEvent<HTMLElement>) => {
@@ -158,7 +182,7 @@ export function FoundCard({ item, top, children }: { item: FoundItem; top: Money
   }
   return (
     <article
-      className={cx("found-card", revealed && "revealed", open !== null && "pop-open")}
+      className={cx("found-card", hat.tone === "off" && "off-market", revealed && "revealed", open !== null && "pop-open")}
       style={l ? ({ "--tone": setTheme(l)?.tone } as CSSProperties) : undefined}
       onKeyDown={closeOnEscape}
     >
@@ -251,7 +275,7 @@ export function FoundCard({ item, top, children }: { item: FoundItem; top: Money
         </div>
         {l && (
           <p className="found-foot">
-            <span>{l.status === "active" ? `listed ${ago(l.listedAt)}` : l.status}</span>
+            <span>listed {ago(l.listedAt)}</span>
             <span>cert {l.certNumber}</span>
           </p>
         )}
@@ -291,7 +315,7 @@ export function FoundForYou({ state, status }: { state: RuleState; status: Statu
   const items = useMemo(() => (detail === null ? [] : foundItems(detail)), [detail])
   const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean)
   const shown = words.length === 0 ? items : items.filter((i) => words.every((w) => haystack(i).includes(w)))
-  const toSign = items.filter(open).length
+  const toSign = items.filter(canBuy).length
   const canTrade = !status.readOnly
 
   /** Which ends of the row are in view; an arrow greys out at its end. */
@@ -373,7 +397,7 @@ export function FoundForYou({ state, status }: { state: RuleState; status: Statu
           <div className="found-track" ref={track} onScroll={measure} role="region" aria-label="Found for you" tabIndex={0}>
             {shown.map((i) => (
               <FoundCard key={i.key} item={i} top={top}>
-                {open(i) ? (
+                {canBuy(i) ? (
                   <FoundActions item={i} state={state} busy={busy} canTrade={canTrade} canAsk={status.modelConfigured} />
                 ) : null}
               </FoundCard>
